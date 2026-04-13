@@ -55,7 +55,7 @@ pub unsafe fn session_from_id(id: SessionId) -> Option<*mut session> {
 /// Look up a session by ID and return a shared reference, suitable for
 /// read-only access. See `client_ref` for the rationale and aliasing
 /// caveats — same convention applies.
-#[allow(dead_code, reason = "Phase 2.4 hook; used opportunistically going forward")]
+#[expect(dead_code, reason = "Phase 2.4 hook; used opportunistically going forward")]
 pub unsafe fn session_ref(id: SessionId) -> Option<&'static session> {
     unsafe {
         (*(&raw const SESSION_REGISTRY))
@@ -372,9 +372,7 @@ pub unsafe fn session_next_session(s: *mut session) -> *mut session {
         // Find the next session after this one in sorted order, wrapping around.
         let s2 = sessions
             .range::<str, _>((std::ops::Bound::Excluded(name), std::ops::Bound::Unbounded))
-            .next()
-            .map(|(_, &v)| v)
-            .unwrap_or_else(|| *sessions.values().next().unwrap());
+            .next().map_or_else(|| *sessions.values().next().unwrap(), |(_, &v)| v);
         if s2 == s {
             return null_mut();
         }
@@ -394,9 +392,7 @@ pub unsafe fn session_previous_session(s: *mut session) -> *mut session {
         // Find the previous session before this one in sorted order, wrapping around.
         let s2 = sessions
             .range::<str, _>((std::ops::Bound::Unbounded, std::ops::Bound::Excluded(name)))
-            .next_back()
-            .map(|(_, &v)| v)
-            .unwrap_or_else(|| *sessions.values().next_back().unwrap());
+            .next_back().map_or_else(|| *sessions.values().next_back().unwrap(), |(_, &v)| v);
         if s2 == s {
             return null_mut();
         }
@@ -414,7 +410,7 @@ pub unsafe fn session_attach(
         let wl = winlink_add(&raw mut (*s).windows, idx);
 
         if wl.is_null() {
-            return Err(format!("index in use: {}", idx));
+            return Err(format!("index in use: {idx}"));
         }
         (*wl).session = Some(SessionId((*s).id));
         winlink_set_window(wl, w);
@@ -621,8 +617,7 @@ pub unsafe fn session_group_find(name: &str) -> *mut session_group {
     unsafe {
         (*(&raw mut SESSION_GROUPS))
             .get_mut(name)
-            .map(|sg| &mut **sg as *mut session_group)
-            .unwrap_or(null_mut())
+            .map_or(null_mut(), |sg| &mut **sg as *mut session_group)
     }
 }
 
@@ -766,7 +761,7 @@ pub unsafe fn session_group_synchronize1(target: *mut session, s: *mut session) 
         // Fix up the last window stack.
         let old_lastw = std::mem::take(&mut (*s).lastw);
 
-        for &wl in old_lastw.iter() {
+        for &wl in &old_lastw {
             if let Some(wl2) = NonNull::new(winlink_find_by_index(&raw mut (*s).windows, (*wl).idx))
             {
                 (*s).lastw.push(wl2.as_ptr());
@@ -819,7 +814,7 @@ pub unsafe fn session_renumber_windows(s: *mut session) {
 
         // Fix the stack of last windows now.
         let old_lastw = std::mem::take(&mut (*s).lastw);
-        for &wl in old_lastw.iter() {
+        for &wl in &old_lastw {
             (*wl).flags &= !winlink_flags::WINLINK_VISITED;
 
             let w_lookup = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());

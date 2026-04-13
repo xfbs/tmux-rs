@@ -129,7 +129,7 @@ pub unsafe fn spawn_window(sc: *mut spawn_context) -> Result<NonNull<winlink>, S
         if !(*sc).flags.intersects(SPAWN_RESPAWN) && idx != -1 {
             let wl = winlink_find_by_index(&raw mut (*s).windows, idx);
             if !wl.is_null() && !(*sc).flags.intersects(SPAWN_KILL) {
-                return Err(format!("index {} in use", idx));
+                return Err(format!("index {idx} in use"));
             }
             if !wl.is_null() {
                 // Can't use session_detach as it will destroy session
@@ -154,7 +154,7 @@ pub unsafe fn spawn_window(sc: *mut spawn_context) -> Result<NonNull<winlink>, S
             }
             (*sc).wl = winlink_add(&raw mut (*s).windows, idx);
             if (*sc).wl.is_null() {
-                return Err(format!("couldn't add window {}", idx));
+                return Err(format!("couldn't add window {idx}"));
             }
             let mut sx = 0u32;
             let mut sy = 0u32;
@@ -360,11 +360,10 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
             // myprogram" wouldn't work if myprogram isn't in the session's path.
             if !c.is_null() && client_get_session(c).is_null() {
                 // only unattached clients
-                if let Some(ee) = environ_find_raw(&*(*c).environ, c!("PATH")) {
-                    if let Some(ref value) = ee.value {
+                if let Some(ee) = environ_find_raw(&*(*c).environ, c!("PATH"))
+                    && let Some(ref value) = ee.value {
                         environ_set_(&mut *child, "PATH", environ_flags::empty(), value.clone());
                     }
-                }
             }
             if environ_find_raw(&*child, c!("PATH")).is_none() {
                 environ_set!(
@@ -468,7 +467,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
 
             // Child process. Change to the working directory or home if that
             // fails.
-            if (*new_wp).cwd.as_deref().map(|p| std::env::set_current_dir(p).is_ok()).unwrap_or(false) {
+            if (*new_wp).cwd.as_deref().is_some_and(|p| std::env::set_current_dir(p).is_ok()) {
                 environ_set!(
                     child,
                     c!("PWD"),

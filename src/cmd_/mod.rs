@@ -604,7 +604,7 @@ pub unsafe fn cmd_list_append(cmdlist: *mut cmd_list, cmd: *mut cmd) {
 
 pub unsafe fn cmd_list_append_all(cmdlist: *mut cmd_list, from: *mut cmd_list) {
     unsafe {
-        for &cmd in (*from).list.iter() {
+        for &cmd in &(*from).list {
             (*cmd).group = (*cmdlist).group;
         }
         (*cmdlist).list.append(&mut (*from).list);
@@ -625,7 +625,7 @@ pub unsafe fn cmd_list_free(cmdlist: *mut cmd_list) {
             return;
         }
 
-        for &cmd in (*cmdlist).list.iter() {
+        for &cmd in &(*cmdlist).list {
             cmd_free(cmd);
         }
         std::ptr::drop_in_place(&raw mut (*cmdlist).list);
@@ -645,7 +645,7 @@ pub unsafe fn cmd_list_copy(
         free(s as _);
 
         let new_cmdlist = cmd_list_new();
-        for &cmd in cmdlist.list.iter() {
+        for &cmd in &cmdlist.list {
             if (*cmd).group != group {
                 new_cmdlist.group =
                     CMD_LIST_NEXT_GROUP.fetch_add(1, std::sync::atomic::Ordering::SeqCst);

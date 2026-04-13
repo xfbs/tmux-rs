@@ -175,7 +175,7 @@ pub unsafe fn cmd_set_option_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_
                 // Change the option.
                 if args_has(args, 'U') && scope == OPTIONS_TABLE_WINDOW {
                     let target_w = (*target).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-                    for &loop_ in (*target_w).panes.iter() {
+                    for &loop_ in &(*target_w).panes {
                         let po = options_get_only((*loop_).options, &name);
                         if po.is_null() {
                             continue;

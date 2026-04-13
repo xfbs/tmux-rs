@@ -24,7 +24,7 @@ pub const MAX_IMSGSIZE: usize = 16384;
 const IMSGF_HASFD: u16 = 1; // this needs to be u16, i think, but it's u32 in auto generated header
 
 /// IPC message buffer. Holds data being sent or received over the socket.
-/// Allocated with C calloc, freed with ibuf_free.
+/// Allocated with C calloc, freed with `ibuf_free`.
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct ibuf {

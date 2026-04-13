@@ -57,10 +57,10 @@ static mut PASTE_NUM_AUTOMATIC: u32 = 0;
 /// Primary store: name → buffer. Owns all paste buffers.
 static mut PASTE_BY_NAME: BTreeMap<String, Box<PasteBuffer>> = BTreeMap::new();
 /// Order index: buffer names sorted by insertion order (ascending order field).
-/// Maintained in sync with PASTE_BY_NAME.
+/// Maintained in sync with `PASTE_BY_NAME`.
 static mut PASTE_ORDER: Vec<String> = Vec::new();
 
-/// Insert a name into PASTE_ORDER maintaining sort by order field.
+/// Insert a name into `PASTE_ORDER` maintaining sort by order field.
 unsafe fn paste_order_insert(name: &str, order: u32) {
     unsafe {
         // Find insertion point — keep sorted by order ascending
@@ -76,7 +76,7 @@ unsafe fn paste_order_insert(name: &str, order: u32) {
     }
 }
 
-/// Remove a name from PASTE_ORDER.
+/// Remove a name from `PASTE_ORDER`.
 unsafe fn paste_order_remove(name: &str) {
     unsafe {
         (*(&raw mut PASTE_ORDER)).retain(|n| n != name);
@@ -136,11 +136,10 @@ pub unsafe fn paste_walk(pb: *mut PasteBuffer) -> *mut PasteBuffer {
         let current_name = &(*pb).name;
         let mut found = false;
         for name in order_vec.iter().rev() {
-            if found {
-                if let Some(buf) = names.get(name) {
+            if found
+                && let Some(buf) = names.get(name) {
                     return &**buf as *const PasteBuffer as *mut PasteBuffer;
                 }
-            }
             if name.as_str() == current_name.as_ref() {
                 found = true;
             }
@@ -162,15 +161,14 @@ pub unsafe fn paste_get_top(name: *mut Option<&str>) -> *mut PasteBuffer {
         let order_vec = &*(&raw const PASTE_ORDER);
         for buf_name in order_vec.iter().rev() {
             let map = &mut *(&raw mut PASTE_BY_NAME);
-            if let Some(buf) = map.get_mut(buf_name) {
-                if buf.automatic != 0 {
+            if let Some(buf) = map.get_mut(buf_name)
+                && buf.automatic != 0 {
                     let ptr = &mut **buf as *mut PasteBuffer;
                     if !name.is_null() {
                         *name = Some(&(*ptr).name);
                     }
                     return ptr;
                 }
-            }
         }
         null_mut()
     }
@@ -227,13 +225,13 @@ pub unsafe fn paste_add(mut prefix: *const u8, data: *mut u8, size: usize) {
 
         let limit = options_get_number_(GLOBAL_OPTIONS, "buffer-limit");
         // Remove excess automatic buffers (oldest first = lowest order first)
-        let names_to_check: Vec<String> = (*(&raw mut PASTE_ORDER)).iter().cloned().collect();
+        let names_to_check: Vec<String> = (*(&raw mut PASTE_ORDER)).to_vec();
         for buf_name in &names_to_check {
             if (PASTE_NUM_AUTOMATIC as i64) < limit {
                 break;
             }
-            if let Some(buf) = (*(&raw mut PASTE_BY_NAME)).get(buf_name) {
-                if buf.automatic != 0 {
+            if let Some(buf) = (*(&raw mut PASTE_BY_NAME)).get(buf_name)
+                && buf.automatic != 0 {
                     let nn = NonNull::new(
                         &mut **(*(&raw mut PASTE_BY_NAME)).get_mut(buf_name).unwrap()
                             as *mut PasteBuffer,
@@ -241,7 +239,6 @@ pub unsafe fn paste_add(mut prefix: *const u8, data: *mut u8, size: usize) {
                     .unwrap();
                     paste_free(nn);
                 }
-            }
         }
 
         let order = PASTE_NEXT_ORDER;
@@ -291,7 +288,7 @@ pub fn paste_rename(oldname: Option<&str>, newname: Option<&str>) -> Result<(), 
         let newname = newname.unwrap();
 
         if (*(&raw mut PASTE_BY_NAME)).get(oldname).is_none() {
-            return Err(format!("no buffer {}", oldname));
+            return Err(format!("no buffer {oldname}"));
         }
 
         // Remove buffer with new name if it exists

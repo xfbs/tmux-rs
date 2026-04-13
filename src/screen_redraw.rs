@@ -212,7 +212,7 @@ pub unsafe fn screen_redraw_cell_border(ctx: *mut screen_redraw_ctx, px: u32, py
 
         // Check all the panes
         let mut result = 0;
-        for &wp in (*w).panes.iter() {
+        for &wp in &(*w).panes {
             if !window_pane_visible(wp) {
                 continue;
             }
@@ -517,7 +517,7 @@ pub unsafe fn screen_redraw_draw_pane_status(ctx: *mut screen_redraw_ctx) {
             (*w).id,
         );
 
-        for &wp in (*w).panes.iter() {
+        for &wp in &(*w).panes {
             if !window_pane_visible(wp) {
                 continue;
             }
@@ -602,7 +602,7 @@ unsafe fn screen_redraw_update(c: *mut client, mut flags: client_flag) -> client
                 .unwrap_or_default();
             redraw = 0;
 
-            for &wp in (*w).panes.iter() {
+            for &wp in &(*w).panes {
                 if screen_redraw_make_pane_status(
                     c,
                     NonNull::new_unchecked(wp),
@@ -892,7 +892,7 @@ pub unsafe fn screen_redraw_draw_borders(ctx: *mut screen_redraw_ctx) {
             (*w).id,
         );
 
-        for &wp in (*w).panes.iter() {
+        for &wp in &(*w).panes {
             (*wp).border_gc_set = 0;
         }
 
@@ -917,7 +917,7 @@ pub unsafe fn screen_redraw_draw_panes(ctx: *mut screen_redraw_ctx) {
             (*w).id
         );
 
-        for &wp in (*w).panes.iter() {
+        for &wp in &(*w).panes {
             if window_pane_visible(wp) {
                 screen_redraw_draw_pane(ctx, wp);
             }

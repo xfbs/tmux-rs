@@ -97,7 +97,7 @@ unsafe fn window_buffer_add_item(data: *mut window_buffer_modedata) -> *mut wind
             xreallocarray_((*data).item_list, (*data).item_size as usize + 1).as_ptr();
         let item = xcalloc1::<window_buffer_itemdata>();
         // xcalloc returns zeroed memory; String is not valid when zeroed.
-        std::ptr::write(&raw mut (*item).name, String::new());
+        std::ptr::write(&raw mut item.name, String::new());
         *(*data).item_list.add((*data).item_size as usize) = item;
         (*data).item_size += 1;
         item

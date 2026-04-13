@@ -68,8 +68,8 @@ pub unsafe fn file_create_with_peer(
             closed: 0,
         });
         (*files).insert(stream, cf);
-        let cf_ptr = &mut **(*files).get_mut(&stream).unwrap() as *mut client_file;
-        cf_ptr
+        
+        &mut **(*files).get_mut(&stream).unwrap() as *mut client_file
     }
 }
 
@@ -588,12 +588,12 @@ pub unsafe fn file_write_left(files: *mut client_files) -> c_int {
     (waiting != 0) as i32
 }
 
-/// Write callback: drains event_buf to the file fd.
+/// Write callback: drains `event_buf` to the file fd.
 /// When buffer is fully drained, notifies the user callback
 /// and frees the file if it has been closed.
 unsafe fn file_write_fire(cf: *mut client_file) {
     unsafe {
-        if (*cf).event_buf.len() > 0 {
+        if !(*cf).event_buf.is_empty() {
             let n = (*cf).event_buf.write_to_fd((*cf).fd);
             if n < 0 {
                 if std::io::Error::last_os_error().kind() == std::io::ErrorKind::WouldBlock {
@@ -767,7 +767,7 @@ pub unsafe fn file_write_close(files: *mut client_files, imsg: *mut imsg) {
     }
 }
 
-/// Read error/EOF handler: sends MSG_READ_DONE, cleans up the file.
+/// Read error/EOF handler: sends `MSG_READ_DONE`, cleans up the file.
 unsafe fn file_read_error_fire(cf: *mut client_file) {
     unsafe {
         log_debug!("read error file {}", (*cf).stream);
@@ -790,8 +790,8 @@ unsafe fn file_read_error_fire(cf: *mut client_file) {
     }
 }
 
-/// Read callback: reads data from the file fd into event_buf,
-/// then sends it via IPC in MSG_READ chunks.
+/// Read callback: reads data from the file fd into `event_buf`,
+/// then sends it via IPC in `MSG_READ` chunks.
 unsafe fn file_read_fire(cf: *mut client_file) {
     unsafe {
         let n = (*cf).event_buf.read_from_fd((*cf).fd, 4096);

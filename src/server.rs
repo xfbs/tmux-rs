@@ -52,7 +52,7 @@ pub static mut SERVER_PROC: *mut tmuxproc = null_mut();
 pub static mut SERVER_FD: c_int = -1;
 pub static mut SERVER_CLIENT_FLAGS: client_flag = client_flag::empty();
 pub static mut SERVER_EXIT: c_int = 0;
-/// Accept event: either an IoHandle (listening for connections) or TimerHandle (retry timeout).
+/// Accept event: either an `IoHandle` (listening for connections) or `TimerHandle` (retry timeout).
 pub static mut SERVER_EV_ACCEPT_IO: Option<IoHandle> = None;
 pub static mut SERVER_EV_ACCEPT_TIMER: Option<TimerHandle> = None;
 /// Hourly tidy timer.
@@ -194,7 +194,7 @@ pub unsafe fn server_start(
 
         let mut c: *mut client = null_mut();
         let mut cause: *mut u8 = null_mut();
-        let tv: timeval = timeval {
+        let _tv: timeval = timeval {
             tv_sec: 3600,
             tv_usec: 0,
         };
@@ -439,7 +439,7 @@ pub unsafe fn server_update_socket() {
     }
 }
 
-/// Accept callback: accepts a new client connection on SERVER_FD.
+/// Accept callback: accepts a new client connection on `SERVER_FD`.
 unsafe fn server_accept_fire(readable: bool) {
     unsafe {
         // Re-arm for next accept.
@@ -566,7 +566,7 @@ unsafe fn server_child_signal() {
 unsafe fn server_child_exited(pid: pid_t, status: i32) {
     unsafe {
         'outer: for w in windows_iter() {
-            for &wp in (*w).panes.iter() {
+            for &wp in &(*w).panes {
                 if (*wp).pid == pid {
                     (*wp).status = status;
                     (*wp).flags |= window_pane_flags::PANE_STATUSREADY;
@@ -592,7 +592,7 @@ unsafe fn server_child_stopped(pid: pid_t, status: i32) {
         }
 
         for w in windows_iter() {
-            for &wp in (*w).panes.iter() {
+            for &wp in &(*w).panes {
                 if (*wp).pid == pid && killpg(pid, SIGCONT) != 0 {
                     kill(pid, SIGCONT);
                 }

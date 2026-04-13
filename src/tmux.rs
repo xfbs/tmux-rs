@@ -558,7 +558,7 @@ pub unsafe fn tmux_main(mut argc: i32, mut argv: *mut *mut u8, _env: *mut *mut u
             match make_label(label.cast()) {
                 Ok(p) => path = p,
                 Err(cause) => {
-                    eprintln!("{}", cause);
+                    eprintln!("{cause}");
                     std::process::exit(1);
                 }
             }

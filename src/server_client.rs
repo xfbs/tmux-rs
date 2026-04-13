@@ -57,7 +57,7 @@ pub unsafe fn server_client_set_overlay(
             server_client_clear_overlay(c);
         }
 
-        let tv: libc::timeval = libc::timeval {
+        let _tv: libc::timeval = libc::timeval {
             tv_sec: delay as i64 / 1000,
             tv_usec: ((delay % 1000) * 1000) as libc::suseconds_t,
         };
@@ -539,7 +539,7 @@ pub unsafe fn client_from_id(id: ClientId) -> Option<*mut client> {
 /// but the caller must not also hold a `*mut client` to the same ID and
 /// mutate through it while the reference is alive. There's no borrow
 /// checker enforcement of this in the current hybrid state — be careful.
-#[allow(dead_code, reason = "Phase 2.4 hook; used opportunistically going forward")]
+#[expect(dead_code, reason = "Phase 2.4 hook; used opportunistically going forward")]
 pub unsafe fn client_ref(id: ClientId) -> Option<&'static client> {
     unsafe {
         (*(&raw const CLIENT_REGISTRY))
@@ -576,7 +576,7 @@ unsafe fn server_client_free_deferred(cid: ClientId) {
             free_((*c).name.cast_mut());
             // Remove from registry — the Box drop deallocates the client.
             let removed = (*(&raw mut CLIENT_REGISTRY)).remove(&cid);
-            debug_assert!(removed.is_some(), "client {:?} not found in registry", cid);
+            debug_assert!(removed.is_some(), "client {cid:?} not found in registry");
         }
     }
 }
@@ -1881,7 +1881,7 @@ pub unsafe fn server_client_key_callback(item: *mut cmdq_item, data: *mut c_void
         let m = &raw mut (*event).m;
         let s = client_get_session(c);
 
-        let mut tv: libc::timeval = zeroed();
+        let _tv: libc::timeval = zeroed();
         let mut bd: *mut key_binding;
         let mut table: *mut key_table;
         let mut first: *mut key_table;
@@ -2219,7 +2219,7 @@ pub unsafe fn server_client_loop() {
 
         // Any windows will have been redrawn as part of clients, so clear their flags now.
         for w in windows_iter() {
-            for &wp in (*w).panes.iter() {
+            for &wp in &(*w).panes {
                 if (*wp).fd != -1 {
                     server_client_check_pane_resize(wp);
                     server_client_check_pane_buffer(wp);
@@ -2239,7 +2239,7 @@ pub unsafe fn server_client_check_window_resize(w: *mut window) {
         }
 
         let mut wl = null_mut();
-        for &wl_ in (*w).winlinks.iter() {
+        for &wl_ in &(*w).winlinks {
             wl = wl_;
             let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
             if !s.is_null() && (*s).attached != 0 && (*s).curw == wl {
@@ -2553,7 +2553,7 @@ pub unsafe fn server_client_reset_state(c: *mut client) {
         if options_get_number_(oo, "mouse") != 0 {
             if (*c).overlay_draw.is_none() {
                 mode &= !ALL_MOUSE_MODES;
-                for &loop_ in (*w).panes.iter() {
+                for &loop_ in &(*w).panes {
                     if (*(*loop_).screen)
                         .mode
                         .intersects(mode_flag::MODE_MOUSE_ALL)
@@ -2699,7 +2699,7 @@ pub unsafe fn server_client_check_modes(c: *mut client) {
         if !(*c).flags.intersects(client_flag::REDRAWSTATUS) {
             return;
         }
-        for &wp in (*w).panes.iter() {
+        for &wp in &(*w).panes {
             if let Some(wme) = NonNull::new((*wp).modes.first().copied().unwrap_or(null_mut()))
                 && let Some(update) = (*(*wme.as_ptr()).mode).update
             {
@@ -2745,7 +2745,7 @@ pub unsafe fn server_client_check_redraw(c: *mut client) {
         if (*c).flags.intersects(CLIENT_ALLREDRAWFLAGS) {
             needed = true;
         } else {
-            for &wp in (*w).panes.iter() {
+            for &wp in &(*w).panes {
                 if (*wp).flags.intersects(window_pane_flags::PANE_REDRAW) {
                     needed = true;
                     break;
@@ -2771,7 +2771,7 @@ pub unsafe fn server_client_check_redraw(c: *mut client) {
             }
 
             if !(*c).flags.intersects(client_flag::REDRAWWINDOW) {
-                for &wp in (*w).panes.iter() {
+                for &wp in &(*w).panes {
                     if (*wp).flags.intersects(window_pane_flags::PANE_REDRAW) {
                         // log_debug("%s: pane %%%u needs redraw", (*c).name, (*wp).id);
                         (*c).redraw_panes |= 1 << bit;
@@ -2803,7 +2803,7 @@ pub unsafe fn server_client_check_redraw(c: *mut client) {
         if !(*c).flags.intersects(client_flag::REDRAWWINDOW) {
             // If not redrawing the entire window, check whether each pane
             // needs to be redrawn.
-            for &wp in (*w).panes.iter() {
+            for &wp in &(*w).panes {
                 redraw = false;
                 if (*wp).flags.intersects(window_pane_flags::PANE_REDRAW) {
                     redraw = true;
@@ -3295,11 +3295,10 @@ pub unsafe fn server_client_get_cwd(c: *const client, s: *const session) -> Path
         let from_session_ptr = |sp: *const session| -> Option<PathBuf> {
             if !sp.is_null() { (*sp).cwd.clone() } else { None }
         };
-        if !CFG_FINISHED.load(atomic::Ordering::Acquire) && !CFG_CLIENT.is_null() {
-            if let Some(p) = (*CFG_CLIENT).cwd.clone() {
+        if !CFG_FINISHED.load(atomic::Ordering::Acquire) && !CFG_CLIENT.is_null()
+            && let Some(p) = (*CFG_CLIENT).cwd.clone() {
                 return p;
             }
-        }
         if !c.is_null() && client_get_session(c).is_null()
             && let Some(p) = (*c).cwd.clone()
         {
@@ -3520,11 +3519,10 @@ pub unsafe fn server_client_remove_pane(wp: *mut window_pane) {
         let w = window_pane_window(wp);
 
         for c in clients_iter() {
-            if let Some(cw) = (*c).windows.get(&(*w).id) {
-                if pane_ptr_from_id(cw.pane) == wp {
+            if let Some(cw) = (*c).windows.get(&(*w).id)
+                && pane_ptr_from_id(cw.pane) == wp {
                     (*c).windows.remove(&(*w).id);
                 }
-            }
         }
     }
 }

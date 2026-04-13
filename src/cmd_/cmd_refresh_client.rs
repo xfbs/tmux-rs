@@ -217,7 +217,7 @@ pub unsafe fn cmd_refresh_client_clipboard(self_: *mut cmd, item: *mut cmdq_item
             let mut i = 0;
             for j in 0..(*tc).clipboard_npanes {
                 i = j;
-                if *(*tc).clipboard_panes.add(i as usize) == fs.wp.map(|id| id.0).unwrap_or(0) {
+                if *(*tc).clipboard_panes.add(i as usize) == fs.wp.map_or(0, |id| id.0) {
                     break;
                 }
             }
@@ -226,7 +226,7 @@ pub unsafe fn cmd_refresh_client_clipboard(self_: *mut cmd, item: *mut cmdq_item
             }
             (*tc).clipboard_panes =
                 xreallocarray_((*tc).clipboard_panes, (*tc).clipboard_npanes as usize + 1).as_ptr();
-            *(*tc).clipboard_panes.add((*tc).clipboard_npanes as usize) = fs.wp.map(|id| id.0).unwrap_or(0);
+            *(*tc).clipboard_panes.add((*tc).clipboard_npanes as usize) = fs.wp.map_or(0, |id| id.0);
             (*tc).clipboard_npanes += 1;
         }
         tty_clipboard_query(&raw mut (*tc).tty);

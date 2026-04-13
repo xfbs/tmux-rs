@@ -231,11 +231,10 @@ pub unsafe fn options_get_only(oo: *mut options, name: &str) -> *mut options_ent
         }
         // Try mapped name
         let mapped = options_map_name_str(name);
-        if mapped != name {
-            if let Some(entry) = (*oo).tree.get_mut(mapped) {
+        if mapped != name
+            && let Some(entry) = (*oo).tree.get_mut(mapped) {
                 return &mut **entry as *mut options_entry;
             }
-        }
         null_mut()
     }
 }
@@ -246,11 +245,10 @@ pub unsafe fn options_get_only_const(oo: *const options, name: &str) -> *const o
             return &**entry as *const options_entry;
         }
         let mapped = options_map_name_str(name);
-        if mapped != name {
-            if let Some(entry) = (*oo).tree.get(mapped) {
+        if mapped != name
+            && let Some(entry) = (*oo).tree.get(mapped) {
                 return &**entry as *const options_entry;
             }
-        }
         null_mut()
     }
 }
@@ -440,7 +438,7 @@ pub unsafe fn options_table_entry(o: *mut options_entry) -> *const options_table
     unsafe { (*o).tableentry }
 }
 
-/// Get the array map from an options_entry, creating it if null.
+/// Get the array map from an `options_entry`, creating it if null.
 unsafe fn options_array_map(o: *mut options_entry) -> &'static mut options_array {
     unsafe {
         if (*o).value.array.is_null() {

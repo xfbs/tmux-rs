@@ -296,7 +296,7 @@ pub unsafe fn proc_set_signals(tp: *mut tmuxproc, signalcb: Option<unsafe fn(i32
 /// properly unregister calloop sources from this process's event loop.
 ///
 /// When `defaults` is non-zero, this is called in a **forked child** that is
-/// about to `exec()` (spawn_pane, job_run, pipe-pane, etc.).  In that case we
+/// about to `exec()` (`spawn_pane`, `job_run`, pipe-pane, etc.).  In that case we
 /// must NOT call `event_del`, because calloop's unregister path issues
 /// `epoll_ctl(DEL)` which operates on the **shared kernel epoll instance**,
 /// removing the parent server's signal registrations.  The child's copies of

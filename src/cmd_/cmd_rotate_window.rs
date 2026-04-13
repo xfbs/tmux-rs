@@ -60,7 +60,7 @@ unsafe fn cmd_rotate_window_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             sx = (*wp).sx;
             sy = (*wp).sy;
 
-            for &wp_ in (*w).panes.iter() {
+            for &wp_ in &(*w).panes {
                 wp = wp_;
                 let wp2 = window_pane_next_in_list(wp);
                 if wp2.is_null() {

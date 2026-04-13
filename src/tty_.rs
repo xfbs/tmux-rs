@@ -1981,7 +1981,7 @@ pub unsafe fn tty_set_client_cb(ttyctx: *mut tty_ctx, c: *mut client) -> i32 {
 #[cfg(feature = "sixel")]
 pub unsafe fn tty_draw_images(c: *mut client, wp: *mut window_pane, s: *mut screen) {
     unsafe {
-        for &im in (*s).images.iter() {
+        for &im in &(*s).images {
             let mut ttyctx: tty_ctx = zeroed();
             memset0(&raw mut ttyctx);
 

@@ -193,7 +193,7 @@ pub unsafe fn notify_callback(item: *mut cmdq_item, data: *mut c_void) -> cmd_re
             window_remove_ref(w, __func__);
         }
 
-        if !(*ne).fs.s.is_none() {
+        if (*ne).fs.s.is_some() {
             session_remove_ref((*ne).fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()), __func__);
         }
 
@@ -265,7 +265,7 @@ pub unsafe fn notify_add(
         }
 
         cmd_find_copy_state(&raw mut (*ne).fs, fs);
-        if !(*ne).fs.s.is_none() {
+        if (*ne).fs.s.is_some() {
             session_add_ref((*ne).fs.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()), __func__);
         } /* cmd_find_valid_state needs session */
 

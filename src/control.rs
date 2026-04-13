@@ -77,9 +77,9 @@ pub struct control_state {
     pub read_input: crate::evbuffer_::Evbuffer,
     /// Calloop read registration for the control client fd.
     pub read_io: Option<IoHandle>,
-    /// Buffered data to write to the control client (or out_fd).
+    /// Buffered data to write to the control client (or `out_fd`).
     pub write_output: crate::evbuffer_::Evbuffer,
-    /// Calloop write registration for the control client (or out_fd).
+    /// Calloop write registration for the control client (or `out_fd`).
     pub write_io: Option<IoHandle>,
 
     pub subs: control_subs,
@@ -93,7 +93,7 @@ pub const CONTROL_BUFFER_HIGH: i32 = 8192;
 /// Minimum to write to each client.
 pub const CONTROL_WRITE_MINIMUM: i32 = 32;
 
-/// Write data to a control client's output buffer and arm the write IoHandle.
+/// Write data to a control client's output buffer and arm the write `IoHandle`.
 unsafe fn control_write_bytes(c: *mut client, data: &[u8]) {
     unsafe {
         let cs = (*c).control_state;
@@ -102,7 +102,7 @@ unsafe fn control_write_bytes(c: *mut client, data: &[u8]) {
     }
 }
 
-/// Arm the write IoHandle if it's not already registered.
+/// Arm the write `IoHandle` if it's not already registered.
 unsafe fn control_arm_write(c: *mut client) {
     unsafe {
         let cs = (*c).control_state;
@@ -698,7 +698,7 @@ pub unsafe fn control_write_pending(c: *mut client, cp: *mut control_pane, limit
     }
 }
 
-/// Write callback: drains write_output to the control client fd,
+/// Write callback: drains `write_output` to the control client fd,
 /// then flushes pending pane output blocks if there's room.
 unsafe fn control_write_fire(cid: ClientId) {
     unsafe {
@@ -706,7 +706,7 @@ unsafe fn control_write_fire(cid: ClientId) {
         let cs = (*c).control_state;
 
         // Drain buffered data to the fd.
-        if (*cs).write_output.len() > 0 {
+        if !(*cs).write_output.is_empty() {
             let write_fd = if (*c).flags.intersects(client_flag::CONTROLCONTROL) {
                 (*c).fd
             } else {
@@ -890,7 +890,7 @@ pub unsafe fn control_check_subs_pane(c: *mut client, csub: *mut control_sub) {
         }
         let w = window_pane_window(wp);
 
-        for &wl in (*w).winlinks.iter() {
+        for &wl in &(*w).winlinks {
             if (*wl).session != (if s.is_null() { None } else { Some(SessionId((*s).id)) }) {
                 continue;
             }
@@ -929,7 +929,7 @@ pub unsafe fn control_check_subs_all_panes(c: *mut client, csub: *mut control_su
 
         for &wl in (*(&raw mut (*s).windows)).values() {
             let w = winlink_window(wl);
-            for &wp in (*w).panes.iter() {
+            for &wp in &(*w).panes {
                 let ft = format_create_defaults(null_mut(), c, s, wl, wp);
                 let value = format_expand(ft, (*csub).format);
                 format_free(ft);
@@ -968,7 +968,7 @@ pub unsafe fn control_check_subs_window(c: *mut client, csub: *mut control_sub) 
             return;
         }
 
-        for &wl in (*w).winlinks.iter() {
+        for &wl in &(*w).winlinks {
             if (*wl).session != (if s.is_null() { None } else { Some(SessionId((*s).id)) }) {
                 continue;
             }
@@ -1072,7 +1072,7 @@ pub unsafe fn control_add_sub(
 ) {
     unsafe {
         let cs = (*c).control_state;
-        let tv = timeval {
+        let _tv = timeval {
             tv_sec: 1,
             tv_usec: 0,
         };

@@ -131,7 +131,7 @@ use std::{
     cmp,
     collections::LinkedList,
     ffi::{
-        CStr, CString, c_int, c_long, c_longlong, c_short, c_uchar, c_uint, c_ulonglong, c_void,
+        CStr, CString, c_int, c_long, c_longlong, c_uchar, c_uint, c_ulonglong, c_void,
     },
     mem::{MaybeUninit, size_of, zeroed},
     path::PathBuf,
@@ -1465,7 +1465,7 @@ const WINLINK_ALERTFLAGS: winlink_flags = winlink_flags::WINLINK_BELL
     .union(winlink_flags::WINLINK_ACTIVITY)
     .union(winlink_flags::WINLINK_SILENCE);
 
-/// A link between a session and a window. Each session has a BTreeMap of
+/// A link between a session and a window. Each session has a `BTreeMap` of
 /// winlinks keyed by index. Windows track all their winlinks via a Vec,
 /// and sessions track a most-recently-used stack of winlinks.
 
@@ -1510,9 +1510,9 @@ enum layout_type {
     LAYOUT_WINDOWPANE,
 }
 
-/// A node in the layout tree. Each window has a root layout_cell that
+/// A node in the layout tree. Each window has a root `layout_cell` that
 /// recursively subdivides into LEFTRIGHT or TOPBOTTOM splits. Leaf cells
-/// (LAYOUT_WINDOWPANE) point to a window_pane; interior nodes hold child
+/// (`LAYOUT_WINDOWPANE`) point to a `window_pane`; interior nodes hold child
 /// cells in a Vec.
 struct layout_cell {
     type_: layout_type,
@@ -1526,7 +1526,7 @@ struct layout_cell {
     yoff: u32,
 
     wp: Option<PaneId>,
-    /// Child cell ids. Empty for LAYOUT_WINDOWPANE leaves. Resolved
+    /// Child cell ids. Empty for `LAYOUT_WINDOWPANE` leaves. Resolved
     /// through the window's `LayoutArena` via `get_ptr`.
     cells: Vec<LayoutCellId>,
 }
@@ -1563,7 +1563,7 @@ pub struct LayoutCellId(u32);
 /// Removed slot indices land on `free_list` and are reused by the next
 /// `alloc`. This keeps the arena dense without invalidating live IDs.
 #[derive(Default)]
-#[allow(dead_code)] // wired up incrementally in Phase 2.5
+#[expect(dead_code)] // wired up incrementally in Phase 2.5
 pub struct LayoutArena {
     cells: Vec<Option<Box<layout_cell>>>,
     free_list: Vec<u32>,
@@ -1574,7 +1574,7 @@ pub struct LayoutArena {
     saved_root: Option<LayoutCellId>,
 }
 
-#[allow(dead_code)] // wired up incrementally in Phase 2.5
+#[expect(dead_code)] // wired up incrementally in Phase 2.5
 impl LayoutArena {
     pub(crate) fn new() -> Self {
         Self::default()
@@ -1840,7 +1840,7 @@ pub struct SessionId(pub u32);
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct WindowId(pub u32);
 
-/// Stable identifier for a window_pane allocation.
+/// Stable identifier for a `window_pane` allocation.
 ///
 /// Monotonically increasing via `NEXT_WINDOW_PANE_ID`, never reused.
 /// Used as the key into `PANE_REGISTRY` for ID-based ownership.
@@ -2158,7 +2158,7 @@ impl args_value {
     /// Create a `String` variant by taking ownership of a raw `*mut u8` produced
     /// by `xstrdup`/`xmalloc`. The pointer must be NUL-terminated. The returned
     /// `args_value`'s `Drop` will `free()` the underlying allocation via the
-    /// CString destructor (the global allocator wraps libc malloc/free).
+    /// `CString` destructor (the global allocator wraps libc malloc/free).
     ///
     /// # Safety
     /// `ptr` must be a valid, NUL-terminated, malloc-allocated C string with

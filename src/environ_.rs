@@ -17,7 +17,7 @@ use std::ffi::CString;
 use crate::*;
 use crate::options_::*;
 
-/// An environment variable store, backed by a sorted BTreeMap.
+/// An environment variable store, backed by a sorted `BTreeMap`.
 ///
 /// Each entry has a name (ASCII key) and an optional value. Entries with
 /// `value = None` are "cleared" — they mask an inherited variable (like
@@ -68,7 +68,7 @@ pub fn environ_find<'a>(env: &'a Environ, name: &str) -> Option<&'a EnvironEntry
 ///
 /// # Safety
 /// `name` must be a valid NUL-terminated C string.
-pub unsafe fn environ_find_raw<'a>(env: &'a Environ, name: *const u8) -> Option<&'a EnvironEntry> {
+pub unsafe fn environ_find_raw(env: &Environ, name: *const u8) -> Option<&EnvironEntry> {
     unsafe { environ_find(env, cstr_to_str(name)) }
 }
 
@@ -182,15 +182,14 @@ pub unsafe fn environ_update(oo: *mut options, src: &Environ, dst: &mut Environ)
 /// may be reading it. Callers must ensure no concurrent env access.
 pub unsafe fn environ_push(env: &Environ) {
     for entry in env.entries.values() {
-        if let Some(ref value) = entry.value {
-            if !entry.name.is_empty() && !entry.flags.intersects(ENVIRON_HIDDEN) {
+        if let Some(ref value) = entry.value
+            && !entry.name.is_empty() && !entry.flags.intersects(ENVIRON_HIDDEN) {
                 use std::ffi::OsStr;
                 use std::os::unix::ffi::OsStrExt;
                 unsafe {
                     std::env::set_var(OsStr::new(&entry.name), OsStr::from_bytes(value));
                 }
             }
-        }
     }
 }
 
@@ -206,8 +205,8 @@ pub fn environ_log_(env: &Environ, args: std::fmt::Arguments) {
     let prefix = args.to_string();
 
     for entry in env.entries.values() {
-        if let Some(ref value) = entry.value {
-            if !entry.name.is_empty() {
+        if let Some(ref value) = entry.value
+            && !entry.name.is_empty() {
                 log_debug!(
                     "{}{}={}",
                     prefix,
@@ -215,7 +214,6 @@ pub fn environ_log_(env: &Environ, args: std::fmt::Arguments) {
                     String::from_utf8_lossy(value),
                 );
             }
-        }
     }
 }
 

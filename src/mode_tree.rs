@@ -176,7 +176,7 @@ unsafe fn mode_tree_prev_sibling(
 /// Recursively search for an item with the given tag in a list and its children.
 unsafe fn mode_tree_find_item(mtl: &Vec<*mut mode_tree_item>, tag: u64) -> *mut mode_tree_item {
     unsafe {
-        for &mti in mtl.iter() {
+        for &mti in mtl {
             if (*mti).tag == tag {
                 return mti;
             }
@@ -237,7 +237,7 @@ unsafe fn mode_tree_build_lines(mtd: *mut mode_tree_data, mtl: &Vec<*mut mode_tr
         let last_item = mtl.last().copied().unwrap_or(null_mut());
 
         (*mtd).depth = depth;
-        for &mti in mtl.iter() {
+        for &mti in mtl {
             (*mtd).line_list.push(mode_tree_line {
                 item: mti,
                 depth,
@@ -277,7 +277,7 @@ unsafe fn mode_tree_build_lines(mtd: *mut mode_tree_data, mtl: &Vec<*mut mode_tr
                 (*mti).keylen = 0;
             }
         }
-        for &mti in mtl.iter() {
+        for &mti in mtl {
             for line in &mut (*mtd).line_list {
                 if line.item == mti {
                     line.flat = flat;
@@ -289,7 +289,7 @@ unsafe fn mode_tree_build_lines(mtd: *mut mode_tree_data, mtl: &Vec<*mut mode_tr
 
 unsafe fn mode_tree_clear_tagged(mtl: &Vec<*mut mode_tree_item>) {
     unsafe {
-        for &mti in mtl.iter() {
+        for &mti in mtl {
             (*mti).tagged = 0;
             mode_tree_clear_tagged(&(*mti).children);
         }
@@ -1468,13 +1468,13 @@ pub unsafe fn mode_tree_key(
                 }
             }
             code::MINUS_META => {
-                for &mti in (*mtd).children.iter() {
+                for &mti in &(*mtd).children {
                     (*mti).expanded = false;
                 }
                 mode_tree_build(mtd);
             }
             code::PLUS_META => {
-                for &mti in (*mtd).children.iter() {
+                for &mti in &(*mtd).children {
                     (*mti).expanded = true;
                 }
                 mode_tree_build(mtd);

@@ -151,7 +151,7 @@ impl Evbuffer {
 
     /// Compact internal storage if the cursor has passed the halfway point.
     fn maybe_compact(&mut self) {
-        if self.cursor > 0 && (self.cursor >= self.buf.len() / 2 || self.len() == 0) {
+        if self.cursor > 0 && (self.cursor >= self.buf.len() / 2 || self.is_empty()) {
             self.buf.drain(..self.cursor);
             self.cursor = 0;
         }

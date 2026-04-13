@@ -54,7 +54,7 @@ pub enum ParsedArgument {
     String(Vec<u8>),
     /// Command block from { ... } braces.
     CommandBlock(Vec<ParsedCommand>),
-    /// Pre-parsed command list (reference-counted, from cmd_parse_from_arguments).
+    /// Pre-parsed command list (reference-counted, from `cmd_parse_from_arguments`).
     ParsedCommands(*mut cmd_list),
 }
 
@@ -270,7 +270,7 @@ pub fn cmd_parse_log_commands(cmds: &[ParsedCommand], prefix: &str) {
                         log_debug!("{} {}:{}: {}", prefix, i, j, _s(string.as_ptr()));
                     }
                     ParsedArgument::CommandBlock(commands) => {
-                        let sub = format!("{} {}:{}", prefix, i, j);
+                        let sub = format!("{prefix} {i}:{j}");
                         cmd_parse_log_commands(commands, &sub);
                     }
                     ParsedArgument::ParsedCommands(cmdlist) => {
@@ -387,7 +387,7 @@ pub unsafe fn cmd_parse_build_command(
         }
 
         'out: {
-            for arg in cmd.arguments.iter() {
+            for arg in &cmd.arguments {
                 match arg {
                     ParsedArgument::String(string) => {
                         values.push(args_value::new_string(xstrdup(string.as_ptr()).as_ptr()));
@@ -450,7 +450,7 @@ pub unsafe fn cmd_parse_build_commands(
         cmd_parse_log_commands(cmds, "cmd_parse_build_commands");
 
         let result = cmd_list_new();
-        for cmd in cmds.iter() {
+        for cmd in cmds {
             if !pi
                 .flags
                 .intersects(cmd_parse_input_flags::CMD_PARSE_ONEGROUP)
@@ -1091,12 +1091,11 @@ unsafe fn yylex_token_variable(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> b
         name[namelen] = b'\0';
 
         let envent = environ_find_raw(&*GLOBAL_ENVIRON, (&raw const name).cast());
-        if let Some(envent) = envent {
-            if let Some(ref value) = envent.value {
+        if let Some(envent) = envent
+            && let Some(ref value) = envent.value {
                 // log_debug("%s: %s -> %s", __func__, name, value);
                 yylex_append(buf, value);
             }
-        }
         true
     }
 }
@@ -1128,18 +1127,15 @@ unsafe fn yylex_token_tilde(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> bool
         let mut home_bytes: Option<&[u8]> = None;
         if name[0] == b'\0' {
             let envent = environ_find_raw(&*GLOBAL_ENVIRON, c!("HOME"));
-            if let Some(envent) = envent {
-                if let Some(ref value) = envent.value {
-                    if !value.is_empty() {
+            if let Some(envent) = envent
+                && let Some(ref value) = envent.value
+                    && !value.is_empty() {
                         home_bytes = Some(value.as_slice());
                     }
-                }
-            }
-            if home_bytes.is_none() {
-                if let Some(pw) = NonNull::new(libc::getpwuid(libc::getuid())) {
+            if home_bytes.is_none()
+                && let Some(pw) = NonNull::new(libc::getpwuid(libc::getuid())) {
                     home = (*pw.as_ptr()).pw_dir.cast();
                 }
-            }
         } else if let Some(pw) = NonNull::new(libc::getpwnam((&raw const name).cast())) {
             home = (*pw.as_ptr()).pw_dir.cast();
         }

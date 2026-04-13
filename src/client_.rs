@@ -322,7 +322,7 @@ pub unsafe extern "C-unwind" fn client_main(
                 &raw mut ncaps,
             )
         {
-            eprintln!("{}", cause);
+            eprintln!("{cause}");
             return 1;
         }
 

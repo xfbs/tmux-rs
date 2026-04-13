@@ -33,10 +33,10 @@ pub struct screen_sel {
 /// Free titles stack.
 pub unsafe fn screen_free_titles(s: *mut screen) {
     unsafe {
-        for &text in (&(*s).titles).iter() {
+        for &text in &(*s).titles {
             free_(text);
         }
-        (&mut (*s).titles).clear();
+        (*s).titles.clear();
     }
 }
 
@@ -144,7 +144,7 @@ pub unsafe fn screen_reinit(s: *mut screen) {
             (*s).mode = ((*s).mode & !EXTENDED_KEY_MODES) | mode_flag::MODE_KEYS_EXTENDED;
         }
 
-        if !(*s).saved_grid.is_none() {
+        if (*s).saved_grid.is_some() {
             screen_alternate_off(s, null_mut(), 0);
         }
         (*s).saved_cx = u32::MAX;
@@ -285,15 +285,15 @@ pub unsafe fn screen_set_path(s: *mut screen, path: *const u8) {
 pub unsafe fn screen_push_title(s: *mut screen) {
     unsafe {
         // Push to front (index 0 = top of stack)
-        (&mut (*s).titles).insert(0, xstrdup((*s).title.as_ptr().cast()).as_ptr());
+        (*s).titles.insert(0, xstrdup((*s).title.as_ptr().cast()).as_ptr());
     }
 }
 
 /// Pop a title from the stack and set it as the screen title. If the stack is empty, do nothing.
 pub unsafe fn screen_pop_title(s: *mut screen) {
     unsafe {
-        if !(&(*s).titles).is_empty() {
-            let text = (&mut (*s).titles).remove(0);
+        if !(*s).titles.is_empty() {
+            let text = (*s).titles.remove(0);
             screen_set_title(s, text);
             free_(text);
         }
@@ -691,7 +691,7 @@ unsafe fn screen_reflow(s: *mut screen, new_x: u32, cx: *mut u32, cy: *mut u32, 
 /// history is not updated.
 pub unsafe fn screen_alternate_on(s: *mut screen, gc: *mut grid_cell, cursor: i32) {
     unsafe {
-        if !(*s).saved_grid.is_none() {
+        if (*s).saved_grid.is_some() {
             return;
         }
         let sx = screen_size_x(s);

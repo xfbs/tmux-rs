@@ -152,7 +152,7 @@ pub fn defer(callback: Box<dyn FnOnce()>) {
     let id = base.alloc_id();
 
     let timer = Timer::immediate();
-    let res = base.handle.insert_source(timer, move |_, _, data| {
+    let res = base.handle.insert_source(timer, move |_, (), data| {
         data.ready.push(ReadyEvent {
             id,
             fd: -1,
@@ -204,7 +204,7 @@ pub fn signal_register(signum: c_int, callback: Box<dyn Fn()>) -> Option<SignalH
 
     let signal = signal_from_number(signum)?;
     let signals = Signals::new(&[signal]).ok()?;
-    let token = base.handle.insert_source(signals, move |_, _, data| {
+    let token = base.handle.insert_source(signals, move |_, (), data| {
         data.ready.push(ReadyEvent {
             id,
             fd: signum,
@@ -233,7 +233,7 @@ pub fn timer_add(duration: Duration, callback: Box<dyn Fn()>) -> Option<TimerHan
     let id = base.alloc_id();
 
     let timer = Timer::from_duration(duration);
-    let token = base.handle.insert_source(timer, move |_, _, data| {
+    let token = base.handle.insert_source(timer, move |_, (), data| {
         data.ready.push(ReadyEvent {
             id,
             fd: -1,
@@ -295,7 +295,7 @@ pub(crate) struct EventBase {
     /// Takes `(fd, fired_events)`.
     io_callbacks: HashMap<u64, Box<dyn Fn(c_int, c_short)>>,
     /// One-shot closures for `defer()`.  Option so dispatch can `.take()`
-    /// and move out the FnOnce.  Keyed by event id.
+    /// and move out the `FnOnce`.  Keyed by event id.
     deferred_callbacks: HashMap<u64, Option<Box<dyn FnOnce()>>>,
     next_id: u64,
 }

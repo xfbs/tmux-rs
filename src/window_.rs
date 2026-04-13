@@ -36,7 +36,7 @@ pub static NEXT_WINDOW_ID: AtomicU32 = AtomicU32::new(0);
 
 pub static mut ALL_WINDOW_PANES: window_pane_tree = BTreeMap::new();
 
-/// Central registry owning all window_pane allocations. `Box<window_pane>`
+/// Central registry owning all `window_pane` allocations. `Box<window_pane>`
 /// provides a stable heap address, so `*mut window_pane` pointers derived
 /// from it remain valid for the lifetime of the registry entry.
 pub static mut PANE_REGISTRY: BTreeMap<PaneId, Box<window_pane>> = BTreeMap::new();
@@ -47,7 +47,7 @@ pub static NEXT_WINDOW_PANE_ID: AtomicU32 = AtomicU32::new(0);
 ///
 /// Uses `ALL_WINDOW_PANES` (alive set), not `PANE_REGISTRY`, because
 /// destroyed panes remain in the registry until reclaimed.
-#[allow(dead_code, reason = "introduced for Phase 2.3.6 foundation; used in 2.3.7+")]
+#[expect(dead_code, reason = "introduced for Phase 2.3.6 foundation; used in 2.3.7+")]
 #[inline]
 pub unsafe fn panes_iter() -> impl Iterator<Item = *mut window_pane> {
     unsafe {
@@ -59,13 +59,13 @@ pub unsafe fn panes_iter() -> impl Iterator<Item = *mut window_pane> {
     }
 }
 
-/// Look up a window_pane by ID in the global registry.
+/// Look up a `window_pane` by ID in the global registry.
 ///
 /// Returns the registry-stable raw pointer, or `None` if no allocation exists
 /// for that ID. Note: the returned pointer may refer to a destroyed pane that
 /// hasn't yet been reclaimed — use `ALL_WINDOW_PANES` lookup if you need an
 /// *alive* pane.
-#[allow(dead_code, reason = "introduced for Phase 2.3.6 foundation; used in 2.3.7+")]
+#[expect(dead_code, reason = "introduced for Phase 2.3.6 foundation; used in 2.3.7+")]
 pub unsafe fn pane_from_id(id: PaneId) -> Option<*mut window_pane> {
     unsafe {
         (*(&raw mut PANE_REGISTRY))
@@ -77,7 +77,7 @@ pub unsafe fn pane_from_id(id: PaneId) -> Option<*mut window_pane> {
 /// Look up a pane by ID and return a shared reference, suitable for
 /// read-only access. See `client_ref` for the rationale and aliasing
 /// caveats — same convention applies.
-#[allow(dead_code, reason = "Phase 2.4 hook; used opportunistically going forward")]
+#[expect(dead_code, reason = "Phase 2.4 hook; used opportunistically going forward")]
 pub unsafe fn pane_ref(id: PaneId) -> Option<&'static window_pane> {
     unsafe {
         (*(&raw const PANE_REGISTRY))
@@ -108,7 +108,7 @@ pub unsafe fn windows_iter() -> impl Iterator<Item = *mut window> {
 /// for that ID. Note: the returned pointer may refer to a destroyed window
 /// whose reference count has not yet drained — use `WINDOWS` lookup if you
 /// need an *alive* window.
-#[allow(dead_code, reason = "introduced for Phase 2.3.0 foundation; used in 2.3.1+")]
+#[expect(dead_code, reason = "introduced for Phase 2.3.0 foundation; used in 2.3.1+")]
 pub unsafe fn window_from_id(id: WindowId) -> Option<*mut window> {
     unsafe {
         (*(&raw mut WINDOW_REGISTRY))
@@ -120,7 +120,7 @@ pub unsafe fn window_from_id(id: WindowId) -> Option<*mut window> {
 /// Look up a window by ID and return a shared reference, suitable for
 /// read-only access. See `client_ref` for the rationale and aliasing
 /// caveats — same convention applies.
-#[allow(dead_code, reason = "Phase 2.4 hook; used opportunistically going forward")]
+#[expect(dead_code, reason = "Phase 2.4 hook; used opportunistically going forward")]
 pub unsafe fn window_ref(id: WindowId) -> Option<&'static window> {
     unsafe {
         (*(&raw const WINDOW_REGISTRY))
@@ -229,7 +229,7 @@ pub unsafe fn winlink_window(wl: *mut winlink) -> *mut window {
     }
 }
 
-/// Resolve a window_pane's owner window through the registry.
+/// Resolve a `window_pane`'s owner window through the registry.
 ///
 /// Returns null if the pane has no owner (None) or the owner's allocation
 /// has been reclaimed. Most callers can assume non-null since panes are
@@ -243,7 +243,7 @@ pub unsafe fn window_pane_window(wp: *mut window_pane) -> *mut window {
     }
 }
 
-/// Set a window_pane's owner window field from a `*mut window` (possibly null).
+/// Set a `window_pane`'s owner window field from a `*mut window` (possibly null).
 #[inline]
 pub unsafe fn window_pane_set_window(wp: *mut window_pane, w: *mut window) {
     unsafe {
@@ -467,8 +467,7 @@ pub unsafe fn winlink_next(wwl: *mut winlinks, wl: *mut winlink) -> *mut winlink
         (*wwl)
             .range((std::ops::Bound::Excluded((*wl).idx), std::ops::Bound::Unbounded))
             .next()
-            .map(|(_, &v)| v)
-            .unwrap_or(null_mut())
+            .map_or(null_mut(), |(_, &v)| v)
     }
 }
 
@@ -477,8 +476,7 @@ pub unsafe fn winlink_previous(wwl: *mut winlinks, wl: *mut winlink) -> *mut win
         (*wwl)
             .range(..(*wl).idx)
             .next_back()
-            .map(|(_, &v)| v)
-            .unwrap_or(null_mut())
+            .map_or(null_mut(), |(_, &v)| v)
     }
 }
 
@@ -839,7 +837,7 @@ pub unsafe fn window_pane_send_resize(wp: *mut window_pane, sx: u32, sy: u32) {
 }
 
 pub fn window_has_pane(w: &window, wp: *mut window_pane) -> bool {
-    w.panes.iter().any(|&wp1| wp1 == wp)
+    w.panes.contains(&wp)
 }
 
 pub unsafe fn window_update_focus(w: *mut window) {
@@ -974,7 +972,7 @@ pub unsafe fn window_redraw_active_switch(w: *mut window, mut wp: *mut window_pa
 
 pub unsafe fn window_get_active_at(w: &window, x: u32, y: u32) -> *mut window_pane {
     unsafe {
-        for &wp in w.panes.iter() {
+        for &wp in &w.panes {
             if !window_pane_visible(wp) {
                 continue;
             }
@@ -1050,7 +1048,7 @@ pub unsafe fn window_zoom(wp: *mut window_pane) -> i32 {
             window_set_active_pane(w, wp, 1);
         }
 
-        for &wp1 in (*w).panes.iter() {
+        for &wp1 in &(*w).panes {
             pane_set_saved_layout_cell(wp1, pane_layout_cell(wp1));
             pane_set_layout_cell(wp1, null_mut());
         }
@@ -1075,7 +1073,7 @@ pub unsafe fn window_unzoom(w: *mut window, notify: i32) -> i32 {
         window_set_layout_root(w, window_saved_layout_root(w));
         window_set_saved_layout_root(w, null_mut());
 
-        for &wp in (*w).panes.iter() {
+        for &wp in &(*w).panes {
             pane_set_layout_cell(wp, pane_saved_layout_cell(wp));
             pane_set_saved_layout_cell(wp, null_mut());
         }
@@ -1202,7 +1200,7 @@ pub unsafe fn window_pane_at_index(w: &window, idx: u32) -> *mut window_pane {
     unsafe {
         let mut n: u32 = options_get_number___::<u32>(&*w.options, "pane-base-index");
 
-        for &wp in w.panes.iter() {
+        for &wp in &w.panes {
             if n == idx {
                 return wp;
             }
@@ -1252,7 +1250,7 @@ pub unsafe fn window_pane_index(wp: *mut window_pane, i: *mut u32) -> i32 {
         let w = window_pane_window(wp);
 
         *i = options_get_number___::<u32>(&*(*w).options, "pane-base-index") as _;
-        for &wq in (*w).panes.iter() {
+        for &wq in &(*w).panes {
             if wp == wq {
                 return 0;
             }
@@ -1269,7 +1267,7 @@ pub fn window_count_panes(w: &window) -> u32 {
 pub unsafe fn window_destroy_panes(w: *mut window) {
     unsafe {
         // Clear visited flags for all panes in last_panes stack
-        for &wp in (*w).last_panes.iter() {
+        for &wp in &(*w).last_panes {
             (*wp).flags &= !window_pane_flags::PANE_VISITED;
         }
         (*w).last_panes.clear();
@@ -1347,7 +1345,7 @@ pub unsafe fn window_pane_find_by_id(id: u32) -> *mut window_pane {
     }
 }
 
-/// Create a new window_pane.
+/// Create a new `window_pane`.
 ///
 /// Allocates the pane in `PANE_REGISTRY`. The `Box` in the registry
 /// provides a stable heap address, so the returned `*mut window_pane`
@@ -1462,9 +1460,9 @@ unsafe fn window_pane_destroy(wp: *mut window_pane) {
     }
 }
 
-/// Read callback: reads PTY data into event_input, forwards to pipe and
+/// Read callback: reads PTY data into `event_input`, forwards to pipe and
 /// control clients, then parses via the input state machine.
-/// Drops the read IoHandle after each read to implement backpressure —
+/// Drops the read `IoHandle` after each read to implement backpressure —
 /// `server_client_check_pane_buffer` re-arms it when ready.
 unsafe fn window_pane_read_fire(pid: PaneId) {
     unsafe {
@@ -1501,7 +1499,7 @@ unsafe fn window_pane_read_fire(pid: PaneId) {
                         (*wp).pipe_fd,
                         EV_WRITE,
                         Box::new(move |_fd, _events| unsafe {
-                            crate::cmd_::cmd_pipe_pane::cmd_pipe_pane_write_fire(pipe_pid)
+                            crate::cmd_::cmd_pipe_pane::cmd_pipe_pane_write_fire(pipe_pid);
                         }),
                     );
                 }
@@ -1526,7 +1524,7 @@ unsafe fn window_pane_read_fire(pid: PaneId) {
     }
 }
 
-/// Arm the read IoHandle for a pane's PTY fd.
+/// Arm the read `IoHandle` for a pane's PTY fd.
 pub unsafe fn window_pane_arm_read(wp: *mut window_pane) {
     unsafe {
         if (*wp).event_read.is_none() && (*wp).fd >= 0 {
@@ -1540,7 +1538,7 @@ pub unsafe fn window_pane_arm_read(wp: *mut window_pane) {
     }
 }
 
-/// Write data to a pane's PTY output buffer and arm the write IoHandle.
+/// Write data to a pane's PTY output buffer and arm the write `IoHandle`.
 /// Drop-in replacement for `bufferevent_write((*wp).event, data, size)`.
 pub unsafe fn window_pane_write_to_pty(wp: *mut window_pane, data: *const c_void, size: usize) {
     unsafe {
@@ -1550,7 +1548,7 @@ pub unsafe fn window_pane_write_to_pty(wp: *mut window_pane, data: *const c_void
     }
 }
 
-/// Arm the write IoHandle for a pane's PTY fd.
+/// Arm the write `IoHandle` for a pane's PTY fd.
 pub unsafe fn window_pane_arm_write(wp: *mut window_pane) {
     unsafe {
         if (*wp).event_write.is_none() && (*wp).fd >= 0 {
@@ -1564,12 +1562,12 @@ pub unsafe fn window_pane_arm_write(wp: *mut window_pane) {
     }
 }
 
-/// Write callback: drains event_output to the PTY fd.
+/// Write callback: drains `event_output` to the PTY fd.
 unsafe fn window_pane_write_fire(pid: PaneId) {
     unsafe {
         let Some(wp) = pane_from_id(pid) else { return };
 
-        if (*wp).event_output.len() > 0 {
+        if !(*wp).event_output.is_empty() {
             let n = (*wp).event_output.write_to_fd((*wp).fd);
             if n < 0 {
                 if std::io::Error::last_os_error().kind() == std::io::ErrorKind::WouldBlock {
@@ -1631,11 +1629,10 @@ pub unsafe fn window_pane_resize(wp: *mut window_pane, sx: u32, sy: u32) {
             (*wp).base.saved_grid.is_none() as i32,
         );
 
-        if let Some(&wme) = (*wp).modes.first() {
-            if let Some(wme) = NonNull::new(wme) {
+        if let Some(&wme) = (*wp).modes.first()
+            && let Some(wme) = NonNull::new(wme) {
                 ((*(*wme.as_ptr()).mode).resize)(wme, sx, sy);
             }
-        }
     }
 }
 
@@ -1723,7 +1720,7 @@ pub unsafe fn window_pane_reset_mode_all(wp: *mut window_pane) {
 
 unsafe fn window_pane_copy_key(wp: *mut window_pane, key: key_code) {
     unsafe {
-        for &loop_ in (*window_pane_window(wp)).panes.iter() {
+        for &loop_ in &(*window_pane_window(wp)).panes {
             if loop_ != wp
                 && (*loop_).modes.is_empty()
                 && (*loop_).fd != -1
@@ -1910,7 +1907,7 @@ pub unsafe fn window_pane_find_up(wp: *mut window_pane) -> *mut window_pane {
         let left = (*wp).xoff;
         let right = (*wp).xoff + (*wp).sx;
 
-        for &next in (*w).panes.iter() {
+        for &next in &(*w).panes {
             if next == wp {
                 continue;
             }
@@ -1978,7 +1975,7 @@ pub unsafe fn window_pane_find_down(wp: *mut window_pane) -> *mut window_pane {
         let left = (*wp).xoff;
         let right = (*wp).xoff + (*wp).sx;
 
-        for &next in (*w).panes.iter() {
+        for &next in &(*w).panes {
             if next == wp {
                 continue;
             }
@@ -2029,7 +2026,7 @@ pub unsafe fn window_pane_find_left(wp: *mut window_pane) -> *mut window_pane {
         let top = (*wp).yoff;
         let bottom = (*wp).yoff + (*wp).sy;
 
-        for &next in (*w).panes.iter() {
+        for &next in &(*w).panes {
             if next == wp {
                 continue;
             }
@@ -2080,7 +2077,7 @@ pub unsafe fn window_pane_find_right(wp: *mut window_pane) -> *mut window_pane {
         let top = (*wp).yoff;
         let bottom = (*wp).yoff + (*wp).sy;
 
-        for &next in (*w).panes.iter() {
+        for &next in &(*w).panes {
             if next == wp {
                 continue;
             }
@@ -2137,7 +2134,7 @@ pub unsafe fn winlink_clear_flags(wl: *mut winlink) {
         let w = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         if w.is_null() { return; }
         (*w).flags &= !WINDOW_ALERTFLAGS;
-        for &loop_ in (*w).winlinks.iter() {
+        for &loop_ in &(*w).winlinks {
             if (*loop_).flags.intersects(WINLINK_ALERTFLAGS) {
                 (*loop_).flags &= !WINLINK_ALERTFLAGS;
                 server_status_session((*loop_).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut()));

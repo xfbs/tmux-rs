@@ -62,13 +62,12 @@ pub unsafe fn cmd_find_inside_pane(c: *mut client) -> *mut window_pane {
 
         if wp.is_null() {
             let envent = environ_find_raw(&*(*c).environ, c!("TMUX_PANE"));
-            if let Some(envent) = envent {
-                if let Some(ref value) = envent.value {
+            if let Some(envent) = envent
+                && let Some(ref value) = envent.value {
                     wp = window_pane_find_by_id_str(
                         std::str::from_utf8(value).unwrap_or(""),
                     );
                 }
-            }
         }
         if !wp.is_null() {
             log_debug!(
@@ -491,7 +490,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
         for &wl in (*(&raw mut (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).windows)).values() {
             #[expect(clippy::disallowed_methods)]
             let w_iter = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
-            if !w_iter.is_null() && (*w_iter).name.as_deref().map(|n| n.starts_with(window)).unwrap_or(false) {
+            if !w_iter.is_null() && (*w_iter).name.as_deref().is_some_and(|n| n.starts_with(window)) {
                 if !(*fs).wl.is_null() {
                     return -1;
                 }
@@ -509,7 +508,7 @@ pub unsafe fn cmd_find_get_window_with_session(fs: *mut cmd_find_state, window: 
         for &wl in (*(&raw mut (*(*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).windows)).values() {
             let w_iter = (*wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
             let n_c = (*w_iter).name.as_deref().and_then(|n| std::ffi::CString::new(n).ok());
-            if !w_iter.is_null() && n_c.as_ref().map(|c| libc::fnmatch(window_c.as_ptr().cast(), c.as_ptr().cast(), 0) == 0).unwrap_or(false) {
+            if !w_iter.is_null() && n_c.as_ref().is_some_and(|c| libc::fnmatch(window_c.as_ptr().cast(), c.as_ptr().cast(), 0) == 0) {
                 if !(*fs).wl.is_null() {
                     return -1;
                 }
@@ -649,20 +648,20 @@ pub unsafe fn cmd_find_get_pane_with_window(fs: *mut cmd_find_state, pane: &str)
             } else {
                 { let __p = window_pane_previous_by_number(fs_w, wp, n); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
             }
-            if !(*fs).wp.is_none() {
+            if (*fs).wp.is_some() {
                 return 0;
             }
         }
 
         if let Ok(idx) = strtonum_(pane, 0, i32::MAX) {
             { let __p = window_pane_at_index(&*fs_w, idx as u32); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
-            if !(*fs).wp.is_none() {
+            if (*fs).wp.is_some() {
                 return 0;
             }
         }
 
         { let __p = window_find_string(&*fs_w, pane); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
-        if !(*fs).wp.is_none() {
+        if (*fs).wp.is_some() {
             return 0;
         }
     }
@@ -733,7 +732,7 @@ pub unsafe fn cmd_find_log_state(prefix: *const u8, fs: *const cmd_find_state) {
         } else {
             log_debug!("{}: wl=none", _s(prefix));
         }
-        if !(*fs).wp.is_none() {
+        if (*fs).wp.is_some() {
             log_debug!("{}: wp=%%{}", _s(prefix), (*(*fs).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).id);
         } else {
             log_debug!("{}: wp=none", _s(prefix));
@@ -1075,7 +1074,7 @@ pub unsafe fn cmd_find_target(
                     let mut s_tmp: *mut session = (*fs).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
                     { let __p: *mut window_pane = transmute_ptr(cmd_mouse_pane(&*m, &raw mut s_tmp, &raw mut (*fs).wl)); (*fs).wp = if __p.is_null() { None } else { Some(PaneId((*__p).id)) }; }
                     (*fs).s = if s_tmp.is_null() { None } else { Some(SessionId((*s_tmp).id)) };
-                    if !(*fs).wp.is_none() {
+                    if (*fs).wp.is_some() {
                         (*fs).w = (*(*fs).wl).window;
                     } else {
                         // FALLTHROUGH; copied from below

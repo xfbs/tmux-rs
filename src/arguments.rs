@@ -349,7 +349,7 @@ pub unsafe fn args_copy(args: *mut args, argc: i32, argv: *mut *mut u8) -> *mut 
                 }
                 continue;
             }
-            for value in entry.values.iter() {
+            for value in &entry.values {
                 let new_value = args_copy_value_expanded(value, argc, argv);
                 args_set(new_args, entry.flag, Some(new_value), 0);
             }
@@ -480,7 +480,7 @@ pub unsafe fn args_print(args: *mut args) -> *mut u8 {
             if entry.values.is_empty() {
                 continue;
             }
-            for value in entry.values.iter() {
+            for value in &entry.values {
                 if *buf != b'\0' {
                     args_print_add!(&raw mut buf, &raw mut len, " -{}", entry.flag as char,);
                 } else {

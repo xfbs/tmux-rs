@@ -272,7 +272,7 @@ pub unsafe fn status_get_range(c: *mut client, x: u32, y: u32) -> *mut style_ran
         if y >= (*sl).entries.len() as u32 {
             return null_mut();
         }
-        for sr in (*sl).entries[y as usize].ranges.iter_mut() {
+        for sr in &mut (*sl).entries[y as usize].ranges {
             if x >= sr.start && x < sr.end {
                 return sr as *mut style_range;
             }

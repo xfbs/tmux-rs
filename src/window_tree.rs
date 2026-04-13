@@ -329,7 +329,7 @@ unsafe fn window_tree_build_window(
             l = null_mut();
             n = 0;
 
-            for &wp in (*winlink_window(wl)).panes.iter() {
+            for &wp in &(*winlink_window(wl)).panes {
                 if !window_tree_filter_pane(s, wl, wp, cstr_to_str_(filter)) {
                     continue;
                 }
@@ -774,7 +774,7 @@ unsafe fn window_tree_draw_window(
         };
 
         let mut current: u32 = 0;
-        for &wp in (*w).panes.iter() {
+        for &wp in &(*w).panes {
             if wp == window_active_pane(w) {
                 break;
             }
@@ -848,7 +848,7 @@ unsafe fn window_tree_draw_window(
 
         let mut i = 0;
         let mut loop_ = 0;
-        for &wp in (*w).panes.iter() {
+        for &wp in &(*w).panes {
             if loop_ == end {
                 break;
             }
@@ -953,8 +953,7 @@ unsafe fn window_tree_search(
             window_tree_type::WINDOW_TREE_WINDOW => {
                 if let (Some(_s), Some(wl)) = (s, wl) {
                     return (*winlink_window(wl.as_ptr())).name.as_deref()
-                        .map(|n| n.contains(cstr_to_str(ss)))
-                        .unwrap_or(false);
+                        .is_some_and(|n| n.contains(cstr_to_str(ss)));
                 }
             }
             window_tree_type::WINDOW_TREE_PANE => {

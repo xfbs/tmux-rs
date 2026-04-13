@@ -175,12 +175,12 @@ fn alerts_check_bell(w: &window) -> window_flag {
             return window_flag::empty();
         }
 
-        for &wl in w.winlinks.iter() {
+        for &wl in &w.winlinks {
             let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
             if !s.is_null() { (*s).flags &= !SESSION_ALERTED; }
         }
 
-        for &wl in w.winlinks.iter() {
+        for &wl in &w.winlinks {
             // Bells are allowed even if there is an existing bell (so do
             // not check WINLINK_BELL).
             let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
@@ -214,12 +214,12 @@ fn alerts_check_activity(w: &window) -> window_flag {
             return window_flag::empty();
         }
 
-        for &wl in w.winlinks.iter() {
+        for &wl in &w.winlinks {
             let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
             if !s.is_null() { (*s).flags &= !SESSION_ALERTED; }
         }
 
-        for &wl in w.winlinks.iter() {
+        for &wl in &w.winlinks {
             let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
             if s.is_null() { continue; }
             if (*s).curw != wl || (*s).attached == 0 {
@@ -251,12 +251,12 @@ fn alerts_check_silence(w: &window) -> window_flag {
             return window_flag::empty();
         }
 
-        for &wl in w.winlinks.iter() {
+        for &wl in &w.winlinks {
             let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
             if !s.is_null() { (*s).flags &= !SESSION_ALERTED; }
         }
 
-        for &wl in w.winlinks.iter() {
+        for &wl in &w.winlinks {
             if (*wl).flags.intersects(winlink_flags::WINLINK_SILENCE) {
                 continue;
             }

@@ -156,7 +156,7 @@ pub unsafe fn layout_set_even(w: *mut window, type_: layout_type) {
         layout_make_node(lc, type_);
 
         // Build new leaf cells.
-        for &wp in (*w).panes.iter() {
+        for &wp in &(*w).panes {
             let lcnew = layout_create_cell_in(w, lc).1;
             layout_make_leaf(lcnew, wp);
             (*lcnew).sx = (*w).sx;
@@ -268,7 +268,7 @@ pub unsafe fn layout_set_main_h(w: *mut window) {
             (*lc).cells.push(lc_id(w, lcother));
 
             // Add the remaining panes as children.
-            for &wp in (*w).panes.iter() {
+            for &wp in &(*w).panes {
                 if wp == (*w).panes.first().copied().unwrap_or(null_mut()) {
                     continue;
                 }
@@ -361,7 +361,7 @@ pub unsafe fn layout_set_main_h_mirrored(w: *mut window) {
             (*lc).cells.push(lc_id(w, lcother));
 
             // Add the remaining panes as children.
-            for &wp in (*w).panes.iter() {
+            for &wp in &(*w).panes {
                 if wp == (*w).panes.first().copied().unwrap_or(null_mut()) {
                     continue;
                 }
@@ -466,7 +466,7 @@ pub unsafe fn layout_set_main_v(w: *mut window) {
             (*lc).cells.push(lc_id(w, lcother));
 
             // Add the remaining panes as children.
-            for &wp in (*w).panes.iter() {
+            for &wp in &(*w).panes {
                 if wp == (*w).panes.first().copied().unwrap_or(null_mut()) {
                     continue;
                 }
@@ -558,7 +558,7 @@ pub unsafe fn layout_set_main_v_mirrored(w: *mut window) {
             (*lc).cells.push(lc_id(w, lcother));
 
             // Add the remaining panes as children.
-            for &wp in (*w).panes.iter() {
+            for &wp in &(*w).panes {
                 if wp == (*w).panes.first().copied().unwrap_or(null_mut()) {
                     continue;
                 }
@@ -682,7 +682,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
             if (*w).sx <= used {
                 continue;
             }
-            let lcchild = (*lcrow).cells.last().copied().map(|id| lc_ptr(w, id)).unwrap_or(null_mut());
+            let lcchild = (*lcrow).cells.last().copied().map_or(null_mut(), |id| lc_ptr(w, id));
             layout_resize_adjust(
                 w,
                 lcchild,
@@ -694,7 +694,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
         // Adjust the last row height to fit if necessary.
         let used = (rows * height) + rows - 1;
         if (*w).sy > used {
-            let lcrow = (*lc).cells.last().copied().map(|id| lc_ptr(w, id)).unwrap_or(null_mut());
+            let lcrow = (*lc).cells.last().copied().map_or(null_mut(), |id| lc_ptr(w, id));
             layout_resize_adjust(
                 w,
                 lcrow,

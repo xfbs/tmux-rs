@@ -32,7 +32,7 @@ pub unsafe fn image_free_all(s: *mut screen) -> bool {
     unsafe {
         let redraw = !(*s).images.is_empty();
 
-        for &im in (*s).images.iter() {
+        for &im in &(*s).images {
             (*(&raw mut ALL_IMAGES)).retain(|&p| p != im);
             ALL_IMAGES_COUNT -= 1;
 

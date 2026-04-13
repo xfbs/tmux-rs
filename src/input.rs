@@ -86,7 +86,7 @@ enum input_end_type {
 pub struct input_ctx {
     wp: Option<PaneId>,
     /// Output buffer for replies (terminal query responses).
-    /// Borrowed — not owned by input_ctx.
+    /// Borrowed — not owned by `input_ctx`.
     event: *mut evbuffer,
     ctx: screen_write_ctx,
     palette: *mut colour_palette,

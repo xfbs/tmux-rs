@@ -234,7 +234,7 @@ unsafe fn cmd_display_panes_draw(c: *mut client, _data: *mut c_void, ctx: *mut s
             (*w).id
         );
 
-        for &wp in (*w).panes.iter() {
+        for &wp in &(*w).panes {
             if window_pane_visible(wp) {
                 cmd_display_panes_draw_pane(ctx, wp);
             }

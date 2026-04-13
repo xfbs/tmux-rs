@@ -128,10 +128,10 @@ pub unsafe fn key_bindings_unref_table(table: *mut key_table) {
         }
 
         for bd in (*table).key_bindings.values_mut() {
-            key_binding_free_fields(&mut **bd);
+            key_binding_free_fields(bd);
         }
         for bd in (*table).default_key_bindings.values_mut() {
-            key_binding_free_fields(&mut **bd);
+            key_binding_free_fields(bd);
         }
 
         // name: String dropped automatically

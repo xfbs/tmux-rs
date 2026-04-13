@@ -60,7 +60,7 @@ unsafe fn screen_write_free_citem(ci: *mut screen_write_citem) {
     }
 }
 
-/// Resolve a screen_write_ctx's pane field through the pane registry.
+/// Resolve a `screen_write_ctx`'s pane field through the pane registry.
 #[inline]
 unsafe fn ctx_wp(ctx: *mut screen_write_ctx) -> *mut window_pane {
     unsafe { pane_ptr_from_id((*ctx).wp) }
@@ -1976,7 +1976,7 @@ pub unsafe fn screen_write_collect_flush(ctx: *mut screen_write_ctx, scroll_only
         for y in 0..screen_size_y(s) {
             let cl = (*(*ctx).s).write_list.add(y as usize);
             let mut last = u32::MAX;
-            for &ci in (*cl).items.iter() {
+            for &ci in &(*cl).items {
                 if last != u32::MAX && (*ci).x <= last {
                     panic!("collect list not in order: {} <= {}", (*ci).x, last);
                 }
@@ -1997,7 +1997,7 @@ pub unsafe fn screen_write_collect_flush(ctx: *mut screen_write_ctx, scroll_only
                 items += 1;
                 last = (*ci).x;
             }
-            for &ci in (*cl).items.iter() {
+            for &ci in &(*cl).items {
                 screen_write_free_citem(ci);
             }
             (*cl).items.clear();
@@ -2094,7 +2094,7 @@ pub unsafe fn screen_write_collect_add(ctx: *mut screen_write_ctx, gc: *const gr
             || (*gc).attr.intersects(grid_attr::GRID_ATTR_CHARSET)
             || !(*s).mode.intersects(mode_flag::MODE_WRAP)
             || (*s).mode.intersects(mode_flag::MODE_INSERT)
-            || !(*s).sel.is_none()
+            || (*s).sel.is_some()
         {
             screen_write_collect_end(ctx);
             screen_write_collect_flush(ctx, 0, "screen_write_collect_add");
@@ -2214,7 +2214,7 @@ pub unsafe fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *const grid_cell
             if (*s).cx as usize >= (*gl).celldata.len() {
                 skip = grid_cells_equal(gc, &GRID_DEFAULT_CELL);
             } else {
-                gce = (&mut (*gl).celldata).as_mut_ptr().add((*s).cx as usize);
+                gce = (*gl).celldata.as_mut_ptr().add((*s).cx as usize);
                 if (*gce).flags.intersects(grid_flag::EXTENDED)
                     || (*gc).flags != (*gce).flags
                     || (*gc).attr.bits() != (*gce).union_.data.attr as u16

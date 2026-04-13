@@ -486,7 +486,7 @@ pub unsafe fn format_cb_pid(_ft: &format_tree) -> format_table_type {
 /// Callback for `session_attached_list`.
 pub unsafe fn format_cb_session_attached_list(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
 
         if s.is_null() {
             return format_table_type::None;
@@ -520,7 +520,7 @@ pub unsafe fn format_cb_session_attached_list(ft: &format_tree) -> format_table_
 /// Callback for `session_alerts`.
 pub unsafe fn format_cb_session_alerts(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s: *mut session = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s: *mut session = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         const SIZEOF_ALERTS: usize = 1024;
         const SIZEOF_TMP: usize = 16;
         let mut alerts = MaybeUninit::<[u8; 1024]>::uninit();
@@ -560,7 +560,7 @@ pub unsafe fn format_cb_session_alerts(ft: &format_tree) -> format_table_type {
 /// Callback for `session_stack`.
 pub unsafe fn format_cb_session_stack(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         const SIZEOF_RESULT: usize = 1024;
         const SIZEOF_TMP: usize = 16;
 
@@ -574,7 +574,7 @@ pub unsafe fn format_cb_session_stack(ft: &format_tree) -> format_table_type {
         }
 
         _ = xsnprintf_!(result, SIZEOF_RESULT, "{}", (*(*s).curw).idx);
-        for &wl in (*s).lastw.iter() {
+        for &wl in &(*s).lastw {
             _ = xsnprintf_!(tmp, SIZEOF_TMP, "{}", (*wl).idx);
 
             if *result != b'\0' {
@@ -589,18 +589,18 @@ pub unsafe fn format_cb_session_stack(ft: &format_tree) -> format_table_type {
 /// Callback for `window_stack_index`.
 pub unsafe fn format_cb_window_stack_index(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wl.is_null() {
+        if ft.wl.is_null() {
             return format_table_type::None;
         }
-        let s = (*(*ft).wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = (*ft.wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if s.is_null() { return "0".into(); }
 
         let mut idx: u32 = 0;
         let mut wl = null_mut();
-        for &wl_ in (*s).lastw.iter() {
+        for &wl_ in &(*s).lastw {
             wl = wl_;
             idx += 1;
-            if wl == (*ft).wl {
+            if wl == ft.wl {
                 break;
             }
         }
@@ -614,17 +614,17 @@ pub unsafe fn format_cb_window_stack_index(ft: &format_tree) -> format_table_typ
 /// Callback for `window_linked_sessions_list`.
 pub unsafe fn format_cb_window_linked_sessions_list(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wl.is_null() {
+        if ft.wl.is_null() {
             return format_table_type::None;
         }
-        let w = (*(*ft).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = (*ft.wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         let buffer = evbuffer_new();
         if buffer.is_null() {
             fatalx("out of memory");
         }
 
-        for &wl in (*w).winlinks.iter() {
+        for &wl in &(*w).winlinks {
             if EVBUFFER_LENGTH(buffer) > 0 {
                 evbuffer_add(buffer, c!(",").cast(), 1);
             }
@@ -647,10 +647,10 @@ pub unsafe fn format_cb_window_linked_sessions_list(ft: &format_tree) -> format_
 /// Callback for `window_active_sessions`.
 pub unsafe fn format_cb_window_active_sessions(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wl.is_null() {
+        if ft.wl.is_null() {
             return format_table_type::None;
         }
-        let w = (*(*ft).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = (*ft.wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         let n = (*w).winlinks.iter()
             .filter(|&&wl| {
@@ -666,17 +666,17 @@ pub unsafe fn format_cb_window_active_sessions(ft: &format_tree) -> format_table
 /// Callback for `window_active_sessions_list`.
 pub unsafe fn format_cb_window_active_sessions_list(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wl.is_null() {
+        if ft.wl.is_null() {
             return format_table_type::None;
         }
-        let w = (*(*ft).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = (*ft.wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         let buffer = evbuffer_new();
         if buffer.is_null() {
             fatalx("out of memory");
         }
 
-        for &wl in (*w).winlinks.iter() {
+        for &wl in &(*w).winlinks {
             let s = (*wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
             if !s.is_null() && (*s).curw == wl {
                 if EVBUFFER_LENGTH(buffer) > 0 {
@@ -701,10 +701,10 @@ pub unsafe fn format_cb_window_active_sessions_list(ft: &format_tree) -> format_
 /// Callback for `window_active_clients`.
 pub unsafe fn format_cb_window_active_clients(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wl.is_null() {
+        if ft.wl.is_null() {
             return format_table_type::None;
         }
-        let w = (*(*ft).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = (*ft.wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         let mut n = 0u32;
         for loop_ in clients_iter() {
@@ -726,10 +726,10 @@ pub unsafe fn format_cb_window_active_clients(ft: &format_tree) -> format_table_
 /// Callback for `window_active_clients_list`.
 pub unsafe fn format_cb_window_active_clients_list(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wl.is_null() {
+        if ft.wl.is_null() {
             return format_table_type::None;
         }
-        let w = (*(*ft).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = (*ft.wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         let buffer = evbuffer_new();
         if buffer.is_null() {
@@ -766,7 +766,7 @@ pub unsafe fn format_cb_window_active_clients_list(ft: &format_tree) -> format_t
 /// Callback for `window_layout`.
 pub unsafe fn format_cb_window_layout(ft: &format_tree) -> format_table_type {
     unsafe {
-        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = ft.w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         if w.is_null() {
             return format_table_type::None;
@@ -786,7 +786,7 @@ pub unsafe fn format_cb_window_layout(ft: &format_tree) -> format_table_type {
 /// Callback for `window_visible_layout`.
 pub unsafe fn format_cb_window_visible_layout(ft: &format_tree) -> format_table_type {
     unsafe {
-        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = ft.w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
 
         if w.is_null() {
             return format_table_type::None;
@@ -801,7 +801,7 @@ pub unsafe fn format_cb_window_visible_layout(ft: &format_tree) -> format_table_
 /// Callback for `pane_start_command`.
 pub unsafe fn format_cb_start_command(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         if wp.is_null() {
             return format_table_type::None;
@@ -814,7 +814,7 @@ pub unsafe fn format_cb_start_command(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_start_path`.
 pub unsafe fn format_cb_start_path(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         if wp.is_null() {
             return format_table_type::None;
@@ -830,7 +830,7 @@ pub unsafe fn format_cb_start_path(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_current_command`.
 pub unsafe fn format_cb_current_command(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         if wp.is_null() || (*wp).shell.is_none() {
             return format_table_type::None;
@@ -861,7 +861,7 @@ pub unsafe fn format_cb_current_command(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_current_path`.
 pub unsafe fn format_cb_current_path(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         if wp.is_null() {
             return format_table_type::None;
@@ -878,7 +878,7 @@ pub unsafe fn format_cb_current_path(ft: &format_tree) -> format_table_type {
 /// Callback for `history_bytes`.
 pub unsafe fn format_cb_history_bytes(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         if wp.is_null() {
             return format_table_type::None;
@@ -901,7 +901,7 @@ pub unsafe fn format_cb_history_bytes(ft: &format_tree) -> format_table_type {
 /// Callback for `history_all_bytes`.
 pub unsafe fn format_cb_history_all_bytes(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         if wp.is_null() {
             return format_table_type::None;
@@ -934,7 +934,7 @@ pub unsafe fn format_cb_history_all_bytes(ft: &format_tree) -> format_table_type
 /// Callback for `pane_tabs`.
 pub unsafe fn format_cb_pane_tabs(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
 
         if wp.is_null() {
             return format_table_type::None;
@@ -972,7 +972,7 @@ pub unsafe fn format_cb_pane_tabs(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_fg`.
 pub unsafe fn format_cb_pane_fg(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let mut gc = MaybeUninit::<grid_cell>::uninit();
 
         if wp.is_null() {
@@ -988,7 +988,7 @@ pub unsafe fn format_cb_pane_fg(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_bg`.
 pub unsafe fn format_cb_pane_bg(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         let mut gc = MaybeUninit::<grid_cell>::uninit();
 
         if wp.is_null() {
@@ -1004,7 +1004,7 @@ pub unsafe fn format_cb_pane_bg(ft: &format_tree) -> format_table_type {
 /// Callback for `session_group_list`.
 pub unsafe fn format_cb_session_group_list(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if s.is_null() {
             return format_table_type::None;
         }
@@ -1040,7 +1040,7 @@ pub unsafe fn format_cb_session_group_list(ft: &format_tree) -> format_table_typ
 /// Callback for `session_group_attached_list`.
 pub unsafe fn format_cb_session_group_attached_list(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if s.is_null() {
             return format_table_type::None;
         }
@@ -1085,7 +1085,7 @@ pub unsafe fn format_cb_session_group_attached_list(ft: &format_tree) -> format_
 /// Callback for `pane_in_mode`.
 pub unsafe fn format_cb_pane_in_mode(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         if wp.is_null() {
             return format_table_type::None;
         }
@@ -1099,7 +1099,7 @@ pub unsafe fn format_cb_pane_in_mode(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_at_top`.
 pub unsafe fn format_cb_pane_at_top(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         if wp.is_null() {
             return format_table_type::None;
         }
@@ -1119,7 +1119,7 @@ pub unsafe fn format_cb_pane_at_top(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_at_bottom`.
 pub unsafe fn format_cb_pane_at_bottom(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         if wp.is_null() {
             return format_table_type::None;
         }
@@ -1139,7 +1139,7 @@ pub unsafe fn format_cb_pane_at_bottom(ft: &format_tree) -> format_table_type {
 /// Callback for `cursor_character`.
 pub unsafe fn format_cb_cursor_character(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         if wp.is_null() {
             return format_table_type::None;
         }
@@ -1166,7 +1166,7 @@ pub unsafe fn format_cb_cursor_character(ft: &format_tree) -> format_table_type 
 /// Callback for `mouse_word`.
 pub unsafe fn format_cb_mouse_word(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).m.valid {
+        if !ft.m.valid {
             return format_table_type::None;
         }
         let Some(wp) = cmd_mouse_pane(&ft.m, null_mut(), null_mut()) else {
@@ -1192,7 +1192,7 @@ pub unsafe fn format_cb_mouse_word(ft: &format_tree) -> format_table_type {
 /// Callback for `mouse_hyperlink`.
 pub unsafe fn format_cb_mouse_hyperlink(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).m.valid {
+        if !ft.m.valid {
             return format_table_type::None;
         }
         let Some(wp) = cmd_mouse_pane(&ft.m, null_mut(), null_mut()) else {
@@ -1213,7 +1213,7 @@ pub unsafe fn format_cb_mouse_hyperlink(ft: &format_tree) -> format_table_type {
 /// Callback for `mouse_line`.
 pub unsafe fn format_cb_mouse_line(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).m.valid {
+        if !ft.m.valid {
             return format_table_type::None;
         }
         let Some(wp) = cmd_mouse_pane(&ft.m, null_mut(), null_mut()) else {
@@ -1239,17 +1239,17 @@ pub unsafe fn format_cb_mouse_line(ft: &format_tree) -> format_table_type {
 /// Callback for `mouse_status_line`.
 pub unsafe fn format_cb_mouse_status_line(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).m.valid {
+        if !ft.m.valid {
             return format_table_type::None;
         }
-        if (*ft).c.is_null() || !(*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
+        if ft.c.is_null() || !(*ft.c).tty.flags.intersects(tty_flags::TTY_STARTED) {
             return format_table_type::None;
         }
 
-        let y = if (*ft).m.statusat == 0 && (*ft).m.y < (*ft).m.statuslines {
-            (*ft).m.y
-        } else if (*ft).m.statusat > 0 && (*ft).m.y >= (*ft).m.statusat as u32 {
-            (*ft).m.y - (*ft).m.statusat as u32
+        let y = if ft.m.statusat == 0 && ft.m.y < ft.m.statuslines {
+            ft.m.y
+        } else if ft.m.statusat > 0 && ft.m.y >= ft.m.statusat as u32 {
+            ft.m.y - ft.m.statusat as u32
         } else {
             return format_table_type::None;
         };
@@ -1261,26 +1261,26 @@ pub unsafe fn format_cb_mouse_status_line(ft: &format_tree) -> format_table_type
 /// Callback for `mouse_status_range`.
 pub unsafe fn format_cb_mouse_status_range(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).m.valid {
+        if !ft.m.valid {
             return format_table_type::None;
         }
-        if (*ft).c.is_null() || !(*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
+        if ft.c.is_null() || !(*ft.c).tty.flags.intersects(tty_flags::TTY_STARTED) {
             return format_table_type::None;
         }
 
         let x;
         let y;
-        if (*ft).m.statusat == 0 && (*ft).m.y < (*ft).m.statuslines {
-            x = (*ft).m.x;
-            y = (*ft).m.y;
-        } else if (*ft).m.statusat > 0 && (*ft).m.y >= (*ft).m.statusat as u32 {
-            x = (*ft).m.x;
-            y = (*ft).m.y - (*ft).m.statusat as u32;
+        if ft.m.statusat == 0 && ft.m.y < ft.m.statuslines {
+            x = ft.m.x;
+            y = ft.m.y;
+        } else if ft.m.statusat > 0 && ft.m.y >= ft.m.statusat as u32 {
+            x = ft.m.x;
+            y = ft.m.y - ft.m.statusat as u32;
         } else {
             return format_table_type::None;
         }
 
-        let sr = status_get_range((*ft).c, x, y);
+        let sr = status_get_range(ft.c, x, y);
         if sr.is_null() {
             return format_table_type::None;
         }
@@ -1299,8 +1299,8 @@ pub unsafe fn format_cb_mouse_status_range(ft: &format_tree) -> format_table_typ
 
 pub unsafe fn format_cb_alternate_on(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.saved_grid.is_some() {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.saved_grid.is_some() {
                 return "1".into();
             }
             return "0".into();
@@ -1311,8 +1311,8 @@ pub unsafe fn format_cb_alternate_on(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_alternate_saved_x(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.saved_cx).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.saved_cx).into();
         }
         format_table_type::None
     }
@@ -1320,8 +1320,8 @@ pub unsafe fn format_cb_alternate_saved_x(ft: &format_tree) -> format_table_type
 
 pub unsafe fn format_cb_alternate_saved_y(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.saved_cy).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.saved_cy).into();
         }
         format_table_type::None
     }
@@ -1329,7 +1329,7 @@ pub unsafe fn format_cb_alternate_saved_y(ft: &format_tree) -> format_table_type
 
 pub unsafe fn format_cb_buffer_name(ft: &format_tree) -> format_table_type {
     unsafe {
-        if let Some(pb) = NonNull::new((*ft).pb) {
+        if let Some(pb) = NonNull::new(ft.pb) {
             return paste_buffer_name(pb).to_string().into();
         }
         format_table_type::None
@@ -1338,8 +1338,8 @@ pub unsafe fn format_cb_buffer_name(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_buffer_sample(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).pb.is_null() {
-            return paste_make_sample((*ft).pb).into();
+        if !ft.pb.is_null() {
+            return paste_make_sample(ft.pb).into();
         }
         format_table_type::None
     }
@@ -1347,9 +1347,9 @@ pub unsafe fn format_cb_buffer_sample(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_buffer_size(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).pb.is_null() {
+        if !ft.pb.is_null() {
             let mut size = 0usize;
-            paste_buffer_data((*ft).pb, &mut size);
+            paste_buffer_data(ft.pb, &mut size);
             return format!("{size}").into();
         }
         format_table_type::None
@@ -1358,8 +1358,8 @@ pub unsafe fn format_cb_buffer_size(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_cell_height(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() && (*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
-            return format!("{}", (*(*ft).c).tty.ypixel).into();
+        if !ft.c.is_null() && (*ft.c).tty.flags.intersects(tty_flags::TTY_STARTED) {
+            return format!("{}", (*ft.c).tty.ypixel).into();
         }
         format_table_type::None
     }
@@ -1367,8 +1367,8 @@ pub unsafe fn format_cb_client_cell_height(ft: &format_tree) -> format_table_typ
 
 pub unsafe fn format_cb_client_cell_width(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() && (*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
-            return format!("{}", (*(*ft).c).tty.xpixel).into();
+        if !ft.c.is_null() && (*ft.c).tty.flags.intersects(tty_flags::TTY_STARTED) {
+            return format!("{}", (*ft.c).tty.xpixel).into();
         }
         format_table_type::None
     }
@@ -1376,8 +1376,8 @@ pub unsafe fn format_cb_client_cell_width(ft: &format_tree) -> format_table_type
 
 pub unsafe fn format_cb_client_control_mode(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            if (*(*ft).c).flags.intersects(client_flag::CONTROL) {
+        if !ft.c.is_null() {
+            if (*ft.c).flags.intersects(client_flag::CONTROL) {
                 return "1".into();
             }
             return "0".into();
@@ -1388,8 +1388,8 @@ pub unsafe fn format_cb_client_control_mode(ft: &format_tree) -> format_table_ty
 
 pub unsafe fn format_cb_client_discarded(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            return format!("{}", (*(*ft).c).discarded).into();
+        if !ft.c.is_null() {
+            return format!("{}", (*ft.c).discarded).into();
         }
         format_table_type::None
     }
@@ -1397,8 +1397,8 @@ pub unsafe fn format_cb_client_discarded(ft: &format_tree) -> format_table_type 
 
 pub unsafe fn format_cb_client_flags(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            return format!("{}", _s(server_client_get_flags((*ft).c))).into();
+        if !ft.c.is_null() {
+            return format!("{}", _s(server_client_get_flags(ft.c))).into();
         }
         format_table_type::None
     }
@@ -1406,8 +1406,8 @@ pub unsafe fn format_cb_client_flags(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_height(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() && (*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
-            return format!("{}", (*(*ft).c).tty.sy).into();
+        if !ft.c.is_null() && (*ft.c).tty.flags.intersects(tty_flags::TTY_STARTED) {
+            return format!("{}", (*ft.c).tty.sy).into();
         }
         format_table_type::None
     }
@@ -1415,8 +1415,8 @@ pub unsafe fn format_cb_client_height(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_key_table(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            return format!("{}", (*(*(*ft).c).keytable).name).into();
+        if !ft.c.is_null() {
+            return (*(*ft.c).keytable).name.to_string().into();
         }
         format_table_type::None
     }
@@ -1424,8 +1424,8 @@ pub unsafe fn format_cb_client_key_table(ft: &format_tree) -> format_table_type 
 
 pub unsafe fn format_cb_client_last_session(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            let ls = client_get_last_session((*ft).c);
+        if !ft.c.is_null() {
+            let ls = client_get_last_session(ft.c);
             if !ls.is_null() && session_alive(ls) {
                 return format!("{}", (*ls).name).into();
             }
@@ -1436,8 +1436,8 @@ pub unsafe fn format_cb_client_last_session(ft: &format_tree) -> format_table_ty
 
 pub unsafe fn format_cb_client_name(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            return format!("{}", _s((*(*ft).c).name)).into();
+        if !ft.c.is_null() {
+            return format!("{}", _s((*ft.c).name)).into();
         }
         format_table_type::None
     }
@@ -1445,8 +1445,8 @@ pub unsafe fn format_cb_client_name(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_pid(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            return format!("{}", (*(*ft).c).pid as c_long).into();
+        if !ft.c.is_null() {
+            return format!("{}", (*ft.c).pid as c_long).into();
         }
         format_table_type::None
     }
@@ -1455,9 +1455,9 @@ pub unsafe fn format_cb_client_pid(ft: &format_tree) -> format_table_type {
 /// Callback for `client_prefix`.
 pub unsafe fn format_cb_client_prefix(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            let name = server_client_get_key_table((*ft).c);
-            if (*(*(*ft).c).keytable).name == cstr_to_str(name) {
+        if !ft.c.is_null() {
+            let name = server_client_get_key_table(ft.c);
+            if (*(*ft.c).keytable).name == cstr_to_str(name) {
                 return "0".into();
             }
             return "1".into();
@@ -1468,8 +1468,8 @@ pub unsafe fn format_cb_client_prefix(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_readonly(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            if (*(*ft).c).flags.intersects(client_flag::READONLY) {
+        if !ft.c.is_null() {
+            if (*ft.c).flags.intersects(client_flag::READONLY) {
                 return "1".into();
             }
             return "0".into();
@@ -1480,8 +1480,8 @@ pub unsafe fn format_cb_client_readonly(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_session(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            let s = client_get_session((*ft).c);
+        if !ft.c.is_null() {
+            let s = client_get_session(ft.c);
             if !s.is_null() {
                 return format!("{}", (*s).name).into();
             }
@@ -1492,8 +1492,8 @@ pub unsafe fn format_cb_client_session(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_termfeatures(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            return format!("{}", _s(tty_get_features((*(*ft).c).term_features))).into();
+        if !ft.c.is_null() {
+            return format!("{}", _s(tty_get_features((*ft.c).term_features))).into();
         }
         format_table_type::None
     }
@@ -1501,8 +1501,8 @@ pub unsafe fn format_cb_client_termfeatures(ft: &format_tree) -> format_table_ty
 
 pub unsafe fn format_cb_client_termname(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            return (*(*ft).c).term_name.clone().unwrap_or_default().into();
+        if !ft.c.is_null() {
+            return (*ft.c).term_name.clone().unwrap_or_default().into();
         }
         format_table_type::None
     }
@@ -1510,8 +1510,8 @@ pub unsafe fn format_cb_client_termname(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_termtype(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            return (*(*ft).c).term_type.clone().unwrap_or_default().into();
+        if !ft.c.is_null() {
+            return (*ft.c).term_type.clone().unwrap_or_default().into();
         }
         format_table_type::None
     }
@@ -1519,8 +1519,8 @@ pub unsafe fn format_cb_client_termtype(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_tty(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            return (*(*ft).c).ttyname.clone().unwrap_or_default().into();
+        if !ft.c.is_null() {
+            return (*ft.c).ttyname.clone().unwrap_or_default().into();
         }
         format_table_type::None
     }
@@ -1528,8 +1528,8 @@ pub unsafe fn format_cb_client_tty(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_uid(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            let uid = proc_get_peer_uid((*(*ft).c).peer);
+        if !ft.c.is_null() {
+            let uid = proc_get_peer_uid((*ft.c).peer);
             if uid != -1_i32 as uid_t {
                 return format!("{}", uid as c_long).into();
             }
@@ -1540,8 +1540,8 @@ pub unsafe fn format_cb_client_uid(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_user(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            let uid = proc_get_peer_uid((*(*ft).c).peer);
+        if !ft.c.is_null() {
+            let uid = proc_get_peer_uid((*ft.c).peer);
             if uid != -1_i32 as uid_t
                 && let Some(pw) = NonNull::new(libc::getpwuid(uid))
             {
@@ -1554,8 +1554,8 @@ pub unsafe fn format_cb_client_user(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_utf8(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            if (*(*ft).c).flags.intersects(client_flag::UTF8) {
+        if !ft.c.is_null() {
+            if (*ft.c).flags.intersects(client_flag::UTF8) {
                 return "1".into();
             }
             return "0".into();
@@ -1566,8 +1566,8 @@ pub unsafe fn format_cb_client_utf8(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_width(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            return format!("{}", (*(*ft).c).tty.sx).into();
+        if !ft.c.is_null() {
+            return format!("{}", (*ft.c).tty.sx).into();
         }
         format_table_type::None
     }
@@ -1575,8 +1575,8 @@ pub unsafe fn format_cb_client_width(ft: &format_tree) -> format_table_type {
 
 pub unsafe fn format_cb_client_written(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            return format!("{}", (*(*ft).c).written).into();
+        if !ft.c.is_null() {
+            return format!("{}", (*ft.c).written).into();
         }
         format_table_type::None
     }
@@ -1597,8 +1597,8 @@ pub unsafe fn format_cb_config_files(_ft: &format_tree) -> format_table_type {
 /// Callback for `cursor_flag`.
 pub unsafe fn format_cb_cursor_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_CURSOR) {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_CURSOR) {
                 return "1".into();
             }
             return "0".into();
@@ -1610,8 +1610,8 @@ pub unsafe fn format_cb_cursor_flag(ft: &format_tree) -> format_table_type {
 /// Callback for `cursor_x`.
 pub unsafe fn format_cb_cursor_x(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.cx).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.cx).into();
         }
         format_table_type::None
     }
@@ -1620,8 +1620,8 @@ pub unsafe fn format_cb_cursor_x(ft: &format_tree) -> format_table_type {
 /// Callback for `cursor_y`.
 pub unsafe fn format_cb_cursor_y(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.cy).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.cy).into();
         }
         format_table_type::None
     }
@@ -1630,8 +1630,8 @@ pub unsafe fn format_cb_cursor_y(ft: &format_tree) -> format_table_type {
 /// Callback for `history_limit`.
 pub unsafe fn format_cb_history_limit(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.grid).hlimit).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*(*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.grid).hlimit).into();
         }
         format_table_type::None
     }
@@ -1640,8 +1640,8 @@ pub unsafe fn format_cb_history_limit(ft: &format_tree) -> format_table_type {
 /// Callback for `history_size`.
 pub unsafe fn format_cb_history_size(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.grid).hsize).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*(*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.grid).hsize).into();
         }
         format_table_type::None
     }
@@ -1650,8 +1650,8 @@ pub unsafe fn format_cb_history_size(ft: &format_tree) -> format_table_type {
 /// Callback for `insert_flag`.
 pub unsafe fn format_cb_insert_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_INSERT) {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_INSERT) {
                 return "1".into();
             }
             return "0".into();
@@ -1663,8 +1663,8 @@ pub unsafe fn format_cb_insert_flag(ft: &format_tree) -> format_table_type {
 /// Callback for `keypad_cursor_flag`.
 pub unsafe fn format_cb_keypad_cursor_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_KCURSOR) {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_KCURSOR) {
                 return "1".into();
             }
             return "0".into();
@@ -1676,8 +1676,8 @@ pub unsafe fn format_cb_keypad_cursor_flag(ft: &format_tree) -> format_table_typ
 /// Callback for `keypad_flag`.
 pub unsafe fn format_cb_keypad_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_KKEYPAD) {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_KKEYPAD) {
                 return "1".into();
             }
             return "0".into();
@@ -1689,8 +1689,8 @@ pub unsafe fn format_cb_keypad_flag(ft: &format_tree) -> format_table_type {
 /// Callback for `mouse_all_flag`.
 pub unsafe fn format_cb_mouse_all_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_MOUSE_ALL) {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_MOUSE_ALL) {
                 return "1".into();
             }
             return "0".into();
@@ -1702,8 +1702,8 @@ pub unsafe fn format_cb_mouse_all_flag(ft: &format_tree) -> format_table_type {
 /// Callback for `mouse_any_flag`.
 pub unsafe fn format_cb_mouse_any_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(ALL_MOUSE_MODES) {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(ALL_MOUSE_MODES) {
                 return "1".into();
             }
             return "0".into();
@@ -1715,8 +1715,8 @@ pub unsafe fn format_cb_mouse_any_flag(ft: &format_tree) -> format_table_type {
 /// Callback for `mouse_button_flag`.
 pub unsafe fn format_cb_mouse_button_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()))
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()))
                 .base
                 .mode
                 .intersects(mode_flag::MODE_MOUSE_BUTTON)
@@ -1732,7 +1732,7 @@ pub unsafe fn format_cb_mouse_button_flag(ft: &format_tree) -> format_table_type
 /// Callback for `mouse_pane`.
 pub unsafe fn format_cb_mouse_pane(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).m.valid {
+        if ft.m.valid {
             if let Some(wp) = cmd_mouse_pane(&ft.m, null_mut(), null_mut()) {
                 return format!("%{}", (*wp.as_ptr()).id).into();
             }
@@ -1745,8 +1745,8 @@ pub unsafe fn format_cb_mouse_pane(ft: &format_tree) -> format_table_type {
 /// Callback for `mouse_sgr_flag`.
 pub unsafe fn format_cb_mouse_sgr_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_MOUSE_SGR) {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_MOUSE_SGR) {
                 return "1".into();
             }
             return "0".into();
@@ -1758,8 +1758,8 @@ pub unsafe fn format_cb_mouse_sgr_flag(ft: &format_tree) -> format_table_type {
 /// Callback for `mouse_standard_flag`.
 pub unsafe fn format_cb_mouse_standard_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()))
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()))
                 .base
                 .mode
                 .intersects(mode_flag::MODE_MOUSE_STANDARD)
@@ -1775,8 +1775,8 @@ pub unsafe fn format_cb_mouse_standard_flag(ft: &format_tree) -> format_table_ty
 /// Callback for `mouse_utf8_flag`.
 pub unsafe fn format_cb_mouse_utf8_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_MOUSE_UTF8) {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_MOUSE_UTF8) {
                 return "1".into();
             }
             return "0".into();
@@ -1788,7 +1788,7 @@ pub unsafe fn format_cb_mouse_utf8_flag(ft: &format_tree) -> format_table_type {
 /// Callback for `mouse_x`.
 pub unsafe fn format_cb_mouse_x(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).m.valid {
+        if !ft.m.valid {
             return format_table_type::None;
         }
         let wp = cmd_mouse_pane(&ft.m, null_mut(), null_mut());
@@ -1799,12 +1799,12 @@ pub unsafe fn format_cb_mouse_x(ft: &format_tree) -> format_table_type {
         {
             return format!("{x}").into();
         }
-        if !(*ft).c.is_null() && (*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
-            if (*ft).m.statusat == 0 && (*ft).m.y < (*ft).m.statuslines {
-                return format!("{}", (*ft).m.x).into();
+        if !ft.c.is_null() && (*ft.c).tty.flags.intersects(tty_flags::TTY_STARTED) {
+            if ft.m.statusat == 0 && ft.m.y < ft.m.statuslines {
+                return format!("{}", ft.m.x).into();
             }
-            if (*ft).m.statusat > 0 && (*ft).m.y >= (*ft).m.statusat as u32 {
-                return format!("{}", (*ft).m.x).into();
+            if ft.m.statusat > 0 && ft.m.y >= ft.m.statusat as u32 {
+                return format!("{}", ft.m.x).into();
             }
         }
         format_table_type::None
@@ -1814,7 +1814,7 @@ pub unsafe fn format_cb_mouse_x(ft: &format_tree) -> format_table_type {
 /// Callback for `mouse_y`.
 pub unsafe fn format_cb_mouse_y(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).m.valid {
+        if !ft.m.valid {
             return format_table_type::None;
         }
         let wp = cmd_mouse_pane(&ft.m, null_mut(), null_mut());
@@ -1825,12 +1825,12 @@ pub unsafe fn format_cb_mouse_y(ft: &format_tree) -> format_table_type {
         {
             return format!("{y}").into();
         }
-        if !(*ft).c.is_null() && (*(*ft).c).tty.flags.intersects(tty_flags::TTY_STARTED) {
-            if (*ft).m.statusat == 0 && (*ft).m.y < (*ft).m.statuslines {
-                return format!("{}", (*ft).m.y).into();
+        if !ft.c.is_null() && (*ft.c).tty.flags.intersects(tty_flags::TTY_STARTED) {
+            if ft.m.statusat == 0 && ft.m.y < ft.m.statuslines {
+                return format!("{}", ft.m.y).into();
             }
-            if (*ft).m.statusat > 0 && (*ft).m.y >= (*ft).m.statusat as u32 {
-                return format!("{}", (*ft).m.y - (*ft).m.statusat as u32).into();
+            if ft.m.statusat > 0 && ft.m.y >= ft.m.statusat as u32 {
+                return format!("{}", ft.m.y - ft.m.statusat as u32).into();
             }
         }
         format_table_type::None
@@ -1846,8 +1846,8 @@ pub unsafe fn format_cb_next_session_id(_ft: &format_tree) -> format_table_type 
 /// Callback for `origin_flag`.
 pub unsafe fn format_cb_origin_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_ORIGIN) {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_ORIGIN) {
                 return "1".into();
             }
             return "0".into();
@@ -1859,7 +1859,7 @@ pub unsafe fn format_cb_origin_flag(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_active`.
 pub unsafe fn format_cb_pane_active(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         if !wp.is_null() {
             if wp == window_active_pane(window_pane_window(wp)) {
                 return "1".into();
@@ -1873,8 +1873,8 @@ pub unsafe fn format_cb_pane_active(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_at_left`.
 pub unsafe fn format_cb_pane_at_left(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).xoff == 0 {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).xoff == 0 {
                 return "1".into();
             }
             return "0".into();
@@ -1886,7 +1886,7 @@ pub unsafe fn format_cb_pane_at_left(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_at_right`.
 pub unsafe fn format_cb_pane_at_right(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         if !wp.is_null() {
             if (*wp).xoff + (*wp).sx == (*window_pane_window(wp)).sx {
                 return "1".into();
@@ -1900,8 +1900,8 @@ pub unsafe fn format_cb_pane_at_right(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_bottom`.
 pub unsafe fn format_cb_pane_bottom(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).yoff + (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).sy - 1).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).yoff + (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).sy - 1).into();
         }
         format_table_type::None
     }
@@ -1910,8 +1910,8 @@ pub unsafe fn format_cb_pane_bottom(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_dead`.
 pub unsafe fn format_cb_pane_dead(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).fd == -1 {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).fd == -1 {
                 return "1".into();
             }
             return "0".into();
@@ -1923,7 +1923,7 @@ pub unsafe fn format_cb_pane_dead(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_dead_signal`.
 pub unsafe fn format_cb_pane_dead_signal(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         if !wp.is_null() {
             if (*wp).flags.intersects(window_pane_flags::PANE_STATUSREADY)
                 && WIFSIGNALED((*wp).status)
@@ -1939,7 +1939,7 @@ pub unsafe fn format_cb_pane_dead_signal(ft: &format_tree) -> format_table_type 
 /// Callback for `pane_dead_status`.
 pub unsafe fn format_cb_pane_dead_status(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         if !wp.is_null() {
             if (*wp).flags.intersects(window_pane_flags::PANE_STATUSREADY)
                 && WIFEXITED((*wp).status)
@@ -1955,7 +1955,7 @@ pub unsafe fn format_cb_pane_dead_status(ft: &format_tree) -> format_table_type 
 /// Callback for `pane_dead_time`.
 pub unsafe fn format_cb_pane_dead_time(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         if !wp.is_null() && (*wp).flags.intersects(window_pane_flags::PANE_STATUSDRAWN) {
             return format_table_type::Time((*wp).dead_time);
         }
@@ -1974,8 +1974,8 @@ pub unsafe fn format_cb_pane_format(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_height`.
 pub unsafe fn format_cb_pane_height(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).sy).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).sy).into();
         }
         format_table_type::None
     }
@@ -1984,8 +1984,8 @@ pub unsafe fn format_cb_pane_height(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_id`.
 pub unsafe fn format_cb_pane_id(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("%{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).id).into();
+        if ft.wp.is_some() {
+            return format!("%{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).id).into();
         }
         format_table_type::None
     }
@@ -1995,7 +1995,7 @@ pub unsafe fn format_cb_pane_id(ft: &format_tree) -> format_table_type {
 pub unsafe fn format_cb_pane_index(ft: &format_tree) -> format_table_type {
     unsafe {
         let mut idx: u32 = 0;
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         if !wp.is_null() && window_pane_index(wp, &mut idx) == 0 {
             return format!("{idx}").into();
         }
@@ -2006,8 +2006,8 @@ pub unsafe fn format_cb_pane_index(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_input_off`.
 pub unsafe fn format_cb_pane_input_off(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()))
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()))
                 .flags
                 .intersects(window_pane_flags::PANE_INPUTOFF)
             {
@@ -2022,8 +2022,8 @@ pub unsafe fn format_cb_pane_input_off(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_unseen_changes`.
 pub unsafe fn format_cb_pane_unseen_changes(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()))
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut()))
                 .flags
                 .intersects(window_pane_flags::PANE_UNSEENCHANGES)
             {
@@ -2038,8 +2038,8 @@ pub unsafe fn format_cb_pane_unseen_changes(ft: &format_tree) -> format_table_ty
 /// Callback for `pane_key_mode`.
 pub unsafe fn format_cb_pane_key_mode(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() && !(*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).screen.is_null() {
-            match (*(*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).screen).mode & EXTENDED_KEY_MODES {
+        if ft.wp.is_some() && !(*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).screen.is_null() {
+            match (*(*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).screen).mode & EXTENDED_KEY_MODES {
                 mode_flag::MODE_KEYS_EXTENDED => return "Ext 1".into(),
                 mode_flag::MODE_KEYS_EXTENDED_2 => {
                     return "Ext 2".into();
@@ -2054,7 +2054,7 @@ pub unsafe fn format_cb_pane_key_mode(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_last`.
 pub unsafe fn format_cb_pane_last(ft: &format_tree) -> format_table_type {
     unsafe {
-        let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
         if !wp.is_null() {
             if wp == (*window_pane_window(wp)).last_panes.first().copied().unwrap_or(null_mut()) {
                 return "1".into();
@@ -2068,8 +2068,8 @@ pub unsafe fn format_cb_pane_last(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_left`.
 pub unsafe fn format_cb_pane_left(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).xoff).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).xoff).into();
         }
         format_table_type::None
     }
@@ -2078,8 +2078,8 @@ pub unsafe fn format_cb_pane_left(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_marked`.
 pub unsafe fn format_cb_pane_marked(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if server_check_marked() && (*(&raw const MARKED_PANE)).wp == (*ft).wp && (*ft).wp.is_some() {
+        if ft.wp.is_some() {
+            if server_check_marked() && (*(&raw const MARKED_PANE)).wp == ft.wp && ft.wp.is_some() {
                 return "1".into();
             }
             return "0".into();
@@ -2091,7 +2091,7 @@ pub unsafe fn format_cb_pane_marked(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_marked_set`.
 pub unsafe fn format_cb_pane_marked_set(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
+        if ft.wp.is_some() {
             if server_check_marked() {
                 return "1".into();
             }
@@ -2104,8 +2104,8 @@ pub unsafe fn format_cb_pane_marked_set(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_mode`.
 pub unsafe fn format_cb_pane_mode(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            let wme = (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).modes.first().copied().unwrap_or(null_mut());
+        if ft.wp.is_some() {
+            let wme = (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).modes.first().copied().unwrap_or(null_mut());
             if !wme.is_null() {
                 return (*(*wme).mode).name.into();
             }
@@ -2118,8 +2118,8 @@ pub unsafe fn format_cb_pane_mode(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_path`.
 pub unsafe fn format_cb_pane_path(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        if ft.wp.is_some() {
+            let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
             return match (*wp).base.path.as_ref() {
                 Some(p) => format!("{}", p.to_string_lossy()).into(),
                 None => "".into(),
@@ -2132,8 +2132,8 @@ pub unsafe fn format_cb_pane_path(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_pid`.
 pub unsafe fn format_cb_pane_pid(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).pid as i64).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).pid as i64).into();
         }
         format_table_type::None
     }
@@ -2142,8 +2142,8 @@ pub unsafe fn format_cb_pane_pid(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_pipe`.
 pub unsafe fn format_cb_pane_pipe(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).pipe_fd != -1 {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).pipe_fd != -1 {
                 return "1".into();
             }
             return "0".into();
@@ -2155,8 +2155,8 @@ pub unsafe fn format_cb_pane_pipe(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_right`.
 pub unsafe fn format_cb_pane_right(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).xoff + (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).sx - 1).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).xoff + (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).sx - 1).into();
         }
         format_table_type::None
     }
@@ -2165,8 +2165,8 @@ pub unsafe fn format_cb_pane_right(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_search_string`.
 pub unsafe fn format_cb_pane_search_string(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+        if ft.wp.is_some() {
+            let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
             return (*wp).searchstr.clone().unwrap_or_default().into();
         }
         format_table_type::None
@@ -2176,8 +2176,8 @@ pub unsafe fn format_cb_pane_search_string(ft: &format_tree) -> format_table_typ
 /// Callback for `pane_synchronized`.
 pub unsafe fn format_cb_pane_synchronized(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if options_get_number___::<i64>(&*(*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).options, "synchronize-panes") != 0 {
+        if ft.wp.is_some() {
+            if options_get_number___::<i64>(&*(*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).options, "synchronize-panes") != 0 {
                 return "1".into();
             }
             return "0".into();
@@ -2189,8 +2189,8 @@ pub unsafe fn format_cb_pane_synchronized(ft: &format_tree) -> format_table_type
 /// Callback for `pane_title`.
 pub unsafe fn format_cb_pane_title(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", _s((*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.title.as_ptr() as *const u8)).into();
+        if ft.wp.is_some() {
+            return format!("{}", _s((*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.title.as_ptr() as *const u8)).into();
         }
         format_table_type::None
     }
@@ -2199,8 +2199,8 @@ pub unsafe fn format_cb_pane_title(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_top`.
 pub unsafe fn format_cb_pane_top(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).yoff).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).yoff).into();
         }
         format_table_type::None
     }
@@ -2209,8 +2209,8 @@ pub unsafe fn format_cb_pane_top(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_tty`.
 pub unsafe fn format_cb_pane_tty(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", _s((*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).tty.as_ptr())).into();
+        if ft.wp.is_some() {
+            return format!("{}", _s((*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).tty.as_ptr())).into();
         }
         format_table_type::None
     }
@@ -2219,8 +2219,8 @@ pub unsafe fn format_cb_pane_tty(ft: &format_tree) -> format_table_type {
 /// Callback for `pane_width`.
 pub unsafe fn format_cb_pane_width(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).sx).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).sx).into();
         }
         format_table_type::None
     }
@@ -2229,8 +2229,8 @@ pub unsafe fn format_cb_pane_width(ft: &format_tree) -> format_table_type {
 /// Callback for `scroll_region_lower`.
 pub unsafe fn format_cb_scroll_region_lower(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.rlower).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.rlower).into();
         }
         format_table_type::None
     }
@@ -2239,8 +2239,8 @@ pub unsafe fn format_cb_scroll_region_lower(ft: &format_tree) -> format_table_ty
 /// Callback for `scroll_region_upper`.
 pub unsafe fn format_cb_scroll_region_upper(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            return format!("{}", (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.rupper).into();
+        if ft.wp.is_some() {
+            return format!("{}", (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.rupper).into();
         }
         format_table_type::None
     }
@@ -2257,7 +2257,7 @@ pub unsafe fn format_cb_server_sessions(_ft: &format_tree) -> format_table_type 
 /// Callback for `session_attached`.
 pub unsafe fn format_cb_session_attached(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             return format!("{}", (*s).attached).into();
         }
@@ -2276,7 +2276,7 @@ pub unsafe fn format_cb_session_format(ft: &format_tree) -> format_table_type {
 /// Callback for `session_group`.
 pub unsafe fn format_cb_session_group(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             let sg = session_group_contains(s);
             if !sg.is_null() {
@@ -2290,7 +2290,7 @@ pub unsafe fn format_cb_session_group(ft: &format_tree) -> format_table_type {
 /// Callback for `session_group_attached`.
 pub unsafe fn format_cb_session_group_attached(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             let sg = session_group_contains(s);
             if !sg.is_null() {
@@ -2304,7 +2304,7 @@ pub unsafe fn format_cb_session_group_attached(ft: &format_tree) -> format_table
 /// Callback for `session_group_many_attached`.
 pub unsafe fn format_cb_session_group_many_attached(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             let sg = session_group_contains(s);
             if !sg.is_null() {
@@ -2321,7 +2321,7 @@ pub unsafe fn format_cb_session_group_many_attached(ft: &format_tree) -> format_
 /// Callback for `session_group_size`.
 pub unsafe fn format_cb_session_group_size(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             let sg = session_group_contains(s);
             if !sg.is_null() {
@@ -2335,7 +2335,7 @@ pub unsafe fn format_cb_session_group_size(ft: &format_tree) -> format_table_typ
 /// Callback for `session_grouped`.
 pub unsafe fn format_cb_session_grouped(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             if !session_group_contains(s).is_null() {
                 return "1".into();
@@ -2349,7 +2349,7 @@ pub unsafe fn format_cb_session_grouped(ft: &format_tree) -> format_table_type {
 /// Callback for `session_id`.
 pub unsafe fn format_cb_session_id(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             return format!("${}", (*s).id).into();
         }
@@ -2360,7 +2360,7 @@ pub unsafe fn format_cb_session_id(ft: &format_tree) -> format_table_type {
 /// Callback for `session_many_attached`.
 pub unsafe fn format_cb_session_many_attached(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             if (*s).attached > 1 {
                 return "1".into();
@@ -2374,7 +2374,7 @@ pub unsafe fn format_cb_session_many_attached(ft: &format_tree) -> format_table_
 /// Callback for `session_marked`.
 pub unsafe fn format_cb_session_marked(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             if server_check_marked() && MARKED_PANE.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut()) == s {
                 return "1".into();
@@ -2388,7 +2388,7 @@ pub unsafe fn format_cb_session_marked(ft: &format_tree) -> format_table_type {
 /// Callback for `session_name`.
 pub unsafe fn format_cb_session_name(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             return format!("{}", (*s).name).into();
         }
@@ -2399,7 +2399,7 @@ pub unsafe fn format_cb_session_name(ft: &format_tree) -> format_table_type {
 /// Callback for `session_path`.
 pub unsafe fn format_cb_session_path(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             return (*s).cwd.as_deref().map(|p| p.display().to_string()).unwrap_or_default().into();
         }
@@ -2410,7 +2410,7 @@ pub unsafe fn format_cb_session_path(ft: &format_tree) -> format_table_type {
 /// Callback for `session_windows`.
 pub unsafe fn format_cb_session_windows(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             return format!("{}", winlink_count(&raw mut (*s).windows)).into();
         }
@@ -2431,7 +2431,7 @@ pub unsafe fn format_cb_version(_ft: &format_tree) -> format_table_type {
 /// Callback for `active_window_index`.
 pub unsafe fn format_cb_active_window_index(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             return format!("{}", (*(*s).curw).idx).into();
         }
@@ -2442,7 +2442,7 @@ pub unsafe fn format_cb_active_window_index(ft: &format_tree) -> format_table_ty
 /// Callback for `last_window_index`.
 pub unsafe fn format_cb_last_window_index(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             let &wl = (*(&raw mut (*s).windows)).values().next_back().unwrap();
             return format!("{}", (*wl).idx).into();
@@ -2454,9 +2454,9 @@ pub unsafe fn format_cb_last_window_index(ft: &format_tree) -> format_table_type
 /// Callback for `window_active`.
 pub unsafe fn format_cb_window_active(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).wl.is_null() {
-            let s = (*(*ft).wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-            if !s.is_null() && (*ft).wl == (*s).curw {
+        if !ft.wl.is_null() {
+            let s = (*ft.wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() && ft.wl == (*s).curw {
                 return "1".into();
             }
             return "0".into();
@@ -2468,8 +2468,8 @@ pub unsafe fn format_cb_window_active(ft: &format_tree) -> format_table_type {
 /// Callback for `window_activity_flag`.
 pub unsafe fn format_cb_window_activity_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).wl.is_null() {
-            if (*(*ft).wl)
+        if !ft.wl.is_null() {
+            if (*ft.wl)
                 .flags
                 .intersects(winlink_flags::WINLINK_ACTIVITY)
             {
@@ -2484,8 +2484,8 @@ pub unsafe fn format_cb_window_activity_flag(ft: &format_tree) -> format_table_t
 /// Callback for `window_bell_flag`.
 pub unsafe fn format_cb_window_bell_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).wl.is_null() {
-            if (*(*ft).wl).flags.intersects(winlink_flags::WINLINK_BELL) {
+        if !ft.wl.is_null() {
+            if (*ft.wl).flags.intersects(winlink_flags::WINLINK_BELL) {
                 return "1".into();
             }
             return "0".into();
@@ -2497,12 +2497,12 @@ pub unsafe fn format_cb_window_bell_flag(ft: &format_tree) -> format_table_type 
 /// Callback for `window_bigger`.
 pub unsafe fn format_cb_window_bigger(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
+        if !ft.c.is_null() {
             let mut ox: u32 = 0;
             let mut oy: u32 = 0;
             let mut sx: u32 = 0;
             let mut sy: u32 = 0;
-            if tty_window_offset(&raw mut (*(*ft).c).tty, &mut ox, &mut oy, &mut sx, &mut sy) != 0 {
+            if tty_window_offset(&raw mut (*ft.c).tty, &mut ox, &mut oy, &mut sx, &mut sy) != 0 {
                 return "1".into();
             }
             return "0".into();
@@ -2514,7 +2514,7 @@ pub unsafe fn format_cb_window_bigger(ft: &format_tree) -> format_table_type {
 /// Callback for `window_cell_height`.
 pub unsafe fn format_cb_window_cell_height(ft: &format_tree) -> format_table_type {
     unsafe {
-        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = ft.w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         if !w.is_null() {
             return format!("{}", (*w).ypixel).into();
         }
@@ -2525,7 +2525,7 @@ pub unsafe fn format_cb_window_cell_height(ft: &format_tree) -> format_table_typ
 /// Callback for `window_cell_width`.
 pub unsafe fn format_cb_window_cell_width(ft: &format_tree) -> format_table_type {
     unsafe {
-        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = ft.w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         if !w.is_null() {
             return format!("{}", (*w).xpixel).into();
         }
@@ -2536,9 +2536,9 @@ pub unsafe fn format_cb_window_cell_width(ft: &format_tree) -> format_table_type
 /// Callback for `window_end_flag`.
 pub unsafe fn format_cb_window_end_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).wl.is_null() {
-            let s = (*(*ft).wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-            if !s.is_null() && Some(&(*ft).wl) == (*(&raw mut (*s).windows)).values().next_back() {
+        if !ft.wl.is_null() {
+            let s = (*ft.wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() && Some(&ft.wl) == (*(&raw mut (*s).windows)).values().next_back() {
                 return "1".into();
             }
             return "0".into();
@@ -2550,8 +2550,8 @@ pub unsafe fn format_cb_window_end_flag(ft: &format_tree) -> format_table_type {
 /// Callback for `window_flags`.
 pub unsafe fn format_cb_window_flags(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).wl.is_null() {
-            return format!("{}", _s(window_printable_flags((*ft).wl, 1))).into();
+        if !ft.wl.is_null() {
+            return format!("{}", _s(window_printable_flags(ft.wl, 1))).into();
         }
         format_table_type::None
     }
@@ -2568,7 +2568,7 @@ pub unsafe fn format_cb_window_format(ft: &format_tree) -> format_table_type {
 /// Callback for `window_height`.
 pub unsafe fn format_cb_window_height(ft: &format_tree) -> format_table_type {
     unsafe {
-        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = ft.w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         if !w.is_null() {
             return format!("{}", (*w).sy).into();
         }
@@ -2579,7 +2579,7 @@ pub unsafe fn format_cb_window_height(ft: &format_tree) -> format_table_type {
 /// Callback for `window_id`.
 pub unsafe fn format_cb_window_id(ft: &format_tree) -> format_table_type {
     unsafe {
-        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = ft.w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         if !w.is_null() {
             return format!("@{}", (*w).id).into();
         }
@@ -2590,8 +2590,8 @@ pub unsafe fn format_cb_window_id(ft: &format_tree) -> format_table_type {
 /// Callback for `window_index`.
 pub unsafe fn format_cb_window_index(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).wl.is_null() {
-            return format!("{}", (*(*ft).wl).idx).into();
+        if !ft.wl.is_null() {
+            return format!("{}", (*ft.wl).idx).into();
         }
         format_table_type::None
     }
@@ -2600,9 +2600,9 @@ pub unsafe fn format_cb_window_index(ft: &format_tree) -> format_table_type {
 /// Callback for `window_last_flag`.
 pub unsafe fn format_cb_window_last_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).wl.is_null() {
-            let s = (*(*ft).wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-            if !s.is_null() && (*ft).wl == (*s).lastw.first().copied().unwrap_or(null_mut()) {
+        if !ft.wl.is_null() {
+            let s = (*ft.wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() && ft.wl == (*s).lastw.first().copied().unwrap_or(null_mut()) {
                 return "1".into();
             }
             return "0".into();
@@ -2614,9 +2614,9 @@ pub unsafe fn format_cb_window_last_flag(ft: &format_tree) -> format_table_type 
 /// Callback for `window_linked`.
 pub unsafe fn format_cb_window_linked(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).wl.is_null() {
-            let s = (*(*ft).wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-            let w_link = (*(*ft).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if !ft.wl.is_null() {
+            let s = (*ft.wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            let w_link = (*ft.wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
             if session_is_linked(s, &*w_link) {
                 return "1".into();
             }
@@ -2629,8 +2629,8 @@ pub unsafe fn format_cb_window_linked(ft: &format_tree) -> format_table_type {
 /// Callback for `window_linked_sessions`.
 pub unsafe fn format_cb_window_linked_sessions(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).wl.is_null() {
-            let w_ref = (*(*ft).wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        if !ft.wl.is_null() {
+            let w_ref = (*ft.wl).window.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
             if w_ref.is_null() { return "0".into(); }
             return format!("{}", (*w_ref).references).into();
         }
@@ -2641,8 +2641,8 @@ pub unsafe fn format_cb_window_linked_sessions(ft: &format_tree) -> format_table
 /// Callback for `window_marked_flag`.
 pub unsafe fn format_cb_window_marked_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).wl.is_null() {
-            if server_check_marked() && MARKED_PANE.wl == (*ft).wl {
+        if !ft.wl.is_null() {
+            if server_check_marked() && MARKED_PANE.wl == ft.wl {
                 return "1".into();
             }
             return "0".into();
@@ -2654,7 +2654,7 @@ pub unsafe fn format_cb_window_marked_flag(ft: &format_tree) -> format_table_typ
 /// Callback for `window_name`.
 pub unsafe fn format_cb_window_name(ft: &format_tree) -> format_table_type {
     unsafe {
-        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = ft.w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         if !w.is_null() {
             return (*w).name.clone().unwrap_or_default().into();
         }
@@ -2665,12 +2665,12 @@ pub unsafe fn format_cb_window_name(ft: &format_tree) -> format_table_type {
 /// Callback for `window_offset_x`.
 pub unsafe fn format_cb_window_offset_x(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
+        if !ft.c.is_null() {
             let mut ox: u32 = 0;
             let mut oy: u32 = 0;
             let mut sx: u32 = 0;
             let mut sy: u32 = 0;
-            if tty_window_offset(&raw mut (*(*ft).c).tty, &mut ox, &mut oy, &mut sx, &mut sy) != 0 {
+            if tty_window_offset(&raw mut (*ft.c).tty, &mut ox, &mut oy, &mut sx, &mut sy) != 0 {
                 return format!("{ox}").into();
             }
         }
@@ -2681,12 +2681,12 @@ pub unsafe fn format_cb_window_offset_x(ft: &format_tree) -> format_table_type {
 /// Callback for `window_offset_y`.
 pub unsafe fn format_cb_window_offset_y(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
+        if !ft.c.is_null() {
             let mut ox: u32 = 0;
             let mut oy: u32 = 0;
             let mut sx: u32 = 0;
             let mut sy: u32 = 0;
-            if tty_window_offset(&raw mut (*(*ft).c).tty, &mut ox, &mut oy, &mut sx, &mut sy) != 0 {
+            if tty_window_offset(&raw mut (*ft.c).tty, &mut ox, &mut oy, &mut sx, &mut sy) != 0 {
                 return format!("{oy}").into();
             }
         }
@@ -2697,7 +2697,7 @@ pub unsafe fn format_cb_window_offset_y(ft: &format_tree) -> format_table_type {
 /// Callback for `window_panes`.
 pub unsafe fn format_cb_window_panes(ft: &format_tree) -> format_table_type {
     unsafe {
-        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = ft.w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         if !w.is_null() {
             return format!("{}", window_count_panes(&*w)).into();
         }
@@ -2708,8 +2708,8 @@ pub unsafe fn format_cb_window_panes(ft: &format_tree) -> format_table_type {
 /// Callback for `window_raw_flags`.
 pub unsafe fn format_cb_window_raw_flags(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).wl.is_null() {
-            return format!("{}", _s(window_printable_flags((*ft).wl, 0))).into();
+        if !ft.wl.is_null() {
+            return format!("{}", _s(window_printable_flags(ft.wl, 0))).into();
         }
         format_table_type::None
     }
@@ -2718,8 +2718,8 @@ pub unsafe fn format_cb_window_raw_flags(ft: &format_tree) -> format_table_type 
 /// Callback for `window_silence_flag`.
 pub unsafe fn format_cb_window_silence_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).wl.is_null() {
-            if (*(*ft).wl).flags.intersects(winlink_flags::WINLINK_SILENCE) {
+        if !ft.wl.is_null() {
+            if (*ft.wl).flags.intersects(winlink_flags::WINLINK_SILENCE) {
                 return "1".into();
             }
             return "0".into();
@@ -2731,9 +2731,9 @@ pub unsafe fn format_cb_window_silence_flag(ft: &format_tree) -> format_table_ty
 /// Callback for `window_start_flag`.
 pub unsafe fn format_cb_window_start_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).wl.is_null() {
-            let s = (*(*ft).wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
-            if !s.is_null() && Some(&(*ft).wl) == (*(&raw mut (*s).windows)).values().next() {
+        if !ft.wl.is_null() {
+            let s = (*ft.wl).session.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+            if !s.is_null() && Some(&ft.wl) == (*(&raw mut (*s).windows)).values().next() {
                 return "1".into();
             }
             return "0".into();
@@ -2745,7 +2745,7 @@ pub unsafe fn format_cb_window_start_flag(ft: &format_tree) -> format_table_type
 /// Callback for `window_width`.
 pub unsafe fn format_cb_window_width(ft: &format_tree) -> format_table_type {
     unsafe {
-        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = ft.w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         if !w.is_null() {
             return format!("{}", (*w).sx).into();
         }
@@ -2756,7 +2756,7 @@ pub unsafe fn format_cb_window_width(ft: &format_tree) -> format_table_type {
 /// Callback for `window_zoomed_flag`.
 pub unsafe fn format_cb_window_zoomed_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = ft.w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         if !w.is_null() {
             if (*w).flags.intersects(window_flag::ZOOMED) {
                 return "1".into();
@@ -2770,8 +2770,8 @@ pub unsafe fn format_cb_window_zoomed_flag(ft: &format_tree) -> format_table_typ
 /// Callback for `wrap_flag`.
 pub unsafe fn format_cb_wrap_flag(ft: &format_tree) -> format_table_type {
     unsafe {
-        if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_WRAP) {
+        if ft.wp.is_some() {
+            if (*ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.mode.intersects(mode_flag::MODE_WRAP) {
                 return "1".into();
             }
             return "0".into();
@@ -2783,7 +2783,7 @@ pub unsafe fn format_cb_wrap_flag(ft: &format_tree) -> format_table_type {
 /// Callback for `buffer_created`.
 pub unsafe fn format_cb_buffer_created(ft: &format_tree) -> format_table_type {
     unsafe {
-        if let Some(pb) = NonNull::new((*ft).pb) {
+        if let Some(pb) = NonNull::new(ft.pb) {
             format_table_type::Time(timeval {
                 tv_sec: paste_buffer_created(pb),
                 tv_usec: 0,
@@ -2797,8 +2797,8 @@ pub unsafe fn format_cb_buffer_created(ft: &format_tree) -> format_table_type {
 /// Callback for `client_activity`.
 pub unsafe fn format_cb_client_activity(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            return format_table_type::Time((*(*ft).c).activity_time);
+        if !ft.c.is_null() {
+            return format_table_type::Time((*ft.c).activity_time);
         }
         format_table_type::None
     }
@@ -2807,8 +2807,8 @@ pub unsafe fn format_cb_client_activity(ft: &format_tree) -> format_table_type {
 /// Callback for `client_created`.
 pub unsafe fn format_cb_client_created(ft: &format_tree) -> format_table_type {
     unsafe {
-        if !(*ft).c.is_null() {
-            return format_table_type::Time((*(*ft).c).creation_time);
+        if !ft.c.is_null() {
+            return format_table_type::Time((*ft.c).creation_time);
         }
         format_table_type::None
     }
@@ -2817,7 +2817,7 @@ pub unsafe fn format_cb_client_created(ft: &format_tree) -> format_table_type {
 /// Callback for `session_activity`.
 pub unsafe fn format_cb_session_activity(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             return format_table_type::Time((*s).activity_time);
         }
@@ -2828,7 +2828,7 @@ pub unsafe fn format_cb_session_activity(ft: &format_tree) -> format_table_type 
 /// Callback for `session_created`.
 pub unsafe fn format_cb_session_created(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             return format_table_type::Time((*s).creation_time);
         }
@@ -2839,7 +2839,7 @@ pub unsafe fn format_cb_session_created(ft: &format_tree) -> format_table_type {
 /// Callback for `session_last_attached`.
 pub unsafe fn format_cb_session_last_attached(ft: &format_tree) -> format_table_type {
     unsafe {
-        let s = (*ft).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
+        let s = ft.s.and_then(|id| session_from_id(id)).unwrap_or(null_mut());
         if !s.is_null() {
             return format_table_type::Time((*s).last_attached_time);
         }
@@ -2855,7 +2855,7 @@ pub unsafe fn format_cb_start_time(_ft: &format_tree) -> format_table_type {
 /// Callback for `window_activity`.
 pub unsafe fn format_cb_window_activity(ft: &format_tree) -> format_table_type {
     unsafe {
-        let w = (*ft).w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
+        let w = ft.w.and_then(|id| window_from_id(id)).unwrap_or(null_mut());
         if !w.is_null() {
             return format_table_type::Time((*w).activity_time);
         }
@@ -3521,15 +3521,14 @@ fn format_find(
                 if envent.is_none() {
                     envent = environ_find_raw(&*GLOBAL_ENVIRON, key);
                 }
-                if let Some(envent) = envent {
-                    if let Some(ref value) = envent.value {
+                if let Some(envent) = envent
+                    && let Some(ref value) = envent.value {
                         let p = xmalloc(value.len() + 1).as_ptr().cast::<u8>();
                         std::ptr::copy_nonoverlapping(value.as_ptr(), p, value.len());
                         *p.add(value.len()) = b'\0';
                         found = p;
                         break 'found;
                     }
-                }
             }
 
             return null_mut();
@@ -4107,7 +4106,7 @@ pub unsafe fn format_loop_panes(es: *mut format_expand_state, fmt: *const u8) ->
 
         let mut next = MaybeUninit::<format_expand_state>::uninit();
         let next = next.as_mut_ptr();
-        for &wp in (*w).panes.iter() {
+        for &wp in &(*w).panes {
             format_log1!(es, c!("format_loop_panes"), "pane loop: %{}", (*wp).id,);
             let use_ = if !active.is_null() && wp == window_active_pane(w) {
                 active

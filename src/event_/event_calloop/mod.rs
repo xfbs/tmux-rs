@@ -1,7 +1,7 @@
 //! calloop-backed event loop.
 //!
-//! Provides safe RAII wrappers (TimerHandle, SignalHandle, IoHandle, defer)
-//! and the core event_init/event_loop dispatch.
+//! Provides safe RAII wrappers (`TimerHandle`, `SignalHandle`, `IoHandle`, defer)
+//! and the core `event_init/event_loop` dispatch.
 
 mod event_impl;
 
@@ -9,7 +9,7 @@ use std::ffi::{c_int, c_void};
 
 use crate::evbuffer_::Evbuffer;
 
-/// Opaque event_base handle.
+/// Opaque `event_base` handle.
 #[derive(Debug, Copy, Clone)]
 pub struct event_base {
     _unused: [u8; 0],

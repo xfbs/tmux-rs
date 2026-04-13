@@ -35,8 +35,8 @@ pub struct hyperlinks {
     pub next_inner: u32,
     /// Primary store: inner ID → hyperlink data (owns the data).
     pub by_inner: BTreeMap<u32, Box<hyperlinks_uri>>,
-    /// Secondary index: (internal_id, uri) → inner ID.
-    /// Anonymous URIs (empty internal_id) are NOT indexed here.
+    /// Secondary index: (`internal_id`, uri) → inner ID.
+    /// Anonymous URIs (empty `internal_id`) are NOT indexed here.
     pub by_uri: HashMap<(String, String), u32>,
     pub references: u32,
 }

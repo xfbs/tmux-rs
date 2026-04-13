@@ -2684,7 +2684,7 @@ pub unsafe fn window_copy_cmd_search_backward_incremental(
             (*data).searchx = (*data).cx as i32;
             (*data).searchy = (*data).cy as i32;
             (*data).searcho = (*data).oy as i32;
-        } else if ss.as_deref().map(|s| s != arg1_str.as_ref()).unwrap_or(false) {
+        } else if ss.as_deref().is_some_and(|s| s != arg1_str.as_ref()) {
             (*data).cx = (*data).searchx as u32;
             (*data).cy = (*data).searchy as u32;
             (*data).oy = (*data).searcho as u32;
@@ -2741,7 +2741,7 @@ pub unsafe fn window_copy_cmd_search_forward_incremental(
             (*data).searchx = (*data).cx as i32;
             (*data).searchy = (*data).cy as i32;
             (*data).searcho = (*data).oy as i32;
-        } else if ss.as_deref().map(|s| s != arg1_str.as_ref()).unwrap_or(false) {
+        } else if ss.as_deref().is_some_and(|s| s != arg1_str.as_ref()) {
             (*data).cx = (*data).searchx as u32;
             (*data).cy = (*data).searchy as u32;
             (*data).oy = (*data).searcho as u32;
@@ -3799,7 +3799,7 @@ pub unsafe fn window_copy_cellstring(
             return c!(" ") as *mut u8; // TODO think of a better type-safe way to represent returning a MaybeAllocated type
         }
 
-        let gce = (&mut (*gl).celldata).as_mut_ptr().add(px as usize);
+        let gce = (*gl).celldata.as_mut_ptr().add(px as usize);
         if (*gce).flags.intersects(grid_flag::PADDING) {
             *size = 0;
             *allocated = 0;
@@ -5579,7 +5579,7 @@ pub unsafe fn window_copy_append_selection(wme: *mut window_mode_entry) {
         }
         // Own the buffer name before paste_set, which may free the buffer
         // that the borrowed &str points into.
-        let bufname_owned = bufname.map(|s| s.to_string());
+        let bufname_owned = bufname.map(std::string::ToString::to_string);
         let _ = paste_set(buf, len, bufname_owned.as_deref());
     }
 }

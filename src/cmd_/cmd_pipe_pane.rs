@@ -197,8 +197,8 @@ pub unsafe fn cmd_pipe_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
     }
 }
 
-/// Read callback: reads data from the pipe fd into pipe_input,
-/// then writes it to the pane's PTY via bufferevent_write.
+/// Read callback: reads data from the pipe fd into `pipe_input`,
+/// then writes it to the pane's PTY via `bufferevent_write`.
 unsafe fn cmd_pipe_pane_read_fire(pid: PaneId) {
     unsafe {
         let Some(wp) = pane_from_id(pid) else { return };
@@ -228,13 +228,13 @@ unsafe fn cmd_pipe_pane_read_fire(pid: PaneId) {
     }
 }
 
-/// Write callback: drains pipe_output to the pipe fd.
-/// When the buffer is empty, drops the write IoHandle.
+/// Write callback: drains `pipe_output` to the pipe fd.
+/// When the buffer is empty, drops the write `IoHandle`.
 pub unsafe fn cmd_pipe_pane_write_fire(pid: PaneId) {
     unsafe {
         let Some(wp) = pane_from_id(pid) else { return };
 
-        if (*wp).pipe_output.len() > 0 {
+        if !(*wp).pipe_output.is_empty() {
             let n = (*wp).pipe_output.write_to_fd((*wp).pipe_fd);
             if n < 0 {
                 if std::io::Error::last_os_error().kind() == std::io::ErrorKind::WouldBlock {

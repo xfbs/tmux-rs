@@ -366,7 +366,7 @@ pub unsafe fn job_resize(job: *mut job, sx: c_uint, sy: c_uint) {
     }
 }
 
-/// Read callback: reads data from the subprocess fd into event_input,
+/// Read callback: reads data from the subprocess fd into `event_input`,
 /// then invokes the job's update callback.
 unsafe fn job_read_fire(job: *mut job, fd: c_int) {
     unsafe {
@@ -384,10 +384,10 @@ unsafe fn job_read_fire(job: *mut job, fd: c_int) {
     }
 }
 
-/// Write callback: drains event_output to the subprocess fd.
+/// Write callback: drains `event_output` to the subprocess fd.
 unsafe fn job_write_fire(job: *mut job, fd: c_int) {
     unsafe {
-        if (*job).event_output.len() > 0 {
+        if !(*job).event_output.is_empty() {
             let n = (*job).event_output.write_to_fd(fd);
             if n < 0 {
                 if std::io::Error::last_os_error().kind() == std::io::ErrorKind::WouldBlock {

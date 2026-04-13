@@ -485,7 +485,7 @@ pub unsafe fn ibuf_write(msgbuf: *mut msgbuf) -> c_int {
                 iov_len: 0,
             }
         }; IOV_MAX];
-        for &buf in (*msgbuf).bufs.iter() {
+        for &buf in &(*msgbuf).bufs {
             if i as usize >= IOV_MAX {
                 break;
             }
@@ -575,7 +575,7 @@ pub unsafe fn msgbuf_write(msgbuf: *mut msgbuf) -> c_int {
             buf: [u8; unsafe { CMSG_SPACE(size_of::<c_int>() as _) as usize }],
         }
 
-        for &buf in (*msgbuf).bufs.iter() {
+        for &buf in &(*msgbuf).bufs {
             if i as usize >= IOV_MAX {
                 break;
             }

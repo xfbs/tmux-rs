@@ -139,7 +139,7 @@ pub unsafe fn layout_free_cell(w: *mut window, lc: *mut layout_cell) {
     unsafe {
         match (*lc).type_ {
             layout_type::LAYOUT_LEFTRIGHT | layout_type::LAYOUT_TOPBOTTOM => {
-                for &child in lc_children(w as *const _ as *mut window, lc).iter() {
+                for &child in &lc_children(w as *const _ as *mut window, lc) {
                     layout_free_cell(w, child);
                 }
                 (*lc).cells.clear();
@@ -178,7 +178,7 @@ pub unsafe fn layout_print_cell(w: *mut window, lc: *mut layout_cell, hdr: *cons
 
         match (*lc).type_ {
             layout_type::LAYOUT_LEFTRIGHT | layout_type::LAYOUT_TOPBOTTOM => {
-                for &lcchild in lc_children(w as *const _ as *mut window, lc).iter() {
+                for &lcchild in &lc_children(w as *const _ as *mut window, lc) {
                     layout_print_cell(w, lcchild, hdr, n + 1);
                 }
             }
@@ -191,7 +191,7 @@ pub unsafe fn layout_search_by_border(w: *mut window, lc: *mut layout_cell, x: u
     unsafe {
         let mut last: *mut layout_cell = null_mut();
 
-        for &lcchild in lc_children(w as *const _ as *mut window, lc).iter() {
+        for &lcchild in &lc_children(w as *const _ as *mut window, lc) {
             if x >= (*lcchild).xoff
                 && x < (*lcchild).xoff + (*lcchild).sx
                 && y >= (*lcchild).yoff
@@ -268,7 +268,7 @@ unsafe fn layout_fix_offsets1(w: *mut window, lc: *mut layout_cell) {
     unsafe {
         if (*lc).type_ == layout_type::LAYOUT_LEFTRIGHT {
             let mut xoff = (*lc).xoff;
-            for &lcchild in lc_children(w as *const _ as *mut window, lc).iter() {
+            for &lcchild in &lc_children(w as *const _ as *mut window, lc) {
                 (*lcchild).xoff = xoff;
                 (*lcchild).yoff = (*lc).yoff;
                 if (*lcchild).type_ != layout_type::LAYOUT_WINDOWPANE {
@@ -278,7 +278,7 @@ unsafe fn layout_fix_offsets1(w: *mut window, lc: *mut layout_cell) {
             }
         } else {
             let mut yoff = (*lc).yoff;
-            for &lcchild in lc_children(w as *const _ as *mut window, lc).iter() {
+            for &lcchild in &lc_children(w as *const _ as *mut window, lc) {
                 (*lcchild).xoff = (*lc).xoff;
                 (*lcchild).yoff = yoff;
                 if (*lcchild).type_ != layout_type::LAYOUT_WINDOWPANE {
@@ -306,7 +306,7 @@ unsafe fn layout_cell_is_top(w: &window, mut lc: *mut layout_cell) -> c_int {
         while lc != window_layout_root(w as *const _ as *mut window) {
             let next = lc_parent(w as *const _ as *mut window, lc);
             if (*next).type_ == layout_type::LAYOUT_TOPBOTTOM
-                && lc != (*next).cells.first().copied().map(|id| lc_ptr(w as *const _ as *mut window, id)).unwrap_or(null_mut())
+                && lc != (*next).cells.first().copied().map_or(null_mut(), |id| lc_ptr(w as *const _ as *mut window, id))
             {
                 return 0;
             }
@@ -322,7 +322,7 @@ unsafe fn layout_cell_is_bottom(w: &window, mut lc: *mut layout_cell) -> c_int {
         while lc != window_layout_root(w as *const _ as *mut window) {
             let next = lc_parent(w as *const _ as *mut window, lc);
             if (*next).type_ == layout_type::LAYOUT_TOPBOTTOM
-                && lc != (*next).cells.last().copied().map(|id| lc_ptr(w as *const _ as *mut window, id)).unwrap_or(null_mut())
+                && lc != (*next).cells.last().copied().map_or(null_mut(), |id| lc_ptr(w as *const _ as *mut window, id))
             {
                 return 0;
             }
@@ -353,7 +353,7 @@ pub unsafe fn layout_fix_panes(w: &window, skip: *mut window_pane) {
             pane_status::try_from(options_get_number_(w.options, "pane-border-status") as i32)
                 .unwrap();
 
-        for &wp in w.panes.iter() {
+        for &wp in &w.panes {
             let lc = pane_layout_cell(wp);
             if lc.is_null() || wp == skip {
                 continue;
@@ -381,7 +381,7 @@ pub unsafe fn layout_count_cells(w: *mut window, lc: *mut layout_cell) -> u32 {
             layout_type::LAYOUT_WINDOWPANE => 1,
             layout_type::LAYOUT_LEFTRIGHT | layout_type::LAYOUT_TOPBOTTOM => {
                 let mut count = 0;
-                for &lcchild in lc_children(w as *const _ as *mut window, lc).iter() {
+                for &lcchild in &lc_children(w as *const _ as *mut window, lc) {
                     count += layout_count_cells(w, lcchild);
                 }
                 count
@@ -421,14 +421,14 @@ pub unsafe fn layout_resize_check(w: &window, lc: *mut layout_cell, type_: layou
         } else if (*lc).type_ == type_ {
             // Same type: total of available space in all child cells.
             available = 0;
-            for &lcchild in lc_children(w as *const _ as *mut window, lc).iter() {
-                available += layout_resize_check(&*w, lcchild, type_);
+            for &lcchild in &lc_children(w as *const _ as *mut window, lc) {
+                available += layout_resize_check(w, lcchild, type_);
             }
         } else {
             // Different type: minimum of available space in child cells.
             minimum = u32::MAX;
-            for &lcchild in lc_children(w as *const _ as *mut window, lc).iter() {
-                available = layout_resize_check(&*w, lcchild, type_);
+            for &lcchild in &lc_children(w as *const _ as *mut window, lc) {
+                available = layout_resize_check(w, lcchild, type_);
                 if available < minimum {
                     minimum = available;
                 }
@@ -463,7 +463,7 @@ pub unsafe fn layout_resize_adjust(
 
         // Child cell runs in a different direction
         if (*lc).type_ != type_ {
-            for &lcchild in lc_children(w as *const _ as *mut window, lc).iter() {
+            for &lcchild in &lc_children(w as *const _ as *mut window, lc) {
                 layout_resize_adjust(w, lcchild, type_, change);
             }
             return;
@@ -472,7 +472,7 @@ pub unsafe fn layout_resize_adjust(
         // Child cell runs in the same direction. Adjust each child equally
         // until no further change is possible
         while change != 0 {
-            for &lcchild in lc_children(w as *const _ as *mut window, lc).iter() {
+            for &lcchild in &lc_children(w as *const _ as *mut window, lc) {
                 if change == 0 {
                     break;
                 }
@@ -508,7 +508,7 @@ pub unsafe fn layout_destroy_cell(
         }
 
         // Merge the space into the previous or next cell
-        let lcother: *mut layout_cell = if lc == (*lcparent).cells.first().copied().map(|id| lc_ptr(w as *const _ as *mut window, id)).unwrap_or(null_mut()) {
+        let lcother: *mut layout_cell = if lc == (*lcparent).cells.first().copied().map_or(null_mut(), |id| lc_ptr(w as *const _ as *mut window, id)) {
             layout_next_sibling(w, lc)
         } else {
             layout_prev_sibling(w, lc)
@@ -528,7 +528,7 @@ pub unsafe fn layout_destroy_cell(
 
         // If the parent now has one cell, remove the parent from the tree and
         // replace it by that cell
-        let lc = (*lcparent).cells.first().copied().map(|id| lc_ptr(w as *const _ as *mut window, id)).unwrap_or(null_mut());
+        let lc = (*lcparent).cells.first().copied().map_or(null_mut(), |id| lc_ptr(w as *const _ as *mut window, id));
         if layout_next_sibling(w, lc).is_null() {
             (*lcparent).cells.retain(|&id| lc_ptr(w, id) != lc);
 
@@ -644,7 +644,7 @@ pub unsafe fn layout_resize_pane_to(wp: *mut window_pane, type_: layout_type, ne
             (*lc).sy
         };
 
-        let change = if lc == (*lcparent).cells.last().copied().map(|id| lc_ptr(w as *const _ as *mut window, id)).unwrap_or(null_mut()) {
+        let change = if lc == (*lcparent).cells.last().copied().map_or(null_mut(), |id| lc_ptr(w as *const _ as *mut window, id)) {
             size as i32 - new_size as i32
         } else {
             new_size as i32 - size as i32
@@ -711,7 +711,7 @@ pub unsafe fn layout_resize_pane(
         }
 
         // If this is the last cell, move back one
-        if lc == (*lcparent).cells.last().copied().map(|id| lc_ptr(w as *const _ as *mut window, id)).unwrap_or(null_mut()) {
+        if lc == (*lcparent).cells.last().copied().map_or(null_mut(), |id| lc_ptr(w as *const _ as *mut window, id)) {
             lc = layout_prev_sibling(w, lc);
         }
 
@@ -903,7 +903,7 @@ pub unsafe fn layout_set_size_check(
             }
 
             idx = 0;
-            for &lcchild in lc_children(w as *const _ as *mut window, lc).iter() {
+            for &lcchild in &lc_children(w as *const _ as *mut window, lc) {
                 new_size = layout_new_pane_size(
                     w,
                     previous,
@@ -930,7 +930,7 @@ pub unsafe fn layout_set_size_check(
                 idx += 1;
             }
         } else {
-            for &lcchild in lc_children(w as *const _ as *mut window, lc).iter() {
+            for &lcchild in &lc_children(w as *const _ as *mut window, lc) {
                 if (*lcchild).type_ == layout_type::LAYOUT_WINDOWPANE {
                     continue;
                 }
@@ -955,7 +955,7 @@ pub unsafe fn layout_resize_child_cells(w: *mut window, lc: *mut layout_cell) {
         // What is the current size used?
         let mut count: u32 = 0;
         let mut previous: u32 = 0;
-        for &lcchild in lc_children(w as *const _ as *mut window, lc).iter() {
+        for &lcchild in &lc_children(w as *const _ as *mut window, lc) {
             count += 1;
             if (*lc).type_ == layout_type::LAYOUT_LEFTRIGHT {
                 previous += (*lcchild).sx;
@@ -1100,7 +1100,7 @@ pub unsafe fn layout_split_pane(
         let lcparent: *mut layout_cell;
         let lcnew: *mut layout_cell;
 
-        if !(*lc).parent.is_none() && (*lc_parent(w, lc)).type_ == type_ {
+        if (*lc).parent.is_some() && (*lc_parent(w, lc)).type_ == type_ {
             // If the parent exists and is of the same type as the split,
             // create a new cell and insert it after this one.
             lcparent = lc_parent(w, lc);
@@ -1257,7 +1257,7 @@ pub unsafe fn layout_spread_cell(w: *mut window, parent: *mut layout_cell) -> c_
 
         let mut changed = 0;
         let mut idx = 0;
-        for &lc in lc_children(w, parent).iter() {
+        for &lc in &lc_children(w, parent) {
             idx += 1;
             if idx == number {
                 each = size - ((each + 1) * (number - 1));
