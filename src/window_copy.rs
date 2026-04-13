@@ -596,7 +596,7 @@ pub unsafe fn window_copy_pageup1(wme: *mut window_mode_entry, half_page: i32) {
             (*data).oy += n;
         }
 
-        if (*data).screen.sel.is_null() || !(*data).rectflag {
+        if (*data).screen.sel.is_none() || !(*data).rectflag {
             let py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
             let px = window_copy_find_length(wme, py);
             if ((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px {
@@ -658,7 +658,7 @@ pub unsafe fn window_copy_pagedown1(
             (*data).oy -= n;
         }
 
-        if (*data).screen.sel.is_null() || !(*data).rectflag {
+        if (*data).screen.sel.is_none() || !(*data).rectflag {
             let py = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
             let px = window_copy_find_length(wme, py);
             if ((*data).cx >= (*data).lastsx && (*data).cx != px) || (*data).cx > px {
@@ -798,7 +798,7 @@ pub unsafe fn window_copy_formats(wme: *mut window_mode_entry, ft: *mut format_t
         format_add!(ft, "copy_cursor_x", "{}", (*data).cx);
         format_add!(ft, "copy_cursor_y", "{}", (*data).cy);
 
-        if !(*data).screen.sel.is_null() {
+        if (*data).screen.sel.is_some() {
             format_add!(ft, "selection_start_x", "{}", (*data).selx,);
             format_add!(ft, "selection_start_y", "{}", (*data).sely,);
             format_add!(ft, "selection_end_x", "{}", (*data).endselx,);
@@ -1353,7 +1353,7 @@ pub unsafe fn window_copy_cmd_cursor_right(
         while np != 0 {
             window_copy_cursor_right(
                 wme,
-                (!(*data).screen.sel.is_null() && (*data).rectflag) as i32,
+                ((*data).screen.sel.is_some() && (*data).rectflag) as i32,
             );
             np -= 1;
         }
@@ -5258,7 +5258,7 @@ pub unsafe fn window_copy_update_selection(
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
 
-        if (*s).sel.is_null() && (*data).lineflag == line_sel::LINE_SEL_NONE {
+        if (*s).sel.is_none() && (*data).lineflag == line_sel::LINE_SEL_NONE {
             return 0;
         }
         window_copy_set_selection(wme, may_redraw, no_reset)
@@ -5346,7 +5346,7 @@ pub unsafe fn window_copy_get_selection(wme: *mut window_mode_entry, len: *mut u
         let firstsx;
         let restsx;
 
-        if (*data).screen.sel.is_null() && (*data).lineflag == line_sel::LINE_SEL_NONE {
+        if (*data).screen.sel.is_none() && (*data).lineflag == line_sel::LINE_SEL_NONE {
             buf = window_copy_match_at_cursor(data)
                 .map(|s| String::leak(s).as_mut_ptr())
                 .unwrap_or_default();
@@ -5751,7 +5751,7 @@ pub unsafe fn window_copy_cursor_end_of_line(wme: *mut window_mode_entry) {
         let oldy = (*data).cy;
 
         grid_reader_start(&raw mut gr, (*back_s).grid, px, py);
-        if !(*data).screen.sel.is_null() && (*data).rectflag {
+        if (*data).screen.sel.is_some() && (*data).rectflag {
             grid_reader_cursor_end_of_line(&raw mut gr, 1, 1);
         } else {
             grid_reader_cursor_end_of_line(&raw mut gr, 1, 0);
@@ -5776,7 +5776,7 @@ pub unsafe fn window_copy_other_end(wme: *mut window_mode_entry) {
         let s: *mut screen = &raw mut (*data).screen;
         // u_int selx, sely, cy, yy, hsize;
 
-        if (*s).sel.is_null() && (*data).lineflag == line_sel::LINE_SEL_NONE {
+        if (*s).sel.is_none() && (*data).lineflag == line_sel::LINE_SEL_NONE {
             return;
         }
 
@@ -5873,7 +5873,7 @@ pub unsafe fn window_copy_cursor_up(wme: *mut window_mode_entry, scroll_only: i3
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
 
-        let norectsel = (*data).screen.sel.is_null() || !(*data).rectflag;
+        let norectsel = (*data).screen.sel.is_none() || !(*data).rectflag;
         let oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
         let ox = window_copy_find_length(wme, oy);
         if norectsel && (*data).cx != ox {
@@ -5950,7 +5950,7 @@ pub unsafe fn window_copy_cursor_down(wme: *mut window_mode_entry, scroll_only: 
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
 
-        let norectsel = (*data).screen.sel.is_null() || !(*data).rectflag;
+        let norectsel = (*data).screen.sel.is_none() || !(*data).rectflag;
         let oy = screen_hsize((*data).backing) + (*data).cy - (*data).oy;
         let ox = window_copy_find_length(wme, oy);
         if norectsel && (*data).cx != ox {
@@ -6363,7 +6363,7 @@ pub unsafe fn window_copy_scroll_up(wme: *mut window_mode_entry, mut ny: u32) {
         if screen_size_y(s) > 3 {
             window_copy_write_line(wme, &raw mut ctx, screen_size_y(s) - 2);
         }
-        if !(*s).sel.is_null() && screen_size_y(s) > ny {
+        if (*s).sel.is_some() && screen_size_y(s) > ny {
             window_copy_write_line(wme, &raw mut ctx, screen_size_y(s) - ny - 1);
         }
         screen_write_cursormove(&raw mut ctx, (*data).cx as i32, (*data).cy as i32, 0);
@@ -6399,7 +6399,7 @@ pub unsafe fn window_copy_scroll_down(wme: *mut window_mode_entry, mut ny: u32) 
         screen_write_cursormove(&raw mut ctx, 0, 0, 0);
         screen_write_insertline(&raw mut ctx, ny, 8);
         window_copy_write_lines(wme, &raw mut ctx, 0, ny);
-        if !(*s).sel.is_null() && screen_size_y(s) > ny {
+        if (*s).sel.is_some() && screen_size_y(s) > ny {
             window_copy_write_line(wme, &raw mut ctx, ny);
         } else if ny == 1 {
             window_copy_write_line(wme, &raw mut ctx, 1);

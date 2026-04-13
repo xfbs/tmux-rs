@@ -1073,7 +1073,7 @@ struct screen {
     saved_flags: i32,
 
     tabs: Option<Rc<RefCell<BitStr>>>,
-    sel: *mut screen_sel,
+    sel: Option<Box<screen_sel>>,
 
     #[cfg(feature = "sixel")]
     images: images,

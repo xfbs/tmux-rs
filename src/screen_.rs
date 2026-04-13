@@ -15,6 +15,7 @@ use crate::*;
 use crate::options_::*;
 
 /// Selected area in screen.
+#[derive(Clone)]
 pub struct screen_sel {
     pub hidden: i32,
     pub rectangle: i32,
@@ -76,7 +77,7 @@ pub fn screen_placeholder() -> screen {
         saved_cell: unsafe { zeroed() },
         saved_flags: 0,
         tabs: None,
-        sel: null_mut(),
+        sel: None,
         #[cfg(feature = "sixel")]
         images: Vec::new(),
         write_list: null_mut(),
@@ -121,7 +122,7 @@ pub unsafe fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u32) {
                 saved_flags: 0,
 
                 tabs: None,
-                sel: null_mut(),
+                sel: None,
 
                 #[cfg(feature = "sixel")]
                 images: Vec::new(),
@@ -185,7 +186,7 @@ pub unsafe fn screen_reset_hyperlinks(s: *mut screen) {
 /// Destroy a screen.
 pub unsafe fn screen_free(s: *mut screen) {
     unsafe {
-        free_((*s).sel);
+        (*s).sel = None;
         (*s).tabs = None;
         free_((*s).path);
         free_((*s).title);
@@ -497,35 +498,32 @@ pub unsafe fn screen_set_selection(
     gc: *mut grid_cell,
 ) {
     unsafe {
-        if (*s).sel.is_null() {
-            (*s).sel = xcalloc1::<screen_sel>() as *mut screen_sel;
-        }
+        let sel = (*s).sel.get_or_insert_with(|| Box::new(zeroed()));
 
-        memcpy__(&raw mut (*(*s).sel).cell, gc);
-        (*(*s).sel).hidden = 0;
-        (*(*s).sel).rectangle = rectangle as i32;
-        (*(*s).sel).modekeys = modekeys;
+        sel.cell = *gc;
+        sel.hidden = 0;
+        sel.rectangle = rectangle as i32;
+        sel.modekeys = modekeys;
 
-        (*(*s).sel).sx = sx;
-        (*(*s).sel).sy = sy;
-        (*(*s).sel).ex = ex;
-        (*(*s).sel).ey = ey;
+        sel.sx = sx;
+        sel.sy = sy;
+        sel.ex = ex;
+        sel.ey = ey;
     }
 }
 
 /// Clear selection.
 pub unsafe fn screen_clear_selection(s: *mut screen) {
     unsafe {
-        free_((*s).sel);
-        (*s).sel = null_mut();
+        (*s).sel = None;
     }
 }
 
 /// Hide selection.
 pub unsafe fn screen_hide_selection(s: *mut screen) {
     unsafe {
-        if !(*s).sel.is_null() {
-            (*(*s).sel).hidden = 1;
+        if let Some(sel) = (*s).sel.as_mut() {
+            sel.hidden = 1;
         }
     }
 }
@@ -533,30 +531,29 @@ pub unsafe fn screen_hide_selection(s: *mut screen) {
 /// Check if cell in selection.
 pub unsafe fn screen_check_selection(s: *mut screen, px: u32, py: u32) -> c_int {
     unsafe {
-        let sel = (*s).sel;
+        let sel = match (*s).sel.as_ref() {
+            Some(sel) if sel.hidden == 0 => sel,
+            _ => return 0,
+        };
         let xx: u32;
 
-        if sel.is_null() || (*sel).hidden != 0 {
-            return 0;
-        }
-
-        if (*sel).rectangle != 0 {
-            match (*sel).sy.cmp(&(*sel).ey) {
+        if sel.rectangle != 0 {
+            match sel.sy.cmp(&sel.ey) {
                 cmp::Ordering::Less => {
                     // start line < end line -- downward selection.
-                    if py < (*sel).sy || py > (*sel).ey {
+                    if py < sel.sy || py > sel.ey {
                         return 0;
                     }
                 }
                 cmp::Ordering::Greater => {
                     // start line > end line -- upward selection.
-                    if py > (*sel).sy || py < (*sel).ey {
+                    if py > sel.sy || py < sel.ey {
                         return 0;
                     }
                 }
                 cmp::Ordering::Equal => {
                     // starting line == ending line.
-                    if py != (*sel).sy {
+                    if py != sel.sy {
                         return 0;
                     }
                 }
@@ -565,22 +562,22 @@ pub unsafe fn screen_check_selection(s: *mut screen, px: u32, py: u32) -> c_int 
             // Need to include the selection start row, but not the cursor
             // row, which means the selection changes depending on which
             // one is on the left.
-            if (*sel).ex < (*sel).sx {
+            if sel.ex < sel.sx {
                 // Cursor (ex) is on the left.
-                if px < (*sel).ex {
+                if px < sel.ex {
                     return 0;
                 }
 
-                if px > (*sel).sx {
+                if px > sel.sx {
                     return 0;
                 }
             } else {
                 // Selection start (sx) is on the left.
-                if px < (*sel).sx {
+                if px < sel.sx {
                     return 0;
                 }
 
-                if px > (*sel).ex {
+                if px > sel.ex {
                     return 0;
                 }
             }
@@ -588,69 +585,69 @@ pub unsafe fn screen_check_selection(s: *mut screen, px: u32, py: u32) -> c_int 
 
             // Like emacs, keep the top-left-most character, and drop the
             // bottom-right-most, regardless of copy direction.
-            match (*sel).sy.cmp(&((*sel).ey)) {
+            match sel.sy.cmp(&(sel.ey)) {
                 cmp::Ordering::Less => {
                     // starting line < ending line -- downward selection.
-                    if py < (*sel).sy || py > (*sel).ey {
+                    if py < sel.sy || py > sel.ey {
                         return 0;
                     }
 
-                    if py == (*sel).sy && px < (*sel).sx {
+                    if py == sel.sy && px < sel.sx {
                         return 0;
                     }
 
-                    if (*sel).modekeys == modekey::MODEKEY_EMACS {
-                        xx = if (*sel).ex == 0 { 0 } else { (*sel).ex - 1 };
+                    if sel.modekeys == modekey::MODEKEY_EMACS {
+                        xx = if sel.ex == 0 { 0 } else { sel.ex - 1 };
                     } else {
-                        xx = (*sel).ex;
+                        xx = sel.ex;
                     }
-                    if py == (*sel).ey && px > xx {
+                    if py == sel.ey && px > xx {
                         return 0;
                     }
                 }
                 cmp::Ordering::Greater => {
                     // starting line > ending line -- upward selection.
-                    if py > (*sel).sy || py < (*sel).ey {
+                    if py > sel.sy || py < sel.ey {
                         return 0;
                     }
 
-                    if py == (*sel).ey && px < (*sel).ex {
+                    if py == sel.ey && px < sel.ex {
                         return 0;
                     }
 
-                    if (*sel).modekeys == modekey::MODEKEY_EMACS {
-                        xx = (*sel).sx - 1;
+                    if sel.modekeys == modekey::MODEKEY_EMACS {
+                        xx = sel.sx - 1;
                     } else {
-                        xx = (*sel).sx;
+                        xx = sel.sx;
                     }
-                    if py == (*sel).sy && ((*sel).sx == 0 || px > xx) {
+                    if py == sel.sy && (sel.sx == 0 || px > xx) {
                         return 0;
                     }
                 }
                 cmp::Ordering::Equal => {
                     // starting line == ending line.
-                    if py != (*sel).sy {
+                    if py != sel.sy {
                         return 0;
                     }
 
-                    if (*sel).ex < (*sel).sx {
+                    if sel.ex < sel.sx {
                         // cursor (ex) is on the left
-                        if (*sel).modekeys == modekey::MODEKEY_EMACS {
-                            xx = (*sel).sx - 1;
+                        if sel.modekeys == modekey::MODEKEY_EMACS {
+                            xx = sel.sx - 1;
                         } else {
-                            xx = (*sel).sx;
+                            xx = sel.sx;
                         }
-                        if px > xx || px < (*sel).ex {
+                        if px > xx || px < sel.ex {
                             return 0;
                         }
                     } else {
                         // selection start (sx) is on the left
-                        if (*sel).modekeys == modekey::MODEKEY_EMACS {
-                            xx = if (*sel).ex == 0 { 0 } else { (*sel).ex - 1 };
+                        if sel.modekeys == modekey::MODEKEY_EMACS {
+                            xx = if sel.ex == 0 { 0 } else { sel.ex - 1 };
                         } else {
-                            xx = (*sel).ex;
+                            xx = sel.ex;
                         }
-                        if px < (*sel).sx || px > xx {
+                        if px < sel.sx || px > xx {
                             return 0;
                         }
                     }
@@ -665,11 +662,12 @@ pub unsafe fn screen_check_selection(s: *mut screen, px: u32, py: u32) -> c_int 
 /// Get selected grid cell.
 pub unsafe fn screen_select_cell(s: *mut screen, dst: *mut grid_cell, src: *const grid_cell) {
     unsafe {
-        if (*s).sel.is_null() || (*(*s).sel).hidden != 0 {
-            return;
-        }
+        let sel = match (*s).sel.as_ref() {
+            Some(sel) if sel.hidden == 0 => sel,
+            _ => return,
+        };
 
-        memcpy__(dst, &raw const (*(*s).sel).cell);
+        *dst = sel.cell;
 
         utf8_copy(&mut (*dst).data, &(*src).data);
         (*dst).attr &= !grid_attr::GRID_ATTR_CHARSET;
@@ -1332,7 +1330,7 @@ mod tests {
         assert!(s.path.is_null());
         assert!(s.grid.is_null());
         assert!(s.saved_grid.is_null());
-        assert!(s.sel.is_null());
+        assert!(s.sel.is_none());
         assert!(s.tabs.is_none());
         assert_eq!(s.cx, 0);
         assert_eq!(s.cy, 0);

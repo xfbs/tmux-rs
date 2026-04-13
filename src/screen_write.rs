@@ -2094,7 +2094,7 @@ pub unsafe fn screen_write_collect_add(ctx: *mut screen_write_ctx, gc: *const gr
             || (*gc).attr.intersects(grid_attr::GRID_ATTR_CHARSET)
             || !(*s).mode.intersects(mode_flag::MODE_WRAP)
             || (*s).mode.intersects(mode_flag::MODE_INSERT)
-            || !(*s).sel.is_null()
+            || !(*s).sel.is_none()
         {
             screen_write_collect_end(ctx);
             screen_write_collect_flush(ctx, 0, "screen_write_collect_add");
