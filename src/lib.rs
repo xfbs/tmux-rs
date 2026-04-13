@@ -926,7 +926,7 @@ struct grid {
     hsize: u32,
     hlimit: u32,
 
-    linedata: *mut grid_line,
+    linedata: Vec<grid_line>,
 }
 
 /// Virtual cursor in a grid.
