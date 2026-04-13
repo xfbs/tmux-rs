@@ -1040,7 +1040,7 @@ enum screen_cursor_style {
 struct screen {
     title: *mut u8,
     path: *mut u8,
-    titles: *mut screen_titles,
+    titles: Vec<*mut u8>,
 
     /// grid data
     grid: *mut grid,

@@ -30,21 +30,13 @@ pub struct screen_sel {
     pub cell: grid_cell,
 }
 
-pub type screen_titles = Vec<*mut u8>;
-
 /// Free titles stack.
 pub unsafe fn screen_free_titles(s: *mut screen) {
     unsafe {
-        if (*s).titles.is_null() {
-            return;
-        }
-
-        for &text in (*(*s).titles).iter() {
+        for &text in (&(*s).titles).iter() {
             free_(text);
         }
-
-        drop(Box::from_raw((*s).titles));
-        (*s).titles = null_mut();
+        (&mut (*s).titles).clear();
     }
 }
 
@@ -59,7 +51,7 @@ pub fn screen_placeholder() -> screen {
     screen {
         title: null_mut(),
         path: null_mut(),
-        titles: null_mut(),
+        titles: Vec::new(),
         grid: null_mut(),
         cx: 0,
         cy: 0,
@@ -99,7 +91,7 @@ pub unsafe fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u32) {
                 saved_grid: null_mut(),
 
                 title: xstrdup_(c"").as_ptr(),
-                titles: null_mut(),
+                titles: Vec::new(),
                 path: null_mut(),
 
                 cx: 0,
@@ -295,24 +287,16 @@ pub unsafe fn screen_set_path(s: *mut screen, path: *const u8) {
 /// Push the current title onto the stack.
 pub unsafe fn screen_push_title(s: *mut screen) {
     unsafe {
-        if (*s).titles.is_null() {
-            (*s).titles = Box::into_raw(Box::new(Vec::new()));
-        }
-
         // Push to front (index 0 = top of stack)
-        (*(*s).titles).insert(0, xstrdup((*s).title).as_ptr());
+        (&mut (*s).titles).insert(0, xstrdup((*s).title).as_ptr());
     }
 }
 
 /// Pop a title from the stack and set it as the screen title. If the stack is empty, do nothing.
 pub unsafe fn screen_pop_title(s: *mut screen) {
     unsafe {
-        if (*s).titles.is_null() {
-            return;
-        }
-
-        if !(*(*s).titles).is_empty() {
-            let text = (*(*s).titles).remove(0);
+        if !(&(*s).titles).is_empty() {
+            let text = (&mut (*s).titles).remove(0);
             screen_set_title(s, text);
             free_(text);
         }
