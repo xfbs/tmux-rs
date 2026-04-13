@@ -1832,7 +1832,7 @@ pub unsafe fn window_copy_cmd_next_matching_bracket(
                             np -= 1;
                             continue 'outer;
                         }
-                        if (*gl).cellsize > (*(*s).grid).sx {
+                        if (*gl).celldata.len() as u32 > (*(*s).grid).sx {
                             np -= 1;
                             continue 'outer;
                         }
@@ -3793,13 +3793,13 @@ pub unsafe fn window_copy_cellstring(
     unsafe {
         // struct grid_cell_entry *gce;
 
-        if px >= (*gl).cellsize {
+        if px as usize >= (*gl).celldata.len() {
             *size = 1;
             *allocated = 0;
             return c!(" ") as *mut u8; // TODO think of a better type-safe way to represent returning a MaybeAllocated type
         }
 
-        let gce = (*gl).celldata.add(px as usize);
+        let gce = (&mut (*gl).celldata).as_mut_ptr().add(px as usize);
         if (*gce).flags.intersects(grid_flag::PADDING) {
             *size = 0;
             *allocated = 0;
@@ -3811,7 +3811,7 @@ pub unsafe fn window_copy_cellstring(
             return (&raw mut (*gce).union_.data.data).cast();
         }
 
-        let ud = utf8_to_data((*(*gl).extddata.add((*gce).union_.offset as usize)).data);
+        let ud = utf8_to_data((&(*gl).extddata)[(*gce).union_.offset as usize].data);
         if ud.size == 0 {
             *size = 0;
             *allocated = 0;
@@ -5605,13 +5605,13 @@ pub unsafe fn window_copy_copy_line(
 
         // Work out if the line was wrapped at the screen edge and all of it is on screen.
         let gl = grid_get_line(gd, sy);
-        if (*gl).flags.intersects(grid_line_flag::WRAPPED) && (*gl).cellsize <= (*gd).sx {
+        if (*gl).flags.intersects(grid_line_flag::WRAPPED) && (*gl).celldata.len() as u32 <= (*gd).sx {
             wrapped = true;
         }
 
         // If the line was wrapped, don't strip spaces (use the full length).
         let xx = if wrapped {
-            (*gl).cellsize
+            (*gl).celldata.len() as u32
         } else {
             window_copy_find_length(wme, sy)
         };

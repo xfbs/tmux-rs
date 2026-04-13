@@ -843,7 +843,7 @@ impl grid_cell {
 }
 
 /// Grid extended cell entry.
-
+#[derive(Copy, Clone)]
 struct grid_extd_entry {
     data: utf8_char,
     attr: u16,
@@ -864,12 +864,13 @@ struct grid_cell_entry_data {
 }
 
 
+#[derive(Copy, Clone)]
 union grid_cell_entry_union {
     offset: u32,
     data: grid_cell_entry_data,
 }
 
-
+#[derive(Copy, Clone)]
 struct grid_cell_entry {
     union_: grid_cell_entry_union,
     flags: grid_flag,
@@ -878,15 +879,37 @@ struct grid_cell_entry {
 /// Grid line.
 
 struct grid_line {
-    celldata: *mut grid_cell_entry,
+    celldata: Vec<grid_cell_entry>,
     cellused: u32,
-    cellsize: u32,
 
-    extddata: *mut grid_extd_entry,
-    extdsize: u32,
+    extddata: Vec<grid_extd_entry>,
 
     flags: grid_line_flag,
     time: time_t,
+}
+
+impl grid_line {
+    /// Create a new empty grid line.
+    fn new() -> Self {
+        Self {
+            celldata: Vec::new(),
+            cellused: 0,
+            extddata: Vec::new(),
+            flags: grid_line_flag::empty(),
+            time: 0,
+        }
+    }
+
+    /// Create a dead grid line (used by reflow to mark consumed lines).
+    fn new_dead() -> Self {
+        Self {
+            celldata: Vec::new(),
+            cellused: 0,
+            extddata: Vec::new(),
+            flags: grid_line_flag::DEAD,
+            time: 0,
+        }
+    }
 }
 
 const GRID_HISTORY: i32 = 0x1; // scroll lines into history

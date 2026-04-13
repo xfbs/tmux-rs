@@ -634,7 +634,7 @@ pub unsafe fn screen_write_fast_copy(
             }
             let mut cx = (*s).cx;
             for xx in px..(px + nx) {
-                if xx >= (*grid_get_line(gd, yy)).cellsize {
+                if xx as usize >= (*grid_get_line(gd, yy)).celldata.len() {
                     break;
                 }
                 grid_get_cell(gd, xx, yy, &raw mut gc);
@@ -1392,7 +1392,7 @@ pub unsafe fn screen_write_clearline(ctx: *mut screen_write_ctx, bg: u32) {
         let ci = (*ctx).item;
 
         let gl = grid_get_line((*s).grid, (*(*s).grid).hsize + (*s).cy);
-        if (*gl).cellsize == 0 && COLOUR_DEFAULT(bg as i32) {
+        if (*gl).celldata.is_empty() && COLOUR_DEFAULT(bg as i32) {
             return;
         }
 
@@ -1428,7 +1428,7 @@ pub unsafe fn screen_write_clearendofline(ctx: *mut screen_write_ctx, bg: u32) {
         }
 
         let gl = grid_get_line((*s).grid, (*(*s).grid).hsize + (*s).cy);
-        if (*s).cx > sx - 1 || ((*s).cx >= (*gl).cellsize && COLOUR_DEFAULT(bg as i32)) {
+        if (*s).cx > sx - 1 || ((*s).cx as usize >= (*gl).celldata.len() && COLOUR_DEFAULT(bg as i32)) {
             return;
         }
 
@@ -2211,10 +2211,10 @@ pub unsafe fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *const grid_cell
 
         // If no change, do not draw.
         if skip {
-            if (*s).cx >= (*gl).cellsize {
+            if (*s).cx as usize >= (*gl).celldata.len() {
                 skip = grid_cells_equal(gc, &GRID_DEFAULT_CELL);
             } else {
-                gce = (*gl).celldata.add((*s).cx as usize);
+                gce = (&mut (*gl).celldata).as_mut_ptr().add((*s).cx as usize);
                 if (*gce).flags.intersects(grid_flag::EXTENDED)
                     || (*gc).flags != (*gce).flags
                     || (*gc).attr.bits() != (*gce).union_.data.attr as u16

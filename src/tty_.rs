@@ -1792,7 +1792,7 @@ pub unsafe fn tty_draw_line(
             nx = sx;
         }
 
-        let cellsize = (*grid_get_line(gd, (*gd).hsize + py)).cellsize;
+        let cellsize = (*grid_get_line(gd, (*gd).hsize + py)).celldata.len() as u32;
         if sx > cellsize {
             sx = cellsize;
         }

@@ -889,8 +889,8 @@ pub unsafe fn format_cb_history_bytes(ft: &format_tree) -> format_table_type {
 
         for i in 0..((*gd).hsize + (*gd).sy) {
             let gl = grid_get_line(gd, i);
-            size += (*gl).cellsize as usize * std::mem::size_of::<grid_cell>();
-            size += (*gl).extdsize as usize * std::mem::size_of::<grid_cell>();
+            size += (*gl).celldata.len() * std::mem::size_of::<grid_cell>();
+            size += (*gl).extddata.len() * std::mem::size_of::<grid_cell>();
         }
         size += ((*gd).hsize + (*gd).sy) as usize * std::mem::size_of::<grid_line>();
 
@@ -914,8 +914,8 @@ pub unsafe fn format_cb_history_all_bytes(ft: &format_tree) -> format_table_type
 
         for i in 0..lines {
             let gl = grid_get_line(gd, i);
-            cells += (*gl).cellsize;
-            extended_cells += (*gl).extdsize;
+            cells += (*gl).celldata.len() as u32;
+            extended_cells += (*gl).extddata.len() as u32;
         }
 
         format!(
