@@ -2672,7 +2672,7 @@ unsafe fn input_osc_4(ictx: *mut input_ctx, p: *const u8) {
 /// Handle the OSC 8 sequence for embedding hyperlinks.
 unsafe fn input_osc_8(ictx: *mut input_ctx, p: *const u8) {
     unsafe {
-        let hl: *mut hyperlinks = (*(*ictx).ctx.s).hyperlinks;
+        let hl: *mut hyperlinks = (*(*ictx).ctx.s).hyperlinks.unwrap_or(null_mut());
         let gc = &raw mut (*ictx).cell.cell;
 
         let mut id: *mut u8 = null_mut();

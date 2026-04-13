@@ -73,7 +73,7 @@ pub fn screen_placeholder() -> screen {
         #[cfg(feature = "sixel")]
         images: Vec::new(),
         write_list: null_mut(),
-        hyperlinks: null_mut(),
+        hyperlinks: None,
     }
 }
 
@@ -120,7 +120,7 @@ pub unsafe fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u32) {
                 images: Vec::new(),
 
                 write_list: null_mut(),
-                hyperlinks: null_mut(),
+                hyperlinks: None,
             },
         );
 
@@ -167,10 +167,10 @@ pub unsafe fn screen_reinit(s: *mut screen) {
 /// Reset hyperlinks of a screen.
 pub unsafe fn screen_reset_hyperlinks(s: *mut screen) {
     unsafe {
-        if (*s).hyperlinks.is_null() {
-            (*s).hyperlinks = hyperlinks_init();
+        if let Some(hl) = (*s).hyperlinks {
+            hyperlinks_reset(hl);
         } else {
-            hyperlinks_reset((*s).hyperlinks);
+            (*s).hyperlinks = Some(hyperlinks_init());
         }
     }
 }
@@ -191,8 +191,8 @@ pub unsafe fn screen_free(s: *mut screen) {
         }
         grid_destroy((*s).grid);
 
-        if !(*s).hyperlinks.is_null() {
-            hyperlinks_free((*s).hyperlinks);
+        if let Some(hl) = (*s).hyperlinks {
+            hyperlinks_free(hl);
         }
         screen_free_titles(s);
 

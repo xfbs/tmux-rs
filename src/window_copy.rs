@@ -396,8 +396,8 @@ pub unsafe fn window_copy_init(
         (*data).scroll_exit = args_has(args, 'e');
         (*data).hide_position = args_has(args, 'H');
 
-        if !(*base).hyperlinks.is_null() {
-            (*data).screen.hyperlinks = hyperlinks_copy((*base).hyperlinks);
+        if let Some(hl) = (*base).hyperlinks {
+            (*data).screen.hyperlinks = Some(hyperlinks_copy(hl));
         }
         (*data).screen.cx = (*data).cx;
         (*data).screen.cy = (*data).cy;

@@ -1822,7 +1822,7 @@ pub unsafe fn tty_draw_line(
                 && !tty_fake_bce(tty, defaults, 8)
                 && (*c).overlay_check.is_none()
             {
-                tty_default_attributes(tty, defaults, palette, 8, (*s).hyperlinks);
+                tty_default_attributes(tty, defaults, palette, 8, (*s).hyperlinks.unwrap_or(null_mut()));
                 tty_cursor(tty, nx - 1, aty);
                 tty_putcode(tty, tty_code_code::TTYC_EL1);
                 cleared = 1;
@@ -1851,7 +1851,7 @@ pub unsafe fn tty_draw_line(
                     || ux + width + (*gcp).data.width as u32 > nx
                     || (SIZEOF_BUF) - len < (*gcp).data.size as usize)
             {
-                tty_attributes(tty, &last, defaults, palette, (*s).hyperlinks);
+                tty_attributes(tty, &last, defaults, palette, (*s).hyperlinks.unwrap_or(null_mut()));
                 if last.flags.intersects(grid_flag::CLEARED) {
                     // log_debug("%s: %zu cleared", __func__, len);
                     tty_clear_line(tty, defaults, aty, atx + ux, width, last.bg as u32);
@@ -1886,7 +1886,7 @@ pub unsafe fn tty_draw_line(
                 }
             } else if hidden != 0 || ux + (*gcp).data.width as u32 > nx {
                 if !(*gcp).flags.intersects(grid_flag::PADDING) {
-                    tty_attributes(tty, &raw mut last, defaults, palette, (*s).hyperlinks);
+                    tty_attributes(tty, &raw mut last, defaults, palette, (*s).hyperlinks.unwrap_or(null_mut()));
                     for j in 0..OVERLAY_MAX_RANGES {
                         if r.nx[j] == 0 {
                             continue;
@@ -1905,7 +1905,7 @@ pub unsafe fn tty_draw_line(
                     }
                 }
             } else if (*gcp).attr.intersects(grid_attr::GRID_ATTR_CHARSET) {
-                tty_attributes(tty, &raw mut last, defaults, palette, (*s).hyperlinks);
+                tty_attributes(tty, &raw mut last, defaults, palette, (*s).hyperlinks.unwrap_or(null_mut()));
                 tty_cursor(tty, atx + ux, aty);
                 for j in 0..(*gcp).data.size {
                     tty_putc(tty, (*gcp).data.data[j as usize]);
@@ -1922,7 +1922,7 @@ pub unsafe fn tty_draw_line(
             }
         }
         if len != 0 && ((!last.flags.intersects(grid_flag::CLEARED)) || last.bg != 8) {
-            tty_attributes(tty, &raw mut last, defaults, palette, (*s).hyperlinks);
+            tty_attributes(tty, &raw mut last, defaults, palette, (*s).hyperlinks.unwrap_or(null_mut()));
             if last.flags.intersects(grid_flag::CLEARED) {
                 // log_debug("%s: %zu cleared (end)", __func__, len);
                 tty_clear_line(tty, defaults, aty, atx + ux, width, last.bg as u32);
@@ -1937,7 +1937,7 @@ pub unsafe fn tty_draw_line(
 
         if cleared == 0 && ux < nx {
             // log_debug( "%s: %u to end of line (%zu cleared)", __func__, nx - ux, len,);
-            tty_default_attributes(tty, defaults, palette, 8, (*s).hyperlinks);
+            tty_default_attributes(tty, defaults, palette, 8, (*s).hyperlinks.unwrap_or(null_mut()));
             tty_clear_line(tty, defaults, aty, atx + ux, nx - ux, 8);
         }
 
@@ -2123,7 +2123,7 @@ pub unsafe fn tty_cmd_insertcharacter(tty: *mut tty, ctx: *const tty_ctx) {
             &raw const (*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_cursor_pane(tty, ctx, (*ctx).ocx, (*ctx).ocy);
@@ -2157,7 +2157,7 @@ pub unsafe fn tty_cmd_deletecharacter(tty: *mut tty, ctx: *const tty_ctx) {
             &raw const (*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_cursor_pane(tty, ctx, (*ctx).ocx, (*ctx).ocy);
@@ -2178,7 +2178,7 @@ pub unsafe fn tty_cmd_clearcharacter(tty: *mut tty, ctx: *const tty_ctx) {
             &raw const (*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_clear_pane_line(tty, ctx, (*ctx).ocy, (*ctx).ocx, (*ctx).num, (*ctx).bg);
@@ -2207,7 +2207,7 @@ pub unsafe fn tty_cmd_insertline(tty: *mut tty, ctx: *const tty_ctx) {
             &(*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_region_pane(tty, ctx, (*ctx).orupper, (*ctx).orlower);
@@ -2247,7 +2247,7 @@ pub unsafe fn tty_cmd_deleteline(tty: *mut tty, ctx: *const tty_ctx) {
             &(*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_region_pane(tty, ctx, (*ctx).orupper, (*ctx).orlower);
@@ -2273,7 +2273,7 @@ unsafe fn tty_cmd_clearline(tty: *mut tty, ctx: *const tty_ctx) {
             &raw const (*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_clear_pane_line(tty, ctx, (*ctx).ocy, 0, (*ctx).sx, (*ctx).bg);
@@ -2290,7 +2290,7 @@ unsafe fn tty_cmd_clearendofline(tty: *mut tty, ctx: *const tty_ctx) {
             &raw const (*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_clear_pane_line(tty, ctx, (*ctx).ocy, (*ctx).ocx, nx, (*ctx).bg);
@@ -2305,7 +2305,7 @@ unsafe fn tty_cmd_clearstartofline(tty: *mut tty, ctx: *const tty_ctx) {
             &raw const (*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_clear_pane_line(tty, ctx, (*ctx).ocy, 0, (*ctx).ocx + 1, (*ctx).bg);
@@ -2339,7 +2339,7 @@ pub unsafe fn tty_cmd_reverseindex(tty: *mut tty, ctx: *const tty_ctx) {
             &raw const (*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_region_pane(tty, ctx, (*ctx).orupper, (*ctx).orlower);
@@ -2380,7 +2380,7 @@ unsafe fn tty_cmd_linefeed(tty: *mut tty, ctx: *const tty_ctx) {
             &(*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_region_pane(tty, ctx, (*ctx).orupper, (*ctx).orlower);
@@ -2426,7 +2426,7 @@ pub unsafe fn tty_cmd_scrollup(tty: *mut tty, ctx: *const tty_ctx) {
             &(*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_region_pane(tty, ctx, (*ctx).orupper, (*ctx).orlower);
@@ -2475,7 +2475,7 @@ pub unsafe fn tty_cmd_scrolldown(tty: *mut tty, ctx: *const tty_ctx) {
             &(*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_region_pane(tty, ctx, (*ctx).orupper, (*ctx).orlower);
@@ -2499,7 +2499,7 @@ pub unsafe fn tty_cmd_clearendofscreen(tty: *mut tty, ctx: *const tty_ctx) {
             &raw const (*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_region_pane(tty, ctx, 0, (*ctx).sy - 1);
@@ -2527,7 +2527,7 @@ pub unsafe fn tty_cmd_clearstartofscreen(tty: *mut tty, ctx: *const tty_ctx) {
             &raw const (*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_region_pane(tty, ctx, 0, (*ctx).sy - 1);
@@ -2555,7 +2555,7 @@ pub unsafe fn tty_cmd_clearscreen(tty: *mut tty, ctx: *const tty_ctx) {
             &raw const (*ctx).defaults,
             (*ctx).palette,
             (*ctx).bg,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_region_pane(tty, ctx, 0, (*ctx).sy - 1);
@@ -2582,7 +2582,7 @@ pub unsafe fn tty_cmd_alignmenttest(tty: *mut tty, ctx: *const tty_ctx) {
             &raw const GRID_DEFAULT_CELL,
             &raw const (*ctx).defaults,
             (*ctx).palette,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         tty_region_pane(tty, ctx, 0, (*ctx).sy - 1);
@@ -2649,7 +2649,7 @@ pub unsafe fn tty_cmd_cell(tty: *mut tty, ctx: *const tty_ctx) {
             (*ctx).cell,
             &raw const (*ctx).defaults,
             (*ctx).palette,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         if (*ctx).num == 1 {
@@ -2693,7 +2693,7 @@ pub unsafe fn tty_cmd_cells(tty: *mut tty, ctx: *const tty_ctx) {
             (*ctx).cell,
             &raw const (*ctx).defaults,
             (*ctx).palette,
-            (*(*ctx).s).hyperlinks,
+            (*(*ctx).s).hyperlinks.unwrap_or(null_mut()),
         );
 
         // Get tty position from pane position for overlay check.

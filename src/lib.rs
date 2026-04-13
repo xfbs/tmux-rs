@@ -1080,7 +1080,7 @@ struct screen {
 
     write_list: *mut screen_write_cline,
 
-    hyperlinks: *mut hyperlinks,
+    hyperlinks: Option<*mut hyperlinks>,
 }
 
 const SCREEN_WRITE_SYNC: i32 = 0x1;

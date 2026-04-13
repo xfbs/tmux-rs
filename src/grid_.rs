@@ -1158,9 +1158,9 @@ unsafe fn grid_string_cells_code(
         }
 
         // Add hyperlink if changed
-        if !sc.is_null() && !(*sc).hyperlinks.is_null() && (*lastgc).link != (*gc).link {
+        if !sc.is_null() && (*sc).hyperlinks.is_some() && (*lastgc).link != (*gc).link {
             if hyperlinks_get(
-                (*sc).hyperlinks,
+                (*sc).hyperlinks.unwrap_or(null_mut()),
                 (*gc).link,
                 &raw mut uri,
                 &raw mut id,

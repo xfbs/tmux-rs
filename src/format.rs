@@ -5495,11 +5495,11 @@ pub unsafe fn format_grid_hyperlink(
         if (*gc).flags.intersects(grid_flag::PADDING) {
             return None;
         }
-        if (*s).hyperlinks.is_null() || (*gc).link == 0 {
+        if (*s).hyperlinks.is_none() || (*gc).link == 0 {
             return None;
         }
         if !hyperlinks_get(
-            (*s).hyperlinks,
+            (*s).hyperlinks.unwrap_or(null_mut()),
             (*gc).link,
             &mut uri,
             null_mut(),
