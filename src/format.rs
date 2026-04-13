@@ -2119,10 +2119,11 @@ pub unsafe fn format_cb_pane_mode(ft: &format_tree) -> format_table_type {
 pub unsafe fn format_cb_pane_path(ft: &format_tree) -> format_table_type {
     unsafe {
         if (*ft).wp.is_some() {
-            if (*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.path.is_null() {
-                return "".into();
-            }
-            return format!("{}", _s((*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.path)).into();
+            let wp = (*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
+            return match (*wp).base.path.as_ref() {
+                Some(p) => format!("{}", p.to_string_lossy()).into(),
+                None => "".into(),
+            };
         }
         format_table_type::None
     }

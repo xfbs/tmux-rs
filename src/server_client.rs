@@ -2884,10 +2884,9 @@ pub unsafe fn server_client_set_path(c: *mut client) {
             return;
         }
         let active = window_active_pane(winlink_window((*s).curw));
-        let path_ptr = if (*active).base.path.is_null() {
-            c!("")
-        } else {
-            (*active).base.path
+        let path_ptr = match (*active).base.path.as_ref() {
+            Some(p) => p.as_ptr() as *const u8,
+            None => c!(""),
         };
         let new_path = std::ffi::CStr::from_ptr(path_ptr as *const i8)
             .to_string_lossy()

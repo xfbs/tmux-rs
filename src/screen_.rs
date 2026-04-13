@@ -50,7 +50,7 @@ pub unsafe fn screen_free_titles(s: *mut screen) {
 pub fn screen_placeholder() -> screen {
     screen {
         title: CString::default(),
-        path: null_mut(),
+        path: None,
         titles: Vec::new(),
         grid: null_mut(),
         cx: 0,
@@ -92,7 +92,7 @@ pub unsafe fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u32) {
 
                 title: CString::default(),
                 titles: Vec::new(),
-                path: null_mut(),
+                path: None,
 
                 cx: 0,
                 cy: 0,
@@ -180,8 +180,7 @@ pub unsafe fn screen_free(s: *mut screen) {
     unsafe {
         (*s).sel = None;
         (*s).tabs = None;
-        free_((*s).path);
-        // title: CString drops automatically
+        // path and title: CString/Option<CString> drop automatically
 
         if !(*s).write_list.is_null() {
             screen_write_free_list(s);
@@ -274,12 +273,11 @@ pub unsafe fn screen_set_title(s: *mut screen, title: *const u8) -> c_int {
 /// Set screen path.
 pub unsafe fn screen_set_path(s: *mut screen, path: *const u8) {
     unsafe {
-        free_((*s).path);
-        utf8_stravis(
-            &mut (*s).path,
+        let vis = utf8_stravis_(
             path,
             vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB | vis_flags::VIS_NL,
         );
+        (*s).path = Some(CString::new(vis).unwrap_or_default());
     }
 }
 
@@ -1312,7 +1310,7 @@ mod tests {
     fn screen_placeholder_has_safe_defaults() {
         let s = screen_placeholder();
         assert!(s.title.is_empty());
-        assert!(s.path.is_null());
+        assert!(s.path.is_none());
         assert!(s.grid.is_null());
         assert!(s.saved_grid.is_none());
         assert!(s.sel.is_none());
