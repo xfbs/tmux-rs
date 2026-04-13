@@ -1026,7 +1026,7 @@ type images = Vec<*mut image>;
 
 /// Cursor style.
 #[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum screen_cursor_style {
     SCREEN_CURSOR_DEFAULT,
     SCREEN_CURSOR_BLOCK,

@@ -875,3 +875,466 @@ pub unsafe fn screen_mode_to_string(mode: mode_flag) -> *const u8 {
         &raw mut TMP as *mut u8
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::mem::zeroed;
+
+    /// Initialize global options (required for screen_reinit which reads
+    /// the "extended-keys" option).
+    unsafe fn init_globals() {
+        use std::sync::Once;
+        static INIT: Once = Once::new();
+        INIT.call_once(|| unsafe {
+            use crate::tmux::{GLOBAL_OPTIONS, GLOBAL_S_OPTIONS, GLOBAL_W_OPTIONS};
+            use crate::options_::*;
+            GLOBAL_OPTIONS = options_create(null_mut());
+            GLOBAL_S_OPTIONS = options_create(null_mut());
+            GLOBAL_W_OPTIONS = options_create(null_mut());
+            for oe in &OPTIONS_TABLE {
+                if oe.scope & OPTIONS_TABLE_SERVER != 0 {
+                    options_default(GLOBAL_OPTIONS, oe);
+                }
+                if oe.scope & OPTIONS_TABLE_SESSION != 0 {
+                    options_default(GLOBAL_S_OPTIONS, oe);
+                }
+                if oe.scope & OPTIONS_TABLE_WINDOW != 0 {
+                    options_default(GLOBAL_W_OPTIONS, oe);
+                }
+            }
+        });
+    }
+
+    /// Helper: create and initialize a screen for testing.
+    unsafe fn make_screen(sx: u32, sy: u32) -> *mut screen {
+        unsafe {
+            init_globals();
+            let s = Box::into_raw(Box::new(screen_placeholder()));
+            screen_init(s, sx, sy, 0);
+            s
+        }
+    }
+
+    /// Helper: destroy a test screen and free its Box.
+    unsafe fn destroy_screen(s: *mut screen) {
+        unsafe {
+            screen_free(s);
+            drop(Box::from_raw(s));
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Lifecycle
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn screen_init_sets_dimensions() {
+        unsafe {
+            let s = make_screen(80, 24);
+            assert_eq!(screen_size_x(s), 80);
+            assert_eq!(screen_size_y(s), 24);
+            assert_eq!((*s).cx, 0);
+            assert_eq!((*s).cy, 0);
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_init_sets_scroll_region() {
+        unsafe {
+            let s = make_screen(80, 24);
+            assert_eq!((*s).rupper, 0);
+            assert_eq!((*s).rlower, 23);
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_init_sets_cursor_mode() {
+        unsafe {
+            let s = make_screen(80, 24);
+            assert!((*s).mode.contains(mode_flag::MODE_CURSOR));
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_init_creates_grid() {
+        unsafe {
+            let s = make_screen(40, 10);
+            assert!(!(*s).grid.is_null());
+            assert_eq!((*(*s).grid).sx, 40);
+            assert_eq!((*(*s).grid).sy, 10);
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_free_does_not_crash() {
+        unsafe {
+            let s = make_screen(80, 24);
+            destroy_screen(s);
+            // If we reach here, free did not crash.
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Tab stops
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn screen_reset_tabs_sets_every_eighth() {
+        unsafe {
+            let s = make_screen(80, 24);
+            let tabs = (*s).tabs.as_ref().unwrap().borrow();
+            // Tab stops at 8, 16, 24, ..., 72. Not at 0.
+            assert!(!tabs.bit_test(0));
+            assert!(tabs.bit_test(8));
+            assert!(tabs.bit_test(16));
+            assert!(tabs.bit_test(24));
+            assert!(tabs.bit_test(72));
+            assert!(!tabs.bit_test(79));
+            drop(tabs);
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_reset_tabs_small_screen() {
+        unsafe {
+            let s = make_screen(5, 5);
+            // Screen too narrow for any tab stop.
+            let tabs = (*s).tabs.as_ref().unwrap().borrow();
+            assert!(!tabs.bit_test(0));
+            // No tab stops possible in a 5-column screen.
+            drop(tabs);
+            destroy_screen(s);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Title management
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn screen_set_title_stores_title() {
+        unsafe {
+            let s = make_screen(80, 24);
+            screen_set_title(s, c"hello".as_ptr().cast());
+            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            assert_eq!(title.to_str().unwrap(), "hello");
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_set_title_replaces_previous() {
+        unsafe {
+            let s = make_screen(80, 24);
+            screen_set_title(s, c"first".as_ptr().cast());
+            screen_set_title(s, c"second".as_ptr().cast());
+            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            assert_eq!(title.to_str().unwrap(), "second");
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_push_pop_title_stack() {
+        unsafe {
+            let s = make_screen(80, 24);
+
+            screen_set_title(s, c"base".as_ptr().cast());
+            screen_push_title(s);
+            screen_set_title(s, c"overlay".as_ptr().cast());
+
+            // Current title is "overlay".
+            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            assert_eq!(title.to_str().unwrap(), "overlay");
+
+            // Pop restores "base".
+            screen_pop_title(s);
+            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            assert_eq!(title.to_str().unwrap(), "base");
+
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_pop_title_on_empty_stack_does_nothing() {
+        unsafe {
+            let s = make_screen(80, 24);
+            screen_set_title(s, c"keep".as_ptr().cast());
+            screen_pop_title(s); // No stack — should be no-op.
+            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            assert_eq!(title.to_str().unwrap(), "keep");
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_push_multiple_pop_in_order() {
+        unsafe {
+            let s = make_screen(80, 24);
+
+            screen_set_title(s, c"A".as_ptr().cast());
+            screen_push_title(s);
+            screen_set_title(s, c"B".as_ptr().cast());
+            screen_push_title(s);
+            screen_set_title(s, c"C".as_ptr().cast());
+
+            // Pop C → B
+            screen_pop_title(s);
+            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            assert_eq!(title.to_str().unwrap(), "B");
+
+            // Pop B → A
+            screen_pop_title(s);
+            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            assert_eq!(title.to_str().unwrap(), "A");
+
+            destroy_screen(s);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Cursor style
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn screen_set_cursor_style_mappings() {
+        unsafe {
+            let mut style = screen_cursor_style::SCREEN_CURSOR_DEFAULT;
+            let mut mode = mode_flag::empty();
+
+            // Style 0 → DEFAULT
+            screen_set_cursor_style(0, &mut style, &mut mode);
+            assert_eq!(style, screen_cursor_style::SCREEN_CURSOR_DEFAULT);
+
+            // Style 1 → BLOCK + BLINKING
+            screen_set_cursor_style(1, &mut style, &mut mode);
+            assert_eq!(style, screen_cursor_style::SCREEN_CURSOR_BLOCK);
+            assert!(mode.contains(mode_flag::MODE_CURSOR_BLINKING));
+
+            // Style 2 → BLOCK, no blinking
+            screen_set_cursor_style(2, &mut style, &mut mode);
+            assert_eq!(style, screen_cursor_style::SCREEN_CURSOR_BLOCK);
+            assert!(!mode.contains(mode_flag::MODE_CURSOR_BLINKING));
+
+            // Style 3 → UNDERLINE + BLINKING
+            screen_set_cursor_style(3, &mut style, &mut mode);
+            assert_eq!(style, screen_cursor_style::SCREEN_CURSOR_UNDERLINE);
+            assert!(mode.contains(mode_flag::MODE_CURSOR_BLINKING));
+
+            // Style 4 → UNDERLINE, no blinking
+            screen_set_cursor_style(4, &mut style, &mut mode);
+            assert_eq!(style, screen_cursor_style::SCREEN_CURSOR_UNDERLINE);
+            assert!(!mode.contains(mode_flag::MODE_CURSOR_BLINKING));
+
+            // Style 5 → BAR + BLINKING
+            screen_set_cursor_style(5, &mut style, &mut mode);
+            assert_eq!(style, screen_cursor_style::SCREEN_CURSOR_BAR);
+            assert!(mode.contains(mode_flag::MODE_CURSOR_BLINKING));
+
+            // Style 6 → BAR, no blinking
+            screen_set_cursor_style(6, &mut style, &mut mode);
+            assert_eq!(style, screen_cursor_style::SCREEN_CURSOR_BAR);
+            assert!(!mode.contains(mode_flag::MODE_CURSOR_BLINKING));
+
+            // Style 99 → no change (unknown)
+            let prev_style = style;
+            screen_set_cursor_style(99, &mut style, &mut mode);
+            assert_eq!(style, prev_style);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Selection
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn screen_set_and_check_selection_rectangle() {
+        unsafe {
+            let s = make_screen(80, 24);
+            let mut gc: grid_cell = zeroed();
+
+            // Set a rectangular selection from (2,1) to (5,3).
+            screen_set_selection(s, 2, 1, 5, 3, 1, modekey::MODEKEY_EMACS, &mut gc);
+
+            // Inside selection.
+            assert_ne!(screen_check_selection(s, 3, 2), 0);
+            // On boundary.
+            assert_ne!(screen_check_selection(s, 2, 1), 0);
+            assert_ne!(screen_check_selection(s, 5, 3), 0);
+            // Outside — wrong column.
+            assert_eq!(screen_check_selection(s, 1, 2), 0);
+            assert_eq!(screen_check_selection(s, 6, 2), 0);
+            // Outside — wrong row.
+            assert_eq!(screen_check_selection(s, 3, 0), 0);
+            assert_eq!(screen_check_selection(s, 3, 4), 0);
+
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_clear_selection_removes_it() {
+        unsafe {
+            let s = make_screen(80, 24);
+            let mut gc: grid_cell = zeroed();
+
+            screen_set_selection(s, 0, 0, 10, 10, 1, modekey::MODEKEY_EMACS, &mut gc);
+            assert_ne!(screen_check_selection(s, 5, 5), 0);
+
+            screen_clear_selection(s);
+            assert_eq!(screen_check_selection(s, 5, 5), 0);
+
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_hide_selection_hides_it() {
+        unsafe {
+            let s = make_screen(80, 24);
+            let mut gc: grid_cell = zeroed();
+
+            screen_set_selection(s, 0, 0, 10, 10, 1, modekey::MODEKEY_EMACS, &mut gc);
+            assert_ne!(screen_check_selection(s, 5, 5), 0);
+
+            screen_hide_selection(s);
+            assert_eq!(screen_check_selection(s, 5, 5), 0);
+
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_check_selection_linear_downward() {
+        unsafe {
+            let s = make_screen(80, 24);
+            let mut gc: grid_cell = zeroed();
+
+            // Linear (non-rectangle) selection from (5,2) to (10,4) in vi mode.
+            screen_set_selection(s, 5, 2, 10, 4, 0, modekey::MODEKEY_VI, &mut gc);
+
+            // Start line — before sx.
+            assert_eq!(screen_check_selection(s, 4, 2), 0);
+            // Start line — at sx.
+            assert_ne!(screen_check_selection(s, 5, 2), 0);
+            // Middle line — any column should be in selection.
+            assert_ne!(screen_check_selection(s, 0, 3), 0);
+            assert_ne!(screen_check_selection(s, 79, 3), 0);
+            // End line — at ex.
+            assert_ne!(screen_check_selection(s, 10, 4), 0);
+            // End line — past ex.
+            assert_eq!(screen_check_selection(s, 11, 4), 0);
+            // Outside rows.
+            assert_eq!(screen_check_selection(s, 5, 1), 0);
+            assert_eq!(screen_check_selection(s, 5, 5), 0);
+
+            destroy_screen(s);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Resize
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn screen_resize_changes_dimensions() {
+        unsafe {
+            let s = make_screen(80, 24);
+
+            screen_resize(s, 40, 12, 0);
+            assert_eq!(screen_size_x(s), 40);
+            assert_eq!(screen_size_y(s), 12);
+
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_resize_updates_scroll_region() {
+        unsafe {
+            let s = make_screen(80, 24);
+
+            screen_resize(s, 80, 10, 0);
+            assert_eq!((*s).rupper, 0);
+            assert_eq!((*s).rlower, 9);
+
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_resize_grow_then_shrink() {
+        unsafe {
+            let s = make_screen(80, 24);
+
+            // Grow.
+            screen_resize(s, 120, 40, 0);
+            assert_eq!(screen_size_x(s), 120);
+            assert_eq!(screen_size_y(s), 40);
+
+            // Shrink back.
+            screen_resize(s, 80, 24, 0);
+            assert_eq!(screen_size_x(s), 80);
+            assert_eq!(screen_size_y(s), 24);
+
+            destroy_screen(s);
+        }
+    }
+
+    #[test]
+    fn screen_resize_minimum_1x1() {
+        unsafe {
+            let s = make_screen(80, 24);
+
+            screen_resize(s, 0, 0, 0);
+            // Should clamp to 1x1.
+            assert_eq!(screen_size_x(s), 1);
+            assert_eq!(screen_size_y(s), 1);
+
+            destroy_screen(s);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Reinit
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn screen_reinit_resets_cursor() {
+        unsafe {
+            let s = make_screen(80, 24);
+            (*s).cx = 40;
+            (*s).cy = 12;
+
+            screen_reinit(s);
+            assert_eq!((*s).cx, 0);
+            assert_eq!((*s).cy, 0);
+
+            destroy_screen(s);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Placeholder
+    // ---------------------------------------------------------------
+
+    #[test]
+    fn screen_placeholder_has_safe_defaults() {
+        let s = screen_placeholder();
+        assert!(s.title.is_null());
+        assert!(s.path.is_null());
+        assert!(s.grid.is_null());
+        assert!(s.saved_grid.is_null());
+        assert!(s.sel.is_null());
+        assert!(s.tabs.is_none());
+        assert_eq!(s.cx, 0);
+        assert_eq!(s.cy, 0);
+    }
+}
