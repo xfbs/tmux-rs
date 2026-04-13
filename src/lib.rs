@@ -1038,7 +1038,7 @@ enum screen_cursor_style {
 
 #[derive(Clone)]
 struct screen {
-    title: *mut u8,
+    title: CString,
     path: *mut u8,
     titles: Vec<*mut u8>,
 

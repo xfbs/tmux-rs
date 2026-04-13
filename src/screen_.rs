@@ -49,7 +49,7 @@ pub unsafe fn screen_free_titles(s: *mut screen) {
 /// UB once `images` becomes a `Vec`.
 pub fn screen_placeholder() -> screen {
     screen {
-        title: null_mut(),
+        title: CString::default(),
         path: null_mut(),
         titles: Vec::new(),
         grid: null_mut(),
@@ -90,7 +90,7 @@ pub unsafe fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u32) {
                 grid: grid_create(sx, sy, hlimit),
                 saved_grid: None,
 
-                title: xstrdup_(c"").as_ptr(),
+                title: CString::default(),
                 titles: Vec::new(),
                 path: null_mut(),
 
@@ -181,7 +181,7 @@ pub unsafe fn screen_free(s: *mut screen) {
         (*s).sel = None;
         (*s).tabs = None;
         free_((*s).path);
-        free_((*s).title);
+        // title: CString drops automatically
 
         if !(*s).write_list.is_null() {
             screen_write_free_list(s);
@@ -266,8 +266,7 @@ pub unsafe fn screen_set_title(s: *mut screen, title: *const u8) -> c_int {
         if !utf8_isvalid(title) {
             return 0;
         }
-        free_((*s).title);
-        (*s).title = xstrdup(title).as_ptr();
+        (*s).title = CStr::from_ptr(title.cast()).to_owned();
         1
     }
 }
@@ -288,7 +287,7 @@ pub unsafe fn screen_set_path(s: *mut screen, path: *const u8) {
 pub unsafe fn screen_push_title(s: *mut screen) {
     unsafe {
         // Push to front (index 0 = top of stack)
-        (&mut (*s).titles).insert(0, xstrdup((*s).title).as_ptr());
+        (&mut (*s).titles).insert(0, xstrdup((*s).title.as_ptr().cast()).as_ptr());
     }
 }
 
@@ -1006,7 +1005,7 @@ mod tests {
         unsafe {
             let s = make_screen(80, 24);
             screen_set_title(s, c"hello".as_ptr().cast());
-            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            let title = &(*s).title;
             assert_eq!(title.to_str().unwrap(), "hello");
             destroy_screen(s);
         }
@@ -1018,7 +1017,7 @@ mod tests {
             let s = make_screen(80, 24);
             screen_set_title(s, c"first".as_ptr().cast());
             screen_set_title(s, c"second".as_ptr().cast());
-            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            let title = &(*s).title;
             assert_eq!(title.to_str().unwrap(), "second");
             destroy_screen(s);
         }
@@ -1034,12 +1033,12 @@ mod tests {
             screen_set_title(s, c"overlay".as_ptr().cast());
 
             // Current title is "overlay".
-            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            let title = &(*s).title;
             assert_eq!(title.to_str().unwrap(), "overlay");
 
             // Pop restores "base".
             screen_pop_title(s);
-            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            let title = &(*s).title;
             assert_eq!(title.to_str().unwrap(), "base");
 
             destroy_screen(s);
@@ -1052,7 +1051,7 @@ mod tests {
             let s = make_screen(80, 24);
             screen_set_title(s, c"keep".as_ptr().cast());
             screen_pop_title(s); // No stack — should be no-op.
-            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            let title = &(*s).title;
             assert_eq!(title.to_str().unwrap(), "keep");
             destroy_screen(s);
         }
@@ -1071,12 +1070,12 @@ mod tests {
 
             // Pop C → B
             screen_pop_title(s);
-            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            let title = &(*s).title;
             assert_eq!(title.to_str().unwrap(), "B");
 
             // Pop B → A
             screen_pop_title(s);
-            let title = std::ffi::CStr::from_ptr((*s).title as *const i8);
+            let title = &(*s).title;
             assert_eq!(title.to_str().unwrap(), "A");
 
             destroy_screen(s);
@@ -1312,7 +1311,7 @@ mod tests {
     #[test]
     fn screen_placeholder_has_safe_defaults() {
         let s = screen_placeholder();
-        assert!(s.title.is_null());
+        assert!(s.title.is_empty());
         assert!(s.path.is_null());
         assert!(s.grid.is_null());
         assert!(s.saved_grid.is_none());

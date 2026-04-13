@@ -2189,7 +2189,7 @@ pub unsafe fn format_cb_pane_synchronized(ft: &format_tree) -> format_table_type
 pub unsafe fn format_cb_pane_title(ft: &format_tree) -> format_table_type {
     unsafe {
         if (*ft).wp.is_some() {
-            return format!("{}", _s((*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.title)).into();
+            return format!("{}", _s((*(*ft).wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut())).base.title.as_ptr() as *const u8)).into();
         }
         format_table_type::None
     }
