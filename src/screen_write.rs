@@ -35,6 +35,7 @@ pub struct screen_write_citem {
     gc: grid_cell,
 }
 
+#[derive(Clone)]
 pub struct screen_write_cline {
     data: *mut u8,
     items: Vec<*mut screen_write_citem>,
@@ -240,22 +241,27 @@ unsafe fn screen_write_initctx(ctx: *mut screen_write_ctx, ttyctx: *mut tty_ctx,
 /// Make write list.
 pub unsafe fn screen_write_make_list(s: *mut screen) {
     unsafe {
-        (*s).write_list = xcalloc_(screen_size_y(s) as usize).as_ptr();
-        for y in 0..screen_size_y(s) {
-            std::ptr::write(&raw mut (*(*s).write_list.add(y as usize)).items, Vec::new());
+        let sy = screen_size_y(s) as usize;
+        let mut list = Vec::with_capacity(sy);
+        for _ in 0..sy {
+            list.push(screen_write_cline {
+                data: null_mut(),
+                items: Vec::new(),
+            });
         }
+        (*s).write_list = Some(list);
     }
 }
 
 /// Free write list.
 pub unsafe fn screen_write_free_list(s: *mut screen) {
     unsafe {
-        for y in 0..screen_size_y(s) {
-            let cl = (*s).write_list.add(y as usize);
-            std::ptr::drop_in_place(&raw mut (*cl).items);
-            free_((*cl).data);
+        if let Some(list) = (*s).write_list.take() {
+            for cl in &list {
+                free_(cl.data);
+            }
+            // Vec<screen_write_cline> dropped here — items Vecs dropped automatically
         }
-        free_((*s).write_list);
     }
 }
 
@@ -266,7 +272,7 @@ unsafe fn screen_write_init(ctx: *mut screen_write_ctx, s: *mut screen) {
 
         (*ctx).s = s;
 
-        if (*(*ctx).s).write_list.is_null() {
+        if (*(*ctx).s).write_list.is_none() {
             screen_write_make_list((*ctx).s);
         }
         (*ctx).item = screen_write_get_citem().as_ptr();
@@ -1410,7 +1416,7 @@ pub unsafe fn screen_write_clearline(ctx: *mut screen_write_ctx, bg: u32) {
         (*ci).used = sx;
         (*ci).type_ = screen_write_citem_type::Clear;
         (*ci).bg = bg;
-        (*(*(*ctx).s).write_list.add((*s).cy as usize)).items.push(ci);
+        (*(*ctx).s).write_list.as_mut().unwrap()[(*s).cy as usize].items.push(ci);
         (*ctx).item = screen_write_get_citem().as_ptr();
     }
 }
@@ -1446,7 +1452,7 @@ pub unsafe fn screen_write_clearendofline(ctx: *mut screen_write_ctx, bg: u32) {
         (*ci).used = sx - (*s).cx;
         (*ci).type_ = screen_write_citem_type::Clear;
         (*ci).bg = bg;
-        let items = &mut (*(*(*ctx).s).write_list.add((*s).cy as usize)).items;
+        let items = &mut (*(*ctx).s).write_list.as_mut().unwrap()[(*s).cy as usize].items;
         if before.is_null() {
             items.push(ci);
         } else {
@@ -1487,7 +1493,7 @@ pub unsafe fn screen_write_clearstartofline(ctx: *mut screen_write_ctx, bg: u32)
         (*ci).used = (*s).cx + 1;
         (*ci).type_ = screen_write_citem_type::Clear;
         (*ci).bg = bg;
-        let items = &mut (*(*(*ctx).s).write_list.add((*s).cy as usize)).items;
+        let items = &mut (*(*ctx).s).write_list.as_mut().unwrap()[(*s).cy as usize].items;
         if before.is_null() {
             items.push(ci);
         } else {
@@ -1839,8 +1845,8 @@ pub unsafe fn screen_write_collect_trim(
     wrapped: *mut bool,
 ) -> *mut screen_write_citem {
     unsafe {
-        let cl = (*(*ctx).s).write_list.add(y as usize);
-        let items = &mut (*cl).items;
+        let cl = &mut (*(*ctx).s).write_list.as_mut().unwrap()[y as usize];
+        let items = &mut cl.items;
         let mut before = null_mut();
         let sx = x;
         let ex = x + used - 1;
@@ -1914,8 +1920,8 @@ pub unsafe fn screen_write_collect_clear(ctx: *mut screen_write_ctx, y: u32, n: 
     unsafe {
         let freelist = &mut *(&raw mut SCREEN_WRITE_CITEM_FREELIST);
         for i in y..(y + n) {
-            let cl = (*(*ctx).s).write_list.add(i as usize);
-            freelist.append(&mut (*cl).items);
+            let cl = &mut (*(*ctx).s).write_list.as_mut().unwrap()[i as usize];
+            freelist.append(&mut cl.items);
         }
     }
 }
@@ -1927,22 +1933,21 @@ pub unsafe fn screen_write_collect_scroll(ctx: *mut screen_write_ctx, bg: u32) {
         // log_debug("%s: at %u,%u (region %u-%u)", __func__, (*s).cx, (*s).cy, (*s).rupper, (*s).rlower);
 
         screen_write_collect_clear(ctx, (*s).rupper, 1);
-        let saved = (*(*(*ctx).s).write_list.add((*s).rupper as usize)).data;
-        for y in (*s).rupper..(*s).rlower {
-            let cl_src = (*(*ctx).s).write_list.add(y as usize + 1);
-            let taken = std::mem::take(&mut (*cl_src).items);
-            let cl_dst = (*(*ctx).s).write_list.add(y as usize);
-            (*cl_dst).items = taken;
-            (*cl_dst).data = (*cl_src).data;
+        let wl = (*(*ctx).s).write_list.as_mut().unwrap();
+        let saved = wl[(*s).rupper as usize].data;
+        for y in (*s).rupper as usize..(*s).rlower as usize {
+            let taken = std::mem::take(&mut wl[y + 1].items);
+            wl[y].items = taken;
+            wl[y].data = wl[y + 1].data;
         }
-        (*(*(*ctx).s).write_list.add((*s).rlower as usize)).data = saved;
+        wl[(*s).rlower as usize].data = saved;
 
         let ci = screen_write_get_citem().as_ptr();
         (*ci).x = 0;
         (*ci).used = screen_size_x(s);
         (*ci).type_ = screen_write_citem_type::Clear;
         (*ci).bg = bg;
-        (*(*(*ctx).s).write_list.add((*s).rlower as usize)).items.push(ci);
+        wl[(*s).rlower as usize].items.push(ci);
     }
 }
 
@@ -1974,9 +1979,9 @@ pub unsafe fn screen_write_collect_flush(ctx: *mut screen_write_ctx, scroll_only
         let cx = (*s).cx;
         let cy = (*s).cy;
         for y in 0..screen_size_y(s) {
-            let cl = (*(*ctx).s).write_list.add(y as usize);
+            let cl = &mut (*(*ctx).s).write_list.as_mut().unwrap()[y as usize];
             let mut last = u32::MAX;
-            for &ci in &(*cl).items {
+            for &ci in &cl.items {
                 if last != u32::MAX && (*ci).x <= last {
                     panic!("collect list not in order: {} <= {}", (*ci).x, last);
                 }
@@ -1990,17 +1995,17 @@ pub unsafe fn screen_write_collect_flush(ctx: *mut screen_write_ctx, scroll_only
                     screen_write_initctx(ctx, &raw mut ttyctx, 0);
                     ttyctx.cell = &(*ci).gc;
                     ttyctx.wrapped = (*ci).wrapped;
-                    ttyctx.ptr = (*cl).data.add((*ci).x as usize).cast();
+                    ttyctx.ptr = cl.data.add((*ci).x as usize).cast();
                     ttyctx.num = (*ci).used;
                     tty_write(tty_cmd_cells, &raw mut ttyctx);
                 }
                 items += 1;
                 last = (*ci).x;
             }
-            for &ci in &(*cl).items {
+            for &ci in &cl.items {
                 screen_write_free_citem(ci);
             }
-            (*cl).items.clear();
+            cl.items.clear();
         }
         (*s).cx = cx;
         (*s).cy = cy;
@@ -2014,7 +2019,6 @@ pub unsafe fn screen_write_collect_end(ctx: *mut screen_write_ctx) {
     unsafe {
         let s = (*ctx).s;
         let ci = (*ctx).item;
-        let cl = (*s).write_list.add((*s).cy as usize);
         let mut gc: grid_cell = zeroed();
         let mut wrapped = (*ci).wrapped;
 
@@ -2025,7 +2029,7 @@ pub unsafe fn screen_write_collect_end(ctx: *mut screen_write_ctx) {
         let before = screen_write_collect_trim(ctx, (*s).cy, (*s).cx, (*ci).used, &raw mut wrapped);
         (*ci).x = (*s).cx;
         (*ci).wrapped = wrapped;
-        let items = &mut (*cl).items;
+        let items = &mut (*s).write_list.as_mut().unwrap()[(*s).cy as usize].items;
         if before.is_null() {
             items.push(ci);
         } else {
@@ -2065,7 +2069,7 @@ pub unsafe fn screen_write_collect_end(ctx: *mut screen_write_ctx) {
             (*s).cx,
             (*s).cy,
             &(*ci).gc,
-            (*cl).data.add((*ci).x as usize),
+            (*s).write_list.as_ref().unwrap()[(*s).cy as usize].data.add((*ci).x as usize),
             (*ci).used as usize,
         );
         screen_write_set_cursor(ctx, ((*s).cx + (*ci).used) as i32, -1);
@@ -2117,16 +2121,11 @@ pub unsafe fn screen_write_collect_add(ctx: *mut screen_write_ctx, gc: *const gr
         if (*ci).used == 0 {
             memcpy__(&raw mut (*ci).gc, gc);
         }
-        if (*(*(*ctx).s).write_list.add((*s).cy as usize))
-            .data
-            .is_null()
-        {
-            (*(*(*ctx).s).write_list.add((*s).cy as usize)).data =
-                xmalloc(screen_size_x((*ctx).s) as usize).as_ptr().cast();
+        let cl = &mut (*(*ctx).s).write_list.as_mut().unwrap()[(*s).cy as usize];
+        if cl.data.is_null() {
+            cl.data = xmalloc(screen_size_x((*ctx).s) as usize).as_ptr().cast();
         }
-        *(*(*(*ctx).s).write_list.add((*s).cy as usize))
-            .data
-            .add(((*s).cx + (*ci).used) as usize) = (*gc).data.data[0];
+        *cl.data.add(((*s).cx + (*ci).used) as usize) = (*gc).data.data[0];
         (*ci).used += 1;
     }
 }

@@ -1078,7 +1078,7 @@ struct screen {
     #[cfg(feature = "sixel")]
     images: images,
 
-    write_list: *mut screen_write_cline,
+    write_list: Option<Vec<screen_write_cline>>,
 
     hyperlinks: Option<*mut hyperlinks>,
 }

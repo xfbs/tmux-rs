@@ -72,7 +72,7 @@ pub fn screen_placeholder() -> screen {
         sel: None,
         #[cfg(feature = "sixel")]
         images: Vec::new(),
-        write_list: null_mut(),
+        write_list: None,
         hyperlinks: None,
     }
 }
@@ -119,7 +119,7 @@ pub unsafe fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u32) {
                 #[cfg(feature = "sixel")]
                 images: Vec::new(),
 
-                write_list: null_mut(),
+                write_list: None,
                 hyperlinks: None,
             },
         );
@@ -182,7 +182,7 @@ pub unsafe fn screen_free(s: *mut screen) {
         (*s).tabs = None;
         // path and title: CString/Option<CString> drop automatically
 
-        if !(*s).write_list.is_null() {
+        if (*s).write_list.is_some() {
             screen_write_free_list(s);
         }
 
@@ -314,7 +314,8 @@ pub unsafe fn screen_resize_cursor(
         let mut cx = (*s).cx;
         let mut cy = (*(*s).grid).hsize + (*s).cy;
 
-        if !(*s).write_list.is_null() {
+        let had_write_list = (*s).write_list.is_some();
+        if had_write_list {
             screen_write_free_list(s);
         }
 
@@ -369,7 +370,7 @@ pub unsafe fn screen_resize_cursor(
             cy,
         );
 
-        if !(*s).write_list.is_null() {
+        if had_write_list {
             screen_write_make_list(s);
         }
     }
