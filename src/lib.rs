@@ -1040,7 +1040,7 @@ enum screen_cursor_style {
 struct screen {
     title: CString,
     path: Option<CString>,
-    titles: Vec<*mut u8>,
+    titles: Vec<CString>,
 
     /// grid data
     grid: *mut grid,
@@ -1418,7 +1418,7 @@ struct window {
     panes: Vec<*mut window_pane>,
 
     lastlayout: i32,
-    old_layout: *mut u8,
+    old_layout: Option<CString>,
     /// Owns every `layout_cell` for this window, plus the live root and
     /// the zoom-saved root as `Option<LayoutCellId>` slots. Reads and
     /// writes go through `window_layout_root` / `window_set_layout_root`

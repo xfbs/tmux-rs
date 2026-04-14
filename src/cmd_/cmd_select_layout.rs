@@ -85,10 +85,9 @@ unsafe fn cmd_select_layout_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
                     previous = true;
                 }
 
-                oldlayout = (*w).old_layout;
+                oldlayout = (*w).old_layout.take();
                 (*w).old_layout = layout_dump(w, window_layout_root(w))
-                    .map(|s| CString::new(s).unwrap().into_raw().cast())
-                    .unwrap_or_default();
+                    .and_then(|s| CString::new(s).ok());
 
                 if next || previous {
                     if next {
@@ -107,7 +106,7 @@ unsafe fn cmd_select_layout_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
                 let layoutname = if args_count(args) != 0 {
                     args_string(args, 0)
                 } else if args_has(args, 'o') {
-                    oldlayout
+                    oldlayout.as_ref().map(|s| s.as_ptr() as *const u8).unwrap_or(null())
                 } else {
                     null()
                 };
@@ -132,12 +131,12 @@ unsafe fn cmd_select_layout_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
                     break 'changed;
                 }
 
-                free_(oldlayout);
+                drop(oldlayout);
                 return cmd_retval::CMD_RETURN_NORMAL;
             }
 
             // changed:
-            free_(oldlayout);
+            drop(oldlayout);
             recalculate_sizes();
             server_redraw_window(w);
             notify_window(c"window-layout-changed", w);
@@ -145,7 +144,6 @@ unsafe fn cmd_select_layout_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
         }
 
         // error:
-        free_((*w).old_layout);
         (*w).old_layout = oldlayout;
         cmd_retval::CMD_RETURN_ERROR
     }

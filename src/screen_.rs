@@ -33,9 +33,6 @@ pub struct screen_sel {
 /// Free titles stack.
 pub unsafe fn screen_free_titles(s: *mut screen) {
     unsafe {
-        for &text in &(*s).titles {
-            free_(text);
-        }
         (*s).titles.clear();
     }
 }
@@ -285,7 +282,7 @@ pub unsafe fn screen_set_path(s: *mut screen, path: *const u8) {
 pub unsafe fn screen_push_title(s: *mut screen) {
     unsafe {
         // Push to front (index 0 = top of stack)
-        (*s).titles.insert(0, xstrdup((*s).title.as_ptr().cast()).as_ptr());
+        (*s).titles.insert(0, (*s).title.clone());
     }
 }
 
@@ -294,8 +291,7 @@ pub unsafe fn screen_pop_title(s: *mut screen) {
     unsafe {
         if !(*s).titles.is_empty() {
             let text = (*s).titles.remove(0);
-            screen_set_title(s, text);
-            free_(text);
+            screen_set_title(s, text.as_ptr() as *const u8);
         }
     }
 }
