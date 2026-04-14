@@ -496,8 +496,8 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
             if tcgetattr(STDIN_FILENO, &raw mut now) != 0 {
                 _exit(1);
             }
-            if !(*s).tio.is_null() {
-                memcpy__(now.c_cc.as_mut_ptr(), (*(*s).tio).c_cc.as_ptr());
+            if let Some(ref tio) = (*s).tio {
+                memcpy__(now.c_cc.as_mut_ptr(), tio.c_cc.as_ptr());
             }
             key = options_get_number_(GLOBAL_OPTIONS, "backspace") as u64;
             if key >= 0x7f {

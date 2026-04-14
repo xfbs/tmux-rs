@@ -1788,17 +1788,13 @@ unsafe fn tty_keys_clipboard(
             paste_add(null_mut(), out, outlen as usize);
             (*c).flags &= !client_flag::CLIPBOARDBUFFER;
         }
-        let mut i: u32 = 0;
-        while i < (*c).clipboard_npanes {
-            wp = window_pane_find_by_id(*(*c).clipboard_panes.add(i as usize));
+        for &pane_id in &(*c).clipboard_panes {
+            wp = window_pane_find_by_id(pane_id);
             if !wp.is_null() {
                 input_reply_clipboard(&raw mut (*wp).event_output, out, outlen as usize, c!("\x1b\\"));
             }
-            i += 1;
         }
-        free_((*c).clipboard_panes);
-        (*c).clipboard_panes = null_mut();
-        (*c).clipboard_npanes = 0;
+        (*c).clipboard_panes.clear();
 
         0
     }

@@ -74,7 +74,7 @@ unsafe fn cmd_set_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd
                     retval = cmd_retval::CMD_RETURN_ERROR;
                     break 'out;
                 }
-                env = (*(*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).environ;
+                env = &raw mut *(*(*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).environ;
             }
 
             if args_has(args, 'u') {

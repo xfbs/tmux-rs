@@ -126,15 +126,14 @@ impl session {
             std::ptr::write(&raw mut s.lastw, Vec::new());
             std::ptr::write(&raw mut s.windows, BTreeMap::new());
 
-            s.environ = env;
+            std::ptr::write(&raw mut s.environ, Box::from_raw(env));
             s.options = oo;
 
             status_update_cache(s.as_mut());
 
-            s.tio = null_mut();
-            if !tio.is_null() {
-                s.tio = Box::leak(Box::new(*tio)) as *mut termios;
-            }
+            std::ptr::write(&raw mut s.tio,
+                if !tio.is_null() { Some(Box::new(*tio)) } else { None });
+
 
             if let Some(name) = name {
                 s.name = name.to_string().into();
@@ -238,7 +237,7 @@ unsafe fn session_free_deferred(sid: SessionId) {
         );
 
         if (*s).references == 0 {
-            environ_free((*s).environ);
+            // environ: Box<Environ> dropped automatically by registry removal
             options_free((*s).options);
             (*s).name = Cow::Borrowed("");
             // Drop the Box from the registry. Box drop runs Drop on all fields,
@@ -265,7 +264,7 @@ pub unsafe fn session_destroy(s: *mut session, notify: i32, from: *const u8) {
             notify_session(c"session-closed", s);
         }
 
-        free_((*s).tio);
+        (*s).tio = None; // Box<termios> dropped
 
         // Drop the timer handle to deregister from the event loop.
         (*s).lock_timer = None;

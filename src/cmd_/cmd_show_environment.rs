@@ -114,7 +114,7 @@ unsafe fn cmd_show_environment_exec(self_: *mut cmd, item: *mut cmdq_item) -> cm
                 }
                 return cmd_retval::CMD_RETURN_ERROR;
             }
-            env = (*(*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).environ;
+            env = &raw mut *(*(*target).s.and_then(|id| session_from_id(id)).unwrap_or(null_mut())).environ;
         }
 
         if !name.is_null() {

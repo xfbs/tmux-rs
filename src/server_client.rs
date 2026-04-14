@@ -286,7 +286,7 @@ pub unsafe fn server_client_create(fd: i32) -> *mut client {
         }
         memcpy__(&raw mut (*c).activity_time, &raw mut (*c).creation_time);
 
-        (*c).environ = environ_create().as_ptr();
+        std::ptr::write(&raw mut (*c).environ, Box::from_raw(environ_create().as_ptr()));
 
         (*c).fd = -1;
         (*c).out_fd = -1;
@@ -470,7 +470,7 @@ pub unsafe fn server_client_lost(c: *mut client) {
         // Note: ttyname / term_name / title / path are Option<String> and are
         // dropped automatically when the Box<client> is dropped in
         // server_client_free. Calling drop_in_place here would double-free.
-        free_((*c).clipboard_panes);
+        // clipboard_panes: Vec<u32> dropped automatically by registry removal
 
         // term_type is Option<String>, dropped automatically by Box drop.
         tty_term_free_list((*c).term_caps, (*c).term_ncaps);
@@ -492,7 +492,7 @@ pub unsafe fn server_client_lost(c: *mut client) {
         free_((*c).prompt_buffer);
 
         format_lost_client(c);
-        environ_free((*c).environ);
+        // environ: Box<Environ> dropped automatically by registry removal
 
         proc_remove_peer((*c).peer);
         (*c).peer = null_mut();

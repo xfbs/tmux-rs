@@ -1871,9 +1871,9 @@ struct session {
 
     attached: u32,
 
-    tio: *mut termios,
+    tio: Option<Box<termios>>,
 
-    environ: *mut Environ,
+    environ: Box<Environ>,
 
     references: i32,
 
@@ -2608,7 +2608,7 @@ struct client {
     creation_time: timeval,
     activity_time: timeval,
 
-    environ: *mut Environ,
+    environ: Box<Environ>,
     jobs: *mut format_job_tree,
 
     title: Option<String>,
@@ -2687,8 +2687,7 @@ struct client {
 
     files: client_files,
 
-    clipboard_panes: *mut c_uint,
-    clipboard_npanes: c_uint,
+    clipboard_panes: Vec<u32>,
 
 }
 
