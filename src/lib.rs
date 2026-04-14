@@ -2597,7 +2597,7 @@ struct client {
 
     windows: client_windows,
 
-    control_state: *mut control_state,
+    control_state: Option<Box<control_state>>,
     pause_age: c_uint,
 
     pid: pid_t,
