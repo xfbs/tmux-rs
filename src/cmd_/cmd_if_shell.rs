@@ -77,20 +77,21 @@ unsafe fn cmd_if_shell_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_retval
             return cmd_retval::CMD_RETURN_NORMAL;
         }
 
-        let cdata = xcalloc_::<cmd_if_shell_data>(1).as_ptr();
-
-        (*cdata).cmd_if = args_make_commands_prepare(self_, item, 1, null_mut(), wait, false);
-        if count == 3 {
-            (*cdata).cmd_else = args_make_commands_prepare(self_, item, 2, null_mut(), wait, false);
-        }
-
-        if wait {
-            let c = cmdq_get_client(item);
-            (*cdata).client = if c.is_null() { None } else { Some((*c).id) };
-            (*cdata).item = item;
-        } else {
-            (*cdata).client = if tc.is_null() { None } else { Some((*tc).id) };
-        }
+        let cdata = Box::into_raw(Box::new(cmd_if_shell_data {
+            cmd_if: args_make_commands_prepare(self_, item, 1, null_mut(), wait, false),
+            cmd_else: if count == 3 {
+                args_make_commands_prepare(self_, item, 2, null_mut(), wait, false)
+            } else {
+                null_mut()
+            },
+            client: if wait {
+                let c = cmdq_get_client(item);
+                if c.is_null() { None } else { Some((*c).id) }
+            } else {
+                if tc.is_null() { None } else { Some((*tc).id) }
+            },
+            item: if wait { item } else { null_mut() },
+        }));
         if let Some(c) = (*cdata).client.and_then(|id| client_from_id(id)) {
             (*c).references += 1;
         }
@@ -186,6 +187,6 @@ unsafe fn cmd_if_shell_free(data: *mut c_void) {
         }
         args_make_commands_free((*cdata).cmd_if);
 
-        free_(cdata);
+        drop(Box::from_raw(cdata));
     }
 }

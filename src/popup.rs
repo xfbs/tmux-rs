@@ -922,7 +922,7 @@ pub unsafe fn popup_editor_free(pe: *mut popup_editor) {
     unsafe {
         unlink((*pe).path.cast());
         free_((*pe).path);
-        free_(pe);
+        drop(Box::from_raw(pe));
     }
 }
 
@@ -999,13 +999,14 @@ pub unsafe fn popup_editor(
             return -1;
         }
 
-        let pe = xcalloc1::<popup_editor>();
-        pe.path = xstrdup__(
-            path.to_str()
-                .expect("fixme: temporary path SHOULD be valid string; or should store path buf"),
-        );
-        pe.cb = cb;
-        pe.arg = arg;
+        let pe = Box::into_raw(Box::new(popup_editor {
+            path: xstrdup__(
+                path.to_str()
+                    .expect("fixme: temporary path SHOULD be valid string; or should store path buf"),
+            ),
+            cb,
+            arg,
+        }));
 
         let sx = (*c).tty.sx * 9 / 10;
         let sy = (*c).tty.sy * 9 / 10;

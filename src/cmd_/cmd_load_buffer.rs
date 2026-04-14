@@ -74,7 +74,7 @@ unsafe fn cmd_load_buffer_done(
         cmdq_continue(item);
 
         free_((*cdata).name);
-        free_(cdata);
+        drop(Box::from_raw(cdata));
     }
 }
 
@@ -84,15 +84,16 @@ unsafe fn cmd_load_buffer_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let tc = cmdq_get_target_client(item);
         let bufname = args_get(args, b'b');
 
-        let cdata = xcalloc_::<cmd_load_buffer_data>(1).as_ptr();
-        (*cdata).item = item;
-        if !bufname.is_null() {
-            (*cdata).name = xstrdup(bufname).as_ptr();
-        }
-        if args_has(args, 'w') && !tc.is_null() {
-            (*cdata).client = Some((*tc).id);
-            (*tc).references += 1;
-        }
+        let cdata = Box::into_raw(Box::new(cmd_load_buffer_data {
+            item,
+            name: if !bufname.is_null() { xstrdup(bufname).as_ptr() } else { null_mut() },
+            client: if args_has(args, 'w') && !tc.is_null() {
+                (*tc).references += 1;
+                Some((*tc).id)
+            } else {
+                None
+            },
+        }));
 
         let path = format_single_from_target(item, args_string(args, 0));
         file_read(

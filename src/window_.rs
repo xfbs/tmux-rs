@@ -1659,11 +1659,14 @@ pub unsafe fn window_pane_set_mode(
             wme = (*wp).modes.remove(idx);
             (*wp).modes.insert(0, wme);
         } else {
-            wme = xcalloc_::<window_mode_entry>(1).as_ptr();
-            (*wme).wp = pane_id_from_ptr(wp);
-            (*wme).swp = pane_id_from_ptr(swp);
-            (*wme).mode = mode;
-            (*wme).prefix = 1;
+            wme = Box::into_raw(Box::new(window_mode_entry {
+                wp: pane_id_from_ptr(wp),
+                swp: pane_id_from_ptr(swp),
+                mode,
+                data: null_mut(),
+                screen: null_mut(),
+                prefix: 1,
+            }));
             (*wp).modes.insert(0, wme);
             (*wme).screen = ((*(*wme).mode).init)(NonNull::new_unchecked(wme), fs, args);
         }
@@ -1688,7 +1691,7 @@ pub unsafe fn window_pane_reset_mode(wp: *mut window_pane) {
 
         let wme = (*wp).modes.remove(0);
         ((*(*wme).mode).free)(NonNull::new(wme).unwrap());
-        free(wme as _);
+        drop(Box::from_raw(wme));
 
         if let Some(&next) = (*wp).modes.first() {
             let next = NonNull::new(next).unwrap();

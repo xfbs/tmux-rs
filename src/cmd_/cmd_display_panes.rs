@@ -250,7 +250,7 @@ unsafe fn cmd_display_panes_free(_c: *mut client, data: *mut c_void) {
             cmdq_continue((*cdata).item);
         }
         args_make_commands_free((*cdata).state);
-        free_(cdata);
+        drop(Box::from_raw(cdata));
     }
 }
 
@@ -325,12 +325,10 @@ unsafe fn cmd_display_panes_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_r
             delay = options_get_number___(&*(*s).options, "display-panes-time");
         }
 
-        let cdata = xcalloc_::<cmd_display_panes_data>(1).as_ptr();
-        if wait {
-            (*cdata).item = item;
-        }
-        (*cdata).state =
-            args_make_commands_prepare(self_, item, 0, c!("select-pane -t \"%%%\""), wait, false);
+        let cdata = Box::into_raw(Box::new(cmd_display_panes_data {
+            item: if wait { item } else { null_mut() },
+            state: args_make_commands_prepare(self_, item, 0, c!("select-pane -t \"%%%\""), wait, false),
+        }));
 
         if args_has(args, 'N') {
             server_client_set_overlay(

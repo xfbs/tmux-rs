@@ -151,7 +151,7 @@ pub unsafe fn control_free_block(cs: *mut control_state, cb: *mut control_block)
     unsafe {
         free_((*cb).line);
         (*cs).all_blocks.retain(|&p| p != cb);
-        free_(cb);
+        drop(Box::from_raw(cb));
     }
 }
 
@@ -336,12 +336,14 @@ pub unsafe fn control_write_(c: *mut client, args: std::fmt::Arguments) {
             return;
         }
 
-        let cb = xcalloc_::<control_block>(1).as_ptr();
         let mut value = args.to_string();
         value.push('\0');
-        (*cb).line = value.leak().as_mut_ptr().cast();
+        let cb = Box::into_raw(Box::new(control_block {
+            size: 0,
+            line: value.leak().as_mut_ptr().cast(),
+            t: get_timer(),
+        }));
         (*cs).all_blocks.push(cb);
-        (*cb).t = get_timer();
 
         log_debug!(
             "{}: {}: storing line: {}",
@@ -431,10 +433,12 @@ pub unsafe fn control_write_output(c: *mut client, wp: *mut window_pane) {
             }
             window_pane_update_used_data(wp, &raw mut (*cp).queued, new_size);
 
-            let cb = xcalloc_::<control_block>(1).as_ptr();
-            (*cb).size = new_size;
+            let cb = Box::into_raw(Box::new(control_block {
+                size: new_size,
+                line: null_mut(),
+                t: get_timer(),
+            }));
             (*cs).all_blocks.push(cb);
-            (*cb).t = get_timer();
 
             (*cp).blocks.push(cb);
             log_debug!(
@@ -566,7 +570,7 @@ pub unsafe fn control_flush_all_blocks(c: *mut client) {
             (*cs).write_output.add(b"\n");
             free_((*cb).line);
             (*cs).all_blocks.remove(0);
-            free_(cb);
+            drop(Box::from_raw(cb));
         }
     }
 }
@@ -842,7 +846,7 @@ pub unsafe fn control_stop(c: *mut client) {
 
         for &cb in &(*cs).all_blocks {
             free_((*cb).line);
-            free_(cb);
+            drop(Box::from_raw(cb));
         }
         (*cs).all_blocks.clear();
         control_reset_offsets(c);
