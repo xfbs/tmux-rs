@@ -78,7 +78,9 @@ pub unsafe fn tty_init(tty: *mut tty, c: *mut client) -> i32 {
         (*tty).client = c;
 
         std::ptr::write(&raw mut (*tty).event_in, None);
+        std::ptr::write(&raw mut (*tty).in_, evbuffer::new());
         std::ptr::write(&raw mut (*tty).event_out, None);
+        std::ptr::write(&raw mut (*tty).out, evbuffer::new());
         std::ptr::write(&raw mut (*tty).start_timer, None);
         std::ptr::write(&raw mut (*tty).clipboard_timer, None);
         std::ptr::write(&raw mut (*tty).timer, None);
@@ -148,9 +150,9 @@ unsafe fn tty_read_callback_fire(cid: ClientId) {
         let Some(c) = client_from_id(cid) else { return };
         let tty = &raw mut (*c).tty;
         let name = (*c).name;
-        let size = EVBUFFER_LENGTH((*tty).in_);
+        let size = (*tty).in_.len();
 
-        let nread = evbuffer_read((*tty).in_, (*c).fd, -1);
+        let nread = (*tty).in_.read_from_fd((*c).fd, -1);
         if nread == 0 || nread == -1 {
             if nread == 0 {
                 log_debug!("{}: read closed", _s(name));
@@ -196,7 +198,7 @@ unsafe fn tty_timer_fire(cid: ClientId) {
 pub unsafe fn tty_block_maybe(tty: *mut tty) -> i32 {
     unsafe {
         let c = (*tty).client;
-        let size = EVBUFFER_LENGTH((*tty).out);
+        let size = (*tty).out.len();
 
         if size == 0 {
             (*tty).flags &= !tty_flags::TTY_NOBLOCK;
@@ -215,7 +217,7 @@ pub unsafe fn tty_block_maybe(tty: *mut tty) -> i32 {
 
         // log_debug("%s: can't keep up, %zu discarded", (*c).name, size);
 
-        evbuffer_drain((*tty).out, size);
+        (*tty).out.drain(size);
         (*c).discarded += size;
 
         let cid = (*c).id;
@@ -237,7 +239,7 @@ unsafe fn tty_write_callback_fire(cid: ClientId) {
         // Drop the one-shot write handle so we stop getting write-ready events.
         (*tty).event_out = None;
 
-        let nwrite: i32 = evbuffer_write((*tty).out, (*c).fd);
+        let nwrite: i32 = (*tty).out.write_to_fd((*c).fd);
         if nwrite == -1 {
             return;
         }
@@ -257,7 +259,7 @@ unsafe fn tty_write_callback_fire(cid: ClientId) {
             return;
         }
 
-        if EVBUFFER_LENGTH((*tty).out) != 0 {
+        if (*tty).out.len() != 0 {
             tty_arm_write(tty, cid);
         }
     }
@@ -310,16 +312,10 @@ pub unsafe fn tty_open(tty: *mut tty) -> Result<(), String> {
             EV_READ,
             Box::new(move |_fd, _events| tty_read_callback_fire(cid)),
         );
-        (*tty).in_ = evbuffer_new();
-        if (*tty).in_.is_null() {
-            fatal("out of memory");
-        }
-
-        // event_out is armed on demand (tty_arm_write), not at open time.
-        (*tty).out = evbuffer_new();
-        if (*tty).out.is_null() {
-            fatal("out of memory");
-        }
+        // in_ and out are owned Evbuffer fields — initialized by struct default.
+        // Reset them in case tty_open is called after a previous close.
+        (*tty).in_ = evbuffer::new();
+        (*tty).out = evbuffer::new();
 
         // Timer is armed on demand (tty_block_maybe), not at open time.
 
@@ -553,9 +549,9 @@ pub unsafe fn tty_close(tty: *mut tty) {
         tty_stop_tty(tty);
 
         if (*tty).flags.intersects(tty_flags::TTY_OPENED) {
-            evbuffer_free((*tty).in_);
+            (*tty).in_ = evbuffer::new(); // drop + reset
             (*tty).event_in = None;
-            evbuffer_free((*tty).out);
+            (*tty).out = evbuffer::new(); // drop + reset
             (*tty).event_out = None;
 
             tty_term_free((*tty).term);
@@ -678,7 +674,7 @@ pub unsafe fn tty_add(tty: *mut tty, buf: *const u8, len: usize) {
             return;
         }
 
-        evbuffer_add((*tty).out, buf.cast(), len);
+        (*tty).out.add(std::slice::from_raw_parts(buf, len));
         // log_debug("%s: %.*s", (*c).name, (int)len, buf);
         (*c).written += len;
 

@@ -1979,7 +1979,7 @@ bitflags::bitflags! {
 /// Terminal definition.
 
 struct tty_term {
-    name: *mut u8,
+    name: CString,
     tty: *mut tty,
     features: i32,
 
@@ -2050,9 +2050,9 @@ struct tty {
     rright: u32,
 
     event_in: Option<IoHandle>,
-    in_: *mut evbuffer,
+    in_: evbuffer,
     event_out: Option<IoHandle>,
-    out: *mut evbuffer,
+    out: evbuffer,
     timer: Option<TimerHandle>,
     discarded: usize,
 

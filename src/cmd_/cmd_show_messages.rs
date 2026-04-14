@@ -50,7 +50,7 @@ unsafe fn cmd_show_messages_terminals(
                 item,
                 "Terminal {}: {} for {}, flags=0x{:x}:",
                 n,
-                _s((*term).name),
+                _s((*term).name.as_ptr() as *const u8),
                 _s((*(*(*term).tty).client).name),
                 (*term).flags,
             );

@@ -1042,8 +1042,8 @@ pub unsafe fn tty_keys_next(tty: *mut tty) -> i32 {
         let mut m: mouse_event = zeroed();
 
         // Get key buffer.
-        let buf = EVBUFFER_DATA((*tty).in_);
-        let len = EVBUFFER_LENGTH((*tty).in_);
+        let buf = (*tty).in_.as_slice().as_ptr();
+        let len = (*tty).in_.len();
         if len == 0 {
             return 0;
         }
@@ -1294,7 +1294,7 @@ pub unsafe fn tty_keys_next(tty: *mut tty) -> i32 {
                 }
 
                 // Remove data from buffer.
-                evbuffer_drain((*tty).in_, size);
+                (*tty).in_.drain(size);
 
                 // Remove key timer.
                 (*tty).key_timer = None;
@@ -1326,7 +1326,7 @@ pub unsafe fn tty_keys_next(tty: *mut tty) -> i32 {
             // log_debug("%s: discard key %.*s %#llx", c->name, (int)size, buf, key);
 
             // Remove data from buffer.
-            evbuffer_drain((*tty).in_, size);
+            (*tty).in_.drain(size);
 
             return 1;
         }

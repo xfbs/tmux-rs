@@ -389,7 +389,7 @@ pub unsafe fn tty_term_apply(term: *mut tty_term, capabilities: &str, quiet: i32
         let mut value;
         let mut s;
 
-        let name = (*term).name;
+        let name = (*term).name.as_ptr() as *const u8;
 
         while {
             s = tty_term_override_next(capabilities, &raw mut offset);
@@ -481,7 +481,7 @@ pub unsafe fn tty_term_apply_overrides(term: *mut tty_term) {
 
             offset = 0;
             first = tty_term_override_next(cstr_to_str(s), &raw mut offset);
-            if !first.is_null() && fnmatch(first, (*term).name, 0) == 0 {
+            if !first.is_null() && fnmatch(first, (*term).name.as_ptr().cast(), 0) == 0 {
                 tty_term_apply(term, cstr_to_str(s.add(offset)), 0);
             }
         }
@@ -583,7 +583,7 @@ pub unsafe fn tty_term_create(
         log_debug!("adding term {}", _s(name));
         let term = xcalloc1::<tty_term>() as *mut tty_term;
         (*term).tty = tty;
-        (*term).name = xstrdup(name).as_ptr();
+        std::ptr::write(&raw mut (*term).name, CStr::from_ptr(name.cast()).to_owned());
         (*term).codes = xcalloc_(tty_term_ncodes() as usize).as_ptr();
         (*term).expand_context = ExpandContext::new();
         (*(&raw mut TTY_TERMS)).push(term);
@@ -641,7 +641,7 @@ pub unsafe fn tty_term_create(
 
                 let mut offset = 0;
                 let first = tty_term_override_next(cstr_to_str(s), &raw mut offset);
-                if !first.is_null() && fnmatch(first, (*term).name, 0) == 0 {
+                if !first.is_null() && fnmatch(first, (*term).name.as_ptr().cast(), 0) == 0 {
                     tty_add_features(feat, cstr_to_str(s.add(offset)), c!(":"));
                 }
             }
@@ -705,7 +705,7 @@ pub unsafe fn tty_term_create(
 
 pub unsafe fn tty_term_free(term: *mut tty_term) {
     unsafe {
-        log_debug!("removing term {}", _s((*term).name));
+        log_debug!("removing term {}", _s((*term).name.as_ptr() as *const u8));
 
         for i in 0..tty_term_ncodes() as usize {
             if (*(*term).codes.add(i)).type_ == tty_code_type::String {
@@ -715,7 +715,7 @@ pub unsafe fn tty_term_free(term: *mut tty_term) {
         free_((*term).codes);
 
         (*(&raw mut TTY_TERMS)).retain(|&t| t != term);
-        free_((*term).name);
+        std::ptr::drop_in_place(&raw mut (*term).name);
         free_(term);
     }
 }
