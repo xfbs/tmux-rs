@@ -473,7 +473,8 @@ pub unsafe fn server_client_lost(c: *mut client) {
         // clipboard_panes: Vec<u32> dropped automatically by registry removal
 
         // term_type is Option<String>, dropped automatically by Box drop.
-        tty_term_free_list((*c).term_caps, (*c).term_ncaps);
+        for &cap in &(*c).term_caps { free_(cap); }
+        (*c).term_caps.clear();
 
         status_free(c);
 
@@ -3157,10 +3158,7 @@ pub unsafe fn server_client_dispatch_identify(c: *mut client, imsg: *mut imsg) {
                 if datalen == 0 || *data.cast::<u8>().add((datalen - 1) as usize) != b'\0' {
                     fatalx("bad MSG_IDENTIFY_TERMINFO string");
                 }
-                (*c).term_caps =
-                    xreallocarray_((*c).term_caps, (*c).term_ncaps as usize + 1).as_ptr();
-                *(*c).term_caps.add((*c).term_ncaps as usize) = xstrdup(data.cast()).as_ptr();
-                (*c).term_ncaps += 1;
+                (*c).term_caps.push(xstrdup(data.cast()).as_ptr());
                 // log_debug("client %p IDENTIFY_TERMINFO %s", c, data);
             }
             msgtype::MSG_IDENTIFY_TTYNAME => {

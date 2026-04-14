@@ -288,8 +288,8 @@ pub unsafe fn tty_open(tty: *mut tty) -> Result<(), String> {
         match tty_term_create(
             tty,
             term_name_c.as_ptr() as *mut u8,
-            (*c).term_caps,
-            (*c).term_ncaps,
+            (*c).term_caps.as_mut_ptr(),
+            (*c).term_caps.len() as u32,
             &raw mut (*c).term_features,
         ) {
             Ok(term) => (*tty).term = term,
