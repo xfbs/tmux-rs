@@ -2609,7 +2609,7 @@ struct client {
     activity_time: timeval,
 
     environ: Box<Environ>,
-    jobs: *mut format_job_tree,
+    jobs: Option<Box<format_job_tree>>,
 
     title: Option<String>,
     path: Option<String>,

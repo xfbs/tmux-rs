@@ -324,11 +324,8 @@ pub unsafe fn format_job_get(es: *mut format_expand_state, cmd: *mut u8) -> *mut
 
         let jobs = if (*ft).client.is_null() {
             &mut *(&raw mut FORMAT_JOBS)
-        } else if !(*(*ft).client).jobs.is_null() {
-            &mut *(*(*ft).client).jobs
         } else {
-            (*(*ft).client).jobs = Box::into_raw(Box::new(BTreeMap::new()));
-            &mut *(*(*ft).client).jobs
+            (*(*ft).client).jobs.get_or_insert_with(|| Box::new(BTreeMap::new()))
         };
 
         let key = ((*ft).tag, cstr_to_str(cmd).to_string());
@@ -404,17 +401,17 @@ pub unsafe fn format_job_get(es: *mut format_expand_state, cmd: *mut u8) -> *mut
     }
 }
 
-pub unsafe fn format_job_tidy(jobs: *mut format_job_tree, force: i32) {
+pub unsafe fn format_job_tidy(jobs: &mut format_job_tree, force: i32) {
     unsafe {
         let now = libc::time(null_mut());
-        let keys_to_remove: Vec<(u32, String)> = (*jobs)
+        let keys_to_remove: Vec<(u32, String)> = jobs
             .iter()
             .filter(|(_, fj)| force != 0 || (fj.last <= now && now - fj.last >= 3600))
             .map(|(k, _)| k.clone())
             .collect();
 
         for key in keys_to_remove {
-            if let Some(fj) = (*jobs).remove(&key) {
+            if let Some(fj) = jobs.remove(&key) {
                 log_debug!("{}: {}", "format_job_tidy", _s(fj.cmd));
 
                 if !fj.job.is_null() {
@@ -431,10 +428,10 @@ pub unsafe fn format_job_tidy(jobs: *mut format_job_tree, force: i32) {
 
 pub unsafe fn format_tidy_jobs() {
     unsafe {
-        format_job_tidy(&raw mut FORMAT_JOBS, 0);
+        format_job_tidy(&mut *(&raw mut FORMAT_JOBS), 0);
         for c in clients_iter() {
-            if !(*c).jobs.is_null() {
-                format_job_tidy((*c).jobs, 0);
+            if let Some(jobs) = (*c).jobs.as_mut() {
+                format_job_tidy(jobs, 0);
             }
         }
     }
@@ -442,10 +439,10 @@ pub unsafe fn format_tidy_jobs() {
 
 pub unsafe fn format_lost_client(c: *mut client) {
     unsafe {
-        if !(*c).jobs.is_null() {
-            format_job_tidy((*c).jobs, 1);
+        if let Some(jobs) = (*c).jobs.as_mut() {
+            format_job_tidy(jobs, 1);
         }
-        free_((*c).jobs);
+        (*c).jobs = None;
     }
 }
 
