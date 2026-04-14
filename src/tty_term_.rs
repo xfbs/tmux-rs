@@ -583,7 +583,7 @@ pub unsafe fn tty_term_create(
         std::ptr::write(&raw mut (*term).name, CStr::from_ptr(name.cast()).to_owned());
         std::ptr::write(&raw mut (*term).codes, vec![tty_code::None; tty_term_ncodes() as usize]);
         (*term).expand_context = ExpandContext::new();
-        (*(&raw mut TTY_TERMS)).push(term);
+        (*(&raw mut TTY_TERMS)).push(Box::from_raw(term));
         {
             // Fill in codes.
             for i in 0..ncaps as usize {
@@ -698,16 +698,20 @@ pub unsafe fn tty_term_free(term: *mut tty_term) {
     unsafe {
         log_debug!("removing term {}", _s((*term).name.as_ptr() as *const u8));
 
+        // Free string values inside codes (raw *mut u8, no Drop impl).
         for code in &(*term).codes {
             if let tty_code::String(s) = code {
                 free_(*s);
             }
         }
-        std::ptr::drop_in_place(&raw mut (*term).codes);
 
-        (*(&raw mut TTY_TERMS)).retain(|&t| t != term);
-        std::ptr::drop_in_place(&raw mut (*term).name);
-        free_(term);
+        // Remove the Box from TTY_TERMS — Box drop handles name, codes Vec,
+        // and the allocation itself.
+        let terms = &mut *(&raw mut TTY_TERMS);
+        let pos = terms.iter().position(|b| &raw const **b == term as *const tty_term);
+        if let Some(i) = pos {
+            terms.remove(i);
+        }
     }
 }
 

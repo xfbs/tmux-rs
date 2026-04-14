@@ -38,7 +38,8 @@ unsafe fn cmd_show_messages_terminals(
         let tc = cmdq_get_target_client(item);
 
         let mut n = 0u32;
-        for &term in &(*(&raw mut TTY_TERMS)) {
+        for term_box in &(*(&raw mut TTY_TERMS)) {
+            let term: *mut tty_term = &raw const **term_box as *mut tty_term;
             if args_has(args, 't') && term != (*tc).tty.term {
                 continue;
             }

@@ -1990,7 +1990,7 @@ struct tty_term {
     flags: term_flags,
 
 }
-type tty_terms = Vec<*mut tty_term>;
+type tty_terms = Vec<Box<tty_term>>;
 
 bitflags::bitflags! {
     #[repr(transparent)]
