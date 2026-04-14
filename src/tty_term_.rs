@@ -25,21 +25,20 @@ pub static mut TTY_TERMS: tty_terms = Vec::new();
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum tty_code_type {
+    #[allow(dead_code)] // used in pattern matching, constructed only via zeroed() in static table
     None = 0,
     String,
     Number,
     Flag,
 }
 
-pub union tty_code_union {
-    string: *mut u8,
-    number: i32,
-    flag: i32,
-}
-
-pub struct tty_code {
-    pub type_: tty_code_type,
-    pub value: tty_code_union,
+/// Terminal capability value. Replaces the old `tty_code` struct+union pair.
+#[derive(Clone)]
+pub enum tty_code {
+    None,
+    String(*mut u8),
+    Number(i32),
+    Flag(bool),
 }
 
 pub struct tty_term_code_entry {
@@ -383,7 +382,6 @@ pub unsafe fn tty_term_override_next(s: &str, offset: *mut usize) -> *mut u8 {
 
 pub unsafe fn tty_term_apply(term: *mut tty_term, capabilities: &str, quiet: i32) {
     unsafe {
-        let mut code: *mut tty_code;
         let mut offset = 0usize;
         let mut cp;
         let mut value;
@@ -427,36 +425,35 @@ pub unsafe fn tty_term_apply(term: *mut tty_term, capabilities: &str, quiet: i32
                 }
             }
 
+            let codes = &mut (*term).codes;
             for i in 0..tty_term_ncodes() {
                 let ent = &raw const TTY_TERM_CODES[i as usize];
                 if strcmp(s, (*ent).name.as_ptr()) != 0 {
                     continue;
                 }
-                code = (*term).codes.add(i as usize);
-
                 if remove != 0 {
-                    (*code).type_ = tty_code_type::None;
+                    if let tty_code::String(s) = codes[i as usize] {
+                        free_(s);
+                    }
+                    codes[i as usize] = tty_code::None;
                     continue;
                 }
                 match (*ent).type_ {
                     tty_code_type::None => (),
                     tty_code_type::String => {
-                        if (*code).type_ == tty_code_type::String {
-                            free_((*code).value.string);
+                        if let tty_code::String(s) = codes[i as usize] {
+                            free_(s);
                         }
-                        (*code).value.string = xstrdup(value).as_ptr();
-                        (*code).type_ = (*ent).type_;
+                        codes[i as usize] = tty_code::String(xstrdup(value).as_ptr());
                     }
                     tty_code_type::Number => {
                         let Ok(n) = strtonum(value, 0, i32::MAX) else {
                             break;
                         };
-                        (*code).value.number = n;
-                        (*code).type_ = (*ent).type_;
+                        codes[i as usize] = tty_code::Number(n);
                     }
                     tty_code_type::Flag => {
-                        (*code).value.flag = 1;
-                        (*code).type_ = (*ent).type_;
+                        codes[i as usize] = tty_code::Flag(true);
                     }
                 }
             }
@@ -584,7 +581,7 @@ pub unsafe fn tty_term_create(
         let term = xcalloc1::<tty_term>() as *mut tty_term;
         (*term).tty = tty;
         std::ptr::write(&raw mut (*term).name, CStr::from_ptr(name.cast()).to_owned());
-        (*term).codes = xcalloc_(tty_term_ncodes() as usize).as_ptr();
+        std::ptr::write(&raw mut (*term).codes, vec![tty_code::None; tty_term_ncodes() as usize]);
         (*term).expand_context = ExpandContext::new();
         (*(&raw mut TTY_TERMS)).push(term);
         {
@@ -604,32 +601,26 @@ pub unsafe fn tty_term_create(
                         continue;
                     }
 
-                    let code = (*term).codes.add(j);
-                    (*code).type_ = tty_code_type::None;
-                    match ent.type_ {
-                        tty_code_type::None => (),
+                    (&mut (*term).codes)[j] = match ent.type_ {
+                        tty_code_type::None => tty_code::None,
                         tty_code_type::String => {
-                            (*code).type_ = tty_code_type::String;
-                            (*code).value.string = tty_term_strip(value);
+                            tty_code::String(tty_term_strip(value))
                         }
                         tty_code_type::Number => match strtonum(value, 0, i32::MAX) {
-                            Ok(n) => {
-                                (*code).type_ = tty_code_type::Number;
-                                (*code).value.number = n;
-                            }
+                            Ok(n) => tty_code::Number(n),
                             Err(errstr) => {
                                 log_debug!(
                                     "{}: {}",
                                     _s(ent.name.as_ptr()),
                                     errstr.to_string_lossy()
                                 );
+                                tty_code::None
                             }
                         },
                         tty_code_type::Flag => {
-                            (*code).type_ = tty_code_type::Flag;
-                            (*code).value.flag = (*value == b'1') as i32;
+                            tty_code::Flag(*value == b'1')
                         }
-                    }
+                    };
                 }
             }
 
@@ -707,12 +698,12 @@ pub unsafe fn tty_term_free(term: *mut tty_term) {
     unsafe {
         log_debug!("removing term {}", _s((*term).name.as_ptr() as *const u8));
 
-        for i in 0..tty_term_ncodes() as usize {
-            if (*(*term).codes.add(i)).type_ == tty_code_type::String {
-                free_((*(*term).codes.add(i)).value.string);
+        for code in &(*term).codes {
+            if let tty_code::String(s) = code {
+                free_(*s);
             }
         }
-        free_((*term).codes);
+        std::ptr::drop_in_place(&raw mut (*term).codes);
 
         (*(&raw mut TTY_TERMS)).retain(|&t| t != term);
         std::ptr::drop_in_place(&raw mut (*term).name);
@@ -800,19 +791,16 @@ pub unsafe fn tty_term_free_list(caps: *mut *mut u8, ncaps: u32) {
 }
 
 pub unsafe fn tty_term_has(term: *mut tty_term, code: tty_code_code) -> bool {
-    unsafe { (*(*term).codes.add(code as usize)).type_ != tty_code_type::None }
+    unsafe { !matches!((&(*term).codes)[code as usize], tty_code::None) }
 }
 
 pub unsafe fn tty_term_string(term: *mut tty_term, code: tty_code_code) -> &'static [u8] {
     unsafe {
-        if !tty_term_has(term, code) {
-            return &[];
+        match &(&(*term).codes)[code as usize] {
+            tty_code::String(s) => std::slice::from_raw_parts(*s, libc::strlen(*s)),
+            tty_code::None => &[],
+            _ => fatalx_!("not a string: {}", code as u32),
         }
-        if (*(*term).codes.add(code as usize)).type_ != tty_code_type::String {
-            fatalx_!("not a string: {}", code as u32);
-        }
-        let ret = (*(*term).codes.add(code as usize)).value.string;
-        std::slice::from_raw_parts(ret, libc::strlen(ret))
     }
 }
 
@@ -925,25 +913,21 @@ pub unsafe fn tty_term_string_ss(
 
 pub unsafe fn tty_term_number(term: *mut tty_term, code: tty_code_code) -> i32 {
     unsafe {
-        if !tty_term_has(term, code) {
-            return 0;
+        match &(&(*term).codes)[code as usize] {
+            tty_code::Number(n) => *n,
+            tty_code::None => 0,
+            _ => fatalx_!("not a number: {}", code as u32),
         }
-        if (*(*term).codes.add(code as usize)).type_ != tty_code_type::Number {
-            fatalx_!("not a number: {}", code as u32);
-        }
-        (*(*term).codes.add(code as usize)).value.number
     }
 }
 
 pub unsafe fn tty_term_flag(term: *mut tty_term, code: tty_code_code) -> i32 {
     unsafe {
-        if !tty_term_has(term, code) {
-            return 0;
+        match &(&(*term).codes)[code as usize] {
+            tty_code::Flag(f) => *f as i32,
+            tty_code::None => 0,
+            _ => fatalx_!("not a flag: {}", code as u32),
         }
-        if (*(*term).codes.add(code as usize)).type_ != tty_code_type::Flag {
-            fatalx_!("not a flag: {}", code as u32);
-        }
-        (*(*term).codes.add(code as usize)).value.flag
     }
 }
 
@@ -955,8 +939,8 @@ pub unsafe fn tty_term_describe(term: *mut tty_term, code: tty_code_code) -> *co
         let sizeof_out = 128;
         let mut out: [u8; 128] = [0; 128];
 
-        match (*(*term).codes.add(code as usize)).type_ {
-            tty_code_type::None => {
+        match &(&(*term).codes)[code as usize] {
+            tty_code::None => {
                 _ = xsnprintf_!(
                     &raw mut S as _,
                     sizeof_s,
@@ -965,10 +949,10 @@ pub unsafe fn tty_term_describe(term: *mut tty_term, code: tty_code_code) -> *co
                     _s(TTY_TERM_CODES[code as usize].name),
                 );
             }
-            tty_code_type::String => {
+            tty_code::String(s) => {
                 strnvis(
                     &raw mut out as *mut u8,
-                    (*(*term).codes.add(code as usize)).value.string,
+                    *s,
                     sizeof_out,
                     vis_flags::VIS_OCTAL
                         | vis_flags::VIS_CSTYLE
@@ -984,24 +968,24 @@ pub unsafe fn tty_term_describe(term: *mut tty_term, code: tty_code_code) -> *co
                     _s(out.as_ptr()),
                 );
             }
-            tty_code_type::Number => {
+            tty_code::Number(n) => {
                 _ = xsnprintf_!(
                     &raw mut S as _,
                     sizeof_s,
                     "{:4}: {}: (number) {}",
                     code as u32,
                     _s(TTY_TERM_CODES[code as usize].name),
-                    (*(*term).codes.add(code as usize)).value.number,
+                    n,
                 );
             }
-            tty_code_type::Flag => {
+            tty_code::Flag(f) => {
                 _ = xsnprintf_!(
                     &raw mut S as _,
                     sizeof_s,
                     "{:4}: {}: (flag) {}",
                     code as u32,
                     _s(TTY_TERM_CODES[code as usize].name),
-                    (*(*term).codes.add(code as usize)).value.flag != 0
+                    f,
                 );
             }
         }

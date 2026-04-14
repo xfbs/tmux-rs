@@ -1985,7 +1985,7 @@ struct tty_term {
 
     acs: [[u8; 2]; c_uchar::MAX as usize + 1],
 
-    codes: *mut tty_code,
+    codes: Vec<tty_code>,
     expand_context: ExpandContext,
     flags: term_flags,
 
