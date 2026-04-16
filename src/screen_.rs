@@ -428,7 +428,7 @@ unsafe fn screen_resize_y(s: *mut screen, sy: u32, eat_empty: i32, cy: *mut u32)
         }
 
         // Resize line array
-        grid_adjust_lines(gd, (*gd).hsize + sy);
+        (*gd).adjust_lines((*gd).hsize + sy);
 
         // Size increasing
         if sy > oldy {

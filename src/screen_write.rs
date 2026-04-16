@@ -640,7 +640,7 @@ pub unsafe fn screen_write_fast_copy(
             }
             let mut cx = (*s).cx;
             for xx in px..(px + nx) {
-                if xx as usize >= (*grid_get_line(gd, yy)).celldata.len() {
+                if xx as usize >= (*(*gd).get_line(yy)).celldata.len() {
                     break;
                 }
                 (*gd).get_cell(xx, yy, &raw mut gc);
@@ -1104,7 +1104,7 @@ pub unsafe fn screen_write_backspace(ctx: *mut screen_write_ctx) {
             if cy == 0 {
                 return;
             }
-            let gl = grid_get_line(&raw mut *(*s).grid, (*(*s).grid).hsize + cy - 1);
+            let gl = (*s).grid.get_line((*(*s).grid).hsize + cy - 1);
             if (*gl).flags.intersects(grid_line_flag::WRAPPED) {
                 cy -= 1;
                 cx = screen_size_x(s) - 1;
@@ -1397,7 +1397,7 @@ pub unsafe fn screen_write_clearline(ctx: *mut screen_write_ctx, bg: u32) {
         let sx = screen_size_x(s);
         let ci = (*ctx).item;
 
-        let gl = grid_get_line(&raw mut *(*s).grid, (*(*s).grid).hsize + (*s).cy);
+        let gl = (*s).grid.get_line((*(*s).grid).hsize + (*s).cy);
         if (*gl).celldata.is_empty() && COLOUR_DEFAULT(bg as i32) {
             return;
         }
@@ -1433,7 +1433,7 @@ pub unsafe fn screen_write_clearendofline(ctx: *mut screen_write_ctx, bg: u32) {
             return;
         }
 
-        let gl = grid_get_line(&raw mut *(*s).grid, (*(*s).grid).hsize + (*s).cy);
+        let gl = (*s).grid.get_line((*(*s).grid).hsize + (*s).cy);
         if (*s).cx > sx - 1 || ((*s).cx as usize >= (*gl).celldata.len() && COLOUR_DEFAULT(bg as i32)) {
             return;
         }
@@ -1599,7 +1599,7 @@ pub unsafe fn screen_write_linefeed(ctx: *mut screen_write_ctx, wrapped: bool, b
         let rupper = (*s).rupper;
         let rlower = (*s).rlower;
 
-        let gl = grid_get_line(gd, (*gd).hsize + (*s).cy);
+        let gl = (*gd).get_line((*gd).hsize + (*s).cy);
         if wrapped {
             (*gl).flags |= grid_line_flag::WRAPPED;
         }
@@ -2192,7 +2192,7 @@ pub unsafe fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *const grid_cell
         screen_write_initctx(ctx, &raw mut ttyctx, 0);
 
         // Handle overwriting of UTF-8 characters.
-        let gl: *mut grid_line = grid_get_line(&raw mut *(*s).grid, (*(*s).grid).hsize + (*s).cy);
+        let gl: *mut grid_line = (*s).grid.get_line((*(*s).grid).hsize + (*s).cy);
         if (*gl).flags.intersects(grid_line_flag::EXTENDED) {
             grid_view_get_cell(gd, (*s).cx, (*s).cy, &raw mut now_gc);
             if screen_write_overwrite(ctx, &raw mut now_gc, width) != 0 {

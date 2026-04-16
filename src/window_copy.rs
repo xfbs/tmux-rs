@@ -269,7 +269,7 @@ pub unsafe fn window_copy_clone_screen(
         let mut sy = screen_hsize(src) + screen_size_y(src);
         if trim != 0 {
             while sy > screen_hsize(src) {
-                gl = grid_peek_line(&raw mut *(*src).grid, sy - 1);
+                gl = (*src).grid.peek_line(sy - 1);
                 if (*gl).cellused != 0 {
                     break;
                 }
@@ -1827,7 +1827,7 @@ pub unsafe fn window_copy_cmd_next_matching_bracket(
                             np -= 1;
                             continue 'outer;
                         }
-                        let gl = grid_get_line(&raw mut *(*s).grid, py);
+                        let gl = (*s).grid.get_line(py);
                         if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
                             np -= 1;
                             continue 'outer;
@@ -2269,7 +2269,7 @@ pub unsafe fn window_copy_cmd_select_word(
         // Handle single character words.
         let mut nextx = px + 1;
         let mut nexty = py;
-        if (*grid_get_line(&raw mut *(*(*data).backing).grid, nexty))
+        if (*(*(*data).backing).grid.get_line(nexty))
             .flags
             .intersects(grid_line_flag::WRAPPED)
             && nextx > screen_size_x((*data).backing) - 1
@@ -3578,7 +3578,7 @@ pub unsafe fn window_copy_search_lr(
                 let mut pywrap = py;
                 // Wrap line.
                 while px >= (*gd).sx && pywrap < endline {
-                    gl = grid_get_line(gd, pywrap);
+                    gl = (*gd).get_line(pywrap);
                     if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
                         break;
                     }
@@ -3625,7 +3625,7 @@ pub unsafe fn window_copy_search_rl(
                 let mut pywrap = py;
                 // Wrap line.
                 while px >= (*gd).sx && pywrap < endline {
-                    gl = grid_get_line(gd, pywrap);
+                    gl = (*gd).get_line(pywrap);
                     if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
                         break;
                     }
@@ -3688,7 +3688,7 @@ pub unsafe fn window_copy_search_lr_regex(
         let endline = (*gd).hsize + (*gd).sy - 1;
         let mut pywrap = py;
         while !buf.is_null() && pywrap <= endline && len < WINDOW_COPY_SEARCH_MAX_LINE {
-            let gl = grid_get_line(gd, pywrap);
+            let gl = (*gd).get_line(pywrap);
             if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
                 break;
             }
@@ -3763,7 +3763,7 @@ pub unsafe fn window_copy_search_rl_regex(
         let endline = (*gd).hsize + (*gd).sy - 1;
         let mut pywrap = py;
         while !buf.is_null() && pywrap <= endline && len < WINDOW_COPY_SEARCH_MAX_LINE {
-            let gl = grid_get_line(gd, pywrap);
+            let gl = (*gd).get_line(pywrap);
             if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
                 break;
             }
@@ -3921,7 +3921,7 @@ pub unsafe fn window_copy_stringify(
         }
         buf = xrealloc(buf.cast(), bufsize).as_ptr().cast();
 
-        let gl = grid_peek_line(gd, py);
+        let gl = (*gd).peek_line(py);
         let mut bx = *size - 1;
         for ax in first..last {
             let d = window_copy_cellstring(gl, ax, &raw mut dlen, &raw mut allocated);
@@ -3969,7 +3969,7 @@ pub unsafe fn window_copy_cstrtocellpos(
         let mut cells: Vec<Cell> = Vec::with_capacity(ncells as usize);
         let mut px = *ppx;
         let mut pywrap = *ppy;
-        let mut gl = grid_peek_line(gd, pywrap);
+        let mut gl = (*gd).peek_line(pywrap);
         for _ in 0..ncells {
             let mut dlen: usize = 0;
             let mut allocated: i32 = 0;
@@ -3979,7 +3979,7 @@ pub unsafe fn window_copy_cstrtocellpos(
             if px == (*gd).sx {
                 px = 0;
                 pywrap += 1;
-                gl = grid_peek_line(gd, pywrap);
+                gl = (*gd).peek_line(pywrap);
             }
         }
 
@@ -4123,7 +4123,7 @@ pub unsafe fn window_copy_search_back_overlap(
         while found
             && px == 0
             && py - 1 > endline
-            && (*grid_get_line(gd, py - 2))
+            && (*(*gd).get_line(py - 2))
                 .flags
                 .intersects(grid_line_flag::WRAPPED)
             && endx == oldendx
@@ -4471,7 +4471,7 @@ pub unsafe fn window_copy_visible_lines(
         *start = (*gd).hsize - (*data).oy;
 
         while *start > 0 {
-            let gl = grid_peek_line(gd, (*start) - 1);
+            let gl = (*gd).peek_line((*start) - 1);
             if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
                 break;
             }
@@ -4939,7 +4939,7 @@ pub unsafe fn window_copy_write_line(
         mkgc.flags |= grid_flag::NOPALETTE;
 
         if py == 0 && (*s).rupper < (*s).rlower && !(*data).hide_position {
-            gl = grid_get_line(&raw mut *(*(*data).backing).grid, hsize - (*data).oy);
+            gl = (*(*data).backing).grid.get_line(hsize - (*data).oy);
             if (*gl).time == 0 {
                 _ = xsnprintf_!((&raw mut tmp).cast(), 512, "[{}/{}]", (*data).oy, hsize,);
             } else {
@@ -5451,7 +5451,7 @@ pub unsafe fn window_copy_get_selection(wme: *mut window_mode_entry, len: *mut u
         }
         // Remove final \n (unless at end in vi mode).
         if (keys == Ok(modekey::MODEKEY_EMACS) || lastex <= ey_last)
-            && (!(*grid_get_line(&raw mut *(*(*data).backing).grid, ey))
+            && (!(*(*(*data).backing).grid.get_line(ey))
                 .flags
                 .intersects(grid_line_flag::WRAPPED)
                 || lastex != ey_last)
@@ -5604,7 +5604,7 @@ pub unsafe fn window_copy_copy_line(
         }
 
         // Work out if the line was wrapped at the screen edge and all of it is on screen.
-        let gl = grid_get_line(gd, sy);
+        let gl = (*gd).get_line(sy);
         if (*gl).flags.intersects(grid_line_flag::WRAPPED) && (*gl).celldata.len() as u32 <= (*gd).sx {
             wrapped = true;
         }
@@ -5699,7 +5699,7 @@ pub unsafe fn window_copy_find_length(wme: *mut window_mode_entry, py: u32) -> u
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
-        grid_line_length(&raw mut *(*(*data).backing).grid, py)
+        (*(*data).backing).grid.line_length(py)
     }
 }
 
@@ -6313,7 +6313,7 @@ pub unsafe fn window_copy_cursor_prompt(
             }
             line += add as u32;
 
-            if (*grid_get_line(gd, line)).flags.intersects(line_flag) {
+            if (*(*gd).get_line(line)).flags.intersects(line_flag) {
                 break;
             }
         }

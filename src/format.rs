@@ -885,7 +885,7 @@ pub unsafe fn format_cb_history_bytes(ft: &format_tree) -> format_table_type {
         let mut size: usize = 0;
 
         for i in 0..((*gd).hsize + (*gd).sy) {
-            let gl = grid_get_line(gd, i);
+            let gl = (*gd).get_line(i);
             size += (*gl).celldata.len() * std::mem::size_of::<grid_cell>();
             size += (*gl).extddata.len() * std::mem::size_of::<grid_cell>();
         }
@@ -910,7 +910,7 @@ pub unsafe fn format_cb_history_all_bytes(ft: &format_tree) -> format_table_type
         let mut extended_cells = 0;
 
         for i in 0..lines {
-            let gl: *mut grid_line = grid_get_line(gd, i);
+            let gl: *mut grid_line = (*gd).get_line(i);
             cells += (*gl).celldata.len() as u32;
             extended_cells += (*gl).extddata.len() as u32;
         }
@@ -5410,12 +5410,12 @@ pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String 
                 if y == 0 {
                     break;
                 }
-                let gl = grid_peek_line(gd, y - 1);
+                let gl = (*gd).peek_line(y - 1);
                 if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
                     break;
                 }
                 y -= 1;
-                x = grid_line_length(gd, y);
+                x = (*gd).line_length(y);
                 if x == 0 {
                     break;
                 }
@@ -5424,12 +5424,12 @@ pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String 
         }
         loop {
             if found {
-                let end = grid_line_length(gd, y);
+                let end = (*gd).line_length(y);
                 if end == 0 || x == end - 1 {
                     if y == (*gd).hsize + (*gd).sy - 1 {
                         break;
                     }
-                    let gl = grid_peek_line(gd, y);
+                    let gl = (*gd).peek_line(y);
                     if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
                         break;
                     }
@@ -5464,7 +5464,7 @@ pub unsafe fn format_grid_line(gd: *mut grid, y: u32) -> String {
         let mut ud: Vec<utf8_data> = Vec::new();
         let mut gc = MaybeUninit::<grid_cell>::uninit();
         let gc = gc.as_mut_ptr();
-        for x in 0..grid_line_length(gd, y) {
+        for x in 0..(*gd).line_length(y) {
             (*gd).get_cell(x, y, gc);
             if (*gc).flags.intersects(grid_flag::PADDING) {
                 break;

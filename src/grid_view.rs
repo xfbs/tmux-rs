@@ -74,7 +74,7 @@ pub unsafe fn grid_view_clear_history(gd: *mut grid, bg: u32) {
         let mut last = 0u32;
 
         for yy in 0..(*gd).sy {
-            let gl = grid_get_line(gd, grid_view_y(gd, yy));
+            let gl = (*gd).get_line(grid_view_y(gd, yy));
             if (*gl).cellused != 0 {
                 last = yy + 1;
             }

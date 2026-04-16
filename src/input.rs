@@ -2960,7 +2960,7 @@ unsafe fn input_osc_133(ictx: *mut input_ctx, p: *const u8) {
         if line > (*gd).hsize + (*gd).sy - 1 {
             return;
         }
-        let gl = grid_get_line(gd, line);
+        let gl = (*gd).get_line(line);
 
         match *p {
             b'A' => (*gl).flags |= grid_line_flag::START_PROMPT,

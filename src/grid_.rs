@@ -182,17 +182,7 @@ unsafe fn grid_compact_line(gl: &mut grid_line) {
     }
 }
 
-/// Get line data.
-pub unsafe fn grid_get_line(gd: *mut grid, line: c_uint) -> *mut grid_line {
-    unsafe { (*gd).linedata.as_mut_ptr().add(line as usize) }
-}
-
-/// Adjust number of lines.
-pub unsafe fn grid_adjust_lines(gd: *mut grid, lines: c_uint) {
-    unsafe {
-        (*gd).linedata.resize_with(lines as usize, grid_line::new);
-    }
-}
+// grid_get_line and grid_adjust_lines converted to methods (see impl grid below).
 
 /// Copy default into a cell.
 unsafe fn grid_clear_cell(gd: *mut grid, px: c_uint, py: c_uint, bg: c_uint) {
@@ -498,15 +488,7 @@ unsafe fn grid_init_line(gd: *mut grid, py: c_uint, bg: c_uint) {
     }
 }
 
-/// Peek at grid line.
-pub unsafe fn grid_peek_line(gd: *mut grid, py: c_uint) -> *mut grid_line {
-    unsafe {
-        if grid_check_y(gd, c!("grid_peek_line"), py) != 0 {
-            return null_mut();
-        }
-        (*gd).linedata.as_mut_ptr().add(py as usize)
-    }
-}
+// grid_peek_line converted to method (see impl grid below).
 
 /// Get cell from line.
 unsafe fn grid_get_cell1(gl: &grid_line, px: c_uint, gc: *mut grid_cell) {
@@ -546,6 +528,49 @@ unsafe fn grid_get_cell1(gl: &grid_line, px: c_uint, gc: *mut grid_cell) {
 }
 
 impl grid {
+    /// Get line data (mutable pointer).
+    pub unsafe fn get_line(&mut self, line: c_uint) -> *mut grid_line {
+        unsafe { self.linedata.as_mut_ptr().add(line as usize) }
+    }
+
+    /// Adjust number of lines.
+    pub unsafe fn adjust_lines(&mut self, lines: c_uint) {
+        self.linedata.resize_with(lines as usize, grid_line::new);
+    }
+
+    /// Peek at grid line — returns null if py is out of range.
+    pub unsafe fn peek_line(&mut self, py: c_uint) -> *mut grid_line {
+        unsafe {
+            let gd = self as *mut grid;
+            if grid_check_y(gd, c!("grid_peek_line"), py) != 0 {
+                return null_mut();
+            }
+            self.linedata.as_mut_ptr().add(py as usize)
+        }
+    }
+
+    /// Return the length of a line (position past last non-space cell).
+    pub unsafe fn line_length(&mut self, py: u32) -> u32 {
+        unsafe {
+            let mut gc = zeroed();
+            let mut px = (*self.get_line(py)).celldata.len() as u32;
+            if px > self.sx {
+                px = self.sx;
+            }
+            while px > 0 {
+                self.get_cell(px - 1, py, &mut gc);
+                if (gc.flags.intersects(grid_flag::PADDING))
+                    || gc.data.size != 1
+                    || gc.data.data[0] != b' '
+                {
+                    break;
+                }
+                px -= 1;
+            }
+            px
+        }
+    }
+
     /// Get cell for reading.
     pub unsafe fn get_cell(&self, px: c_uint, py: c_uint, gc: *mut grid_cell) {
         unsafe {
@@ -1204,7 +1229,7 @@ pub unsafe fn grid_string_cells(
 
         let mut buf: *mut u8 = xmalloc(len).as_ptr() as *mut u8;
 
-        let gl = grid_peek_line(gd, py);
+        let gl = (*gd).peek_line(py);
         let end = if flags.intersects(grid_string_flags::GRID_STRING_EMPTY_CELLS) {
             (*gl).celldata.len() as u32
         } else {
@@ -1676,27 +1701,7 @@ pub unsafe fn grid_unwrap_position(
     }
 }
 
-/// Get length of line
-pub unsafe fn grid_line_length(gd: *mut grid, py: u32) -> u32 {
-    unsafe {
-        let mut gc = zeroed();
-        let mut px = (*grid_get_line(gd, py)).celldata.len() as u32;
-        if px > (*gd).sx {
-            px = (*gd).sx;
-        }
-        while px > 0 {
-            (*gd).get_cell(px - 1, py, &mut gc);
-            if (gc.flags.intersects(grid_flag::PADDING))
-                || gc.data.size != 1
-                || gc.data.data[0] != b' '
-            {
-                break;
-            }
-            px -= 1;
-        }
-        px
-    }
-}
+// grid_line_length converted to method (see impl grid below).
 
 #[cfg(test)]
 mod tests {
@@ -1849,9 +1854,9 @@ mod tests {
     fn grid_get_line_returns_non_null() {
         let mut gd = grid_create(80, 24, 0);
         unsafe {
-            let gl = grid_get_line(&raw mut *gd, 0);
+            let gl = gd.get_line(0);
             assert!(!gl.is_null());
-            let gl_last = grid_get_line(&raw mut *gd, 23);
+            let gl_last = gd.get_line(23);
             assert!(!gl_last.is_null());
             drop(gd);
         }
@@ -1861,7 +1866,7 @@ mod tests {
     fn grid_line_length_on_empty_line() {
         let mut gd = grid_create(80, 24, 0);
         unsafe {
-            let len = grid_line_length(&raw mut *gd, 0);
+            let len = gd.line_length(0);
             assert_eq!(len, 0);
             drop(gd);
         }
@@ -1876,7 +1881,7 @@ mod tests {
             gd.set_cell(4, 0, &cell);
 
             // Line length should be 5 (positions 0..=4, trailing spaces trimmed).
-            let len = grid_line_length(&raw mut *gd, 0);
+            let len = gd.line_length(0);
             assert_eq!(len, 5);
             drop(gd);
         }
@@ -1898,7 +1903,7 @@ mod tests {
             gd.get_cell(0, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
 
-            let len = grid_line_length(&raw mut *gd, 0);
+            let len = gd.line_length(0);
             assert_eq!(len, 0);
             drop(gd);
         }
@@ -2458,14 +2463,14 @@ mod tests {
     fn grid_expand_line_grows_cellsize() {
         let mut gd = grid_create(80, 5, 0);
         unsafe {
-            let gl = grid_get_line(&raw mut *gd, 0);
+            let gl = gd.get_line(0);
             assert_eq!((*gl).celldata.len() as u32, 0);
 
             // Setting a cell at position 10 should expand the line.
             let cell = make_cell(b'X', 8, 8);
             gd.set_cell(10, 0, &cell);
 
-            let gl = grid_get_line(&raw mut *gd, 0);
+            let gl = gd.get_line(0);
             assert!((*gl).celldata.len() as u32 >= 11);
             assert_eq!((*gl).cellused, 11);
             drop(gd);
@@ -2481,7 +2486,7 @@ mod tests {
             // Request expansion to column 2 — should round up to sx/4 = 20.
             gd.set_cell(1, 0, &cell);
 
-            let gl = grid_get_line(&raw mut *gd, 0);
+            let gl = gd.get_line(0);
             assert!(
                 (*gl).celldata.len() as u32 >= 20,
                 "cellsize {} should be >= sx/4 = 20",
@@ -2552,7 +2557,7 @@ mod tests {
             assert!(grid_cells_equal(&gc, &cell));
 
             // New visible line 0 (= line hsize) should be empty.
-            let gl = grid_get_line(&raw mut *gd, gd.hsize);
+            let gl = gd.get_line(gd.hsize);
             assert_eq!((*gl).cellused, 0);
 
             drop(gd);
@@ -2685,8 +2690,8 @@ mod tests {
 
             let mut gc: grid_cell = zeroed();
             // Lines 1 and 2 should be empty.
-            assert_eq!(grid_line_length(&raw mut *gd, 1), 0);
-            assert_eq!(grid_line_length(&raw mut *gd, 2), 0);
+            assert_eq!(gd.line_length(1), 0);
+            assert_eq!(gd.line_length(2), 0);
             // Lines 0, 3, 4 should still have content.
             gd.get_cell(0, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &cell));
@@ -2738,7 +2743,7 @@ mod tests {
                 gd.set_cell(x, 0, &cell);
             }
             // Mark line as wrapped (as tmux does for long lines).
-            (*grid_get_line(&raw mut *gd, 0)).flags |= grid_line_flag::WRAPPED;
+            (*gd.get_line(0)).flags |= grid_line_flag::WRAPPED;
             grid_scroll_history(&raw mut *gd, 8);
             let hsize_before = gd.hsize;
 
@@ -2767,7 +2772,7 @@ mod tests {
             for x in 0..10u32 {
                 gd.set_cell(x, 0, &cell);
             }
-            (*grid_get_line(&raw mut *gd, 0)).flags |= grid_line_flag::WRAPPED;
+            (*gd.get_line(0)).flags |= grid_line_flag::WRAPPED;
             let cell_b = make_cell(b'B', 8, 8);
             for x in 0..5u32 {
                 gd.set_cell(x, 1, &cell_b);
@@ -2884,7 +2889,7 @@ mod tests {
             // Trailing spaces (even with color) count as spaces for length trimming.
             gd.set_cell(1, 0, &extended);
 
-            let len = grid_line_length(&raw mut *gd, 0);
+            let len = gd.line_length(0);
             // grid_line_length trims trailing spaces regardless of style.
             assert_eq!(len, 1);
             drop(gd);

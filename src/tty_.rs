@@ -1788,7 +1788,7 @@ pub unsafe fn tty_draw_line(
             nx = sx;
         }
 
-        let cellsize = (*grid_get_line(gd, (*gd).hsize + py)).celldata.len() as u32;
+        let cellsize = (*(*gd).get_line((*gd).hsize + py)).celldata.len() as u32;
         if sx > cellsize {
             sx = cellsize;
         }
@@ -1803,7 +1803,7 @@ pub unsafe fn tty_draw_line(
         let gl = if py == 0 {
             null_mut()
         } else {
-            grid_get_line(gd, (*gd).hsize + py - 1)
+            (*gd).get_line((*gd).hsize + py - 1)
         };
         if gl.is_null()
             || !(*gl).flags.intersects(grid_line_flag::WRAPPED)
