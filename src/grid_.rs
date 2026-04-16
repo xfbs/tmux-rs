@@ -333,8 +333,8 @@ pub unsafe fn grid_compare(ga: *mut grid, gb: *mut grid) -> c_int {
                     0,
                 );
 
-                grid_get_cell(ga, xx, yy, &mut gca);
-                grid_get_cell(gb, xx, yy, &mut gcb);
+                (*ga).get_cell(xx, yy, &mut gca);
+                (*gb).get_cell(xx, yy, &mut gcb);
 
                 if !grid_cells_equal(&gca, &gcb) {
                     return 1;
@@ -401,7 +401,7 @@ pub unsafe fn grid_scroll_history(gd: *mut grid, bg: c_uint) {
         let yy = (*gd).hsize + (*gd).sy;
         (*gd).linedata.push(grid_line::new());
 
-        grid_empty_line(gd, yy, bg);
+        (*gd).empty_line(yy, bg);
 
         (*gd).hscrolled += 1;
         let hsize = (*gd).hsize as usize;
@@ -482,15 +482,7 @@ unsafe fn grid_expand_line(gd: *mut grid, py: c_uint, mut sx: c_uint, bg: c_uint
 }
 
 /// Empty a line and set background colour if needed.
-pub unsafe fn grid_empty_line(gd: *mut grid, py: c_uint, bg: c_uint) {
-    unsafe {
-        // Replace the old line with a fresh empty one (old Vecs drop via assignment).
-        (&mut (*gd).linedata)[py as usize] = grid_line::new();
-        if !COLOUR_DEFAULT(bg as i32) {
-            grid_expand_line(gd, py, (*gd).sx, bg);
-        }
-    }
-}
+// grid_empty_line converted to method (see impl grid below).
 
 /// Initialize a line slot without dropping (for after `ptr::copy` where
 /// the old data was bitwise-moved to another location).
@@ -553,77 +545,91 @@ unsafe fn grid_get_cell1(gl: &grid_line, px: c_uint, gc: *mut grid_cell) {
     }
 }
 
-/// Get cell for reading.
-pub unsafe fn grid_get_cell(gd: *mut grid, px: c_uint, py: c_uint, gc: *mut grid_cell) {
-    unsafe {
-        if grid_check_y(gd, c!("grid_get_cell"), py) != 0
-            || px as usize >= (&(*gd).linedata)[py as usize].celldata.len()
-        {
-            std::ptr::copy(&raw const GRID_DEFAULT_CELL, gc, 1);
-        } else {
-            grid_get_cell1(&(&(*gd).linedata)[py as usize], px, gc);
-        }
-    }
-}
-
-/// Set cell at position.
-pub unsafe fn grid_set_cell(gd: *mut grid, px: c_uint, py: c_uint, gc: *const grid_cell) {
-    unsafe {
-        if grid_check_y(gd, c!("grid_set_cell"), py) != 0 {
-            return;
-        }
-
-        grid_expand_line(gd, py, px + 1, 8);
-
-        let gl = &mut (&mut (*gd).linedata)[py as usize];
-        if px + 1 > gl.cellused {
-            gl.cellused = px + 1;
-        }
-
-        let gce = &mut gl.celldata[px as usize] as *mut grid_cell_entry;
-        if grid_need_extended_cell(gce, gc) {
-            grid_extended_cell(gl, gce, gc);
-        } else {
-            grid_store_cell(gce, gc, (*gc).data.data[0]);
-        }
-    }
-}
-
-/// Set padding at position.
-pub unsafe fn grid_set_padding(gd: *mut grid, px: c_uint, py: c_uint) {
-    unsafe {
-        grid_set_cell(gd, px, py, &GRID_PADDING_CELL);
-    }
-}
-
-/// Set cells at position.
-pub unsafe fn grid_set_cells(
-    gd: *mut grid,
-    px: u32,
-    py: u32,
-    gc: *const grid_cell,
-    s: *const u8,
-    slen: usize,
-) {
-    unsafe {
-        if grid_check_y(gd, c!("grid_set_cells"), py) != 0 {
-            return;
-        }
-
-        grid_expand_line(gd, py, px + slen as c_uint, 8);
-
-        let gl = (*gd).linedata.as_mut_ptr().add(py as usize);
-        if px + slen as c_uint > (*gl).cellused {
-            (*gl).cellused = px + slen as c_uint;
-        }
-
-        for i in 0..slen {
-            let gce = (*gl).celldata.as_mut_ptr().add((px + i as c_uint) as usize);
-            if grid_need_extended_cell(gce, gc) {
-                let gee = grid_extended_cell(gl, gce, gc);
-                (*gee).data = utf8_build_one(*s.add(i));
+impl grid {
+    /// Get cell for reading.
+    pub unsafe fn get_cell(&self, px: c_uint, py: c_uint, gc: *mut grid_cell) {
+        unsafe {
+            let gd = self as *const grid as *mut grid;
+            if grid_check_y(gd, c!("grid_get_cell"), py) != 0
+                || px as usize >= self.linedata[py as usize].celldata.len()
+            {
+                std::ptr::copy(&raw const GRID_DEFAULT_CELL, gc, 1);
             } else {
-                grid_store_cell(gce, gc, *s.add(i));
+                grid_get_cell1(&self.linedata[py as usize], px, gc);
+            }
+        }
+    }
+
+    /// Set cell at position.
+    pub unsafe fn set_cell(&mut self, px: c_uint, py: c_uint, gc: *const grid_cell) {
+        unsafe {
+            let gd = self as *mut grid;
+            if grid_check_y(gd, c!("grid_set_cell"), py) != 0 {
+                return;
+            }
+
+            grid_expand_line(gd, py, px + 1, 8);
+
+            let gl = &mut self.linedata[py as usize];
+            if px + 1 > gl.cellused {
+                gl.cellused = px + 1;
+            }
+
+            let gce = &mut gl.celldata[px as usize] as *mut grid_cell_entry;
+            if grid_need_extended_cell(gce, gc) {
+                grid_extended_cell(gl, gce, gc);
+            } else {
+                grid_store_cell(gce, gc, (*gc).data.data[0]);
+            }
+        }
+    }
+
+    /// Set padding at position.
+    pub unsafe fn set_padding(&mut self, px: c_uint, py: c_uint) {
+        unsafe { self.set_cell(px, py, &GRID_PADDING_CELL) }
+    }
+
+    /// Set cells at position.
+    pub unsafe fn set_cells(
+        &mut self,
+        px: u32,
+        py: u32,
+        gc: *const grid_cell,
+        s: *const u8,
+        slen: usize,
+    ) {
+        unsafe {
+            let gd = self as *mut grid;
+            if grid_check_y(gd, c!("grid_set_cells"), py) != 0 {
+                return;
+            }
+
+            grid_expand_line(gd, py, px + slen as c_uint, 8);
+
+            let gl = self.linedata.as_mut_ptr().add(py as usize);
+            if px + slen as c_uint > (*gl).cellused {
+                (*gl).cellused = px + slen as c_uint;
+            }
+
+            for i in 0..slen {
+                let gce = (*gl).celldata.as_mut_ptr().add((px + i as c_uint) as usize);
+                if grid_need_extended_cell(gce, gc) {
+                    let gee = grid_extended_cell(gl, gce, gc);
+                    (*gee).data = utf8_build_one(*s.add(i));
+                } else {
+                    grid_store_cell(gce, gc, *s.add(i));
+                }
+            }
+        }
+    }
+
+    /// Empty a line and optionally fill with a background color.
+    pub unsafe fn empty_line(&mut self, py: c_uint, bg: c_uint) {
+        unsafe {
+            let gd = self as *mut grid;
+            self.linedata[py as usize] = grid_line::new();
+            if !COLOUR_DEFAULT(bg as i32) {
+                grid_expand_line(gd, py, self.sx, bg);
             }
         }
     }
@@ -695,7 +701,7 @@ pub unsafe fn grid_clear_lines(gd: *mut grid, py: c_uint, ny: c_uint, bg: c_uint
 
         for yy in py..py + ny {
             grid_free_line(gd, yy);
-            grid_empty_line(gd, yy, bg);
+            (*gd).empty_line(yy, bg);
         }
         if py != 0 {
             (&mut (*gd).linedata)[py as usize - 1].flags &= !grid_line_flag::WRAPPED;
@@ -1209,7 +1215,7 @@ pub unsafe fn grid_string_cells(
             if gl.is_null() || xx >= end {
                 break;
             }
-            grid_get_cell(gd, xx, py, &mut gc);
+            (*gd).get_cell(xx, py, &mut gc);
             if gc.flags.intersects(grid_flag::PADDING) {
                 continue;
             }
@@ -1398,7 +1404,7 @@ unsafe fn grid_reflow_join(
                 break;
             }
             width += gc.data.width as u32;
-            grid_set_cell(target, at, to, &gc);
+            (*target).set_cell(at, to, &gc);
             at += 1;
 
             // Join as much more as possible onto current line
@@ -1411,7 +1417,7 @@ unsafe fn grid_reflow_join(
                 }
                 width += gc.data.width as u32;
 
-                grid_set_cell(target, at, to, &gc);
+                (*target).set_cell(at, to, &gc);
                 at += 1;
                 want += 1;
             }
@@ -1498,7 +1504,7 @@ unsafe fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, 
                 xx = 0;
             }
             width += gc.data.width as u32;
-            grid_set_cell(target, xx, line, &gc);
+            (*target).set_cell(xx, line, &gc);
             xx += 1;
         }
         if flags.intersects(grid_line_flag::WRAPPED) {
@@ -1679,7 +1685,7 @@ pub unsafe fn grid_line_length(gd: *mut grid, py: u32) -> u32 {
             px = (*gd).sx;
         }
         while px > 0 {
-            grid_get_cell(gd, px - 1, py, &mut gc);
+            (*gd).get_cell(px - 1, py, &mut gc);
             if (gc.flags.intersects(grid_flag::PADDING))
                 || gc.data.size != 1
                 || gc.data.data[0] != b' '
@@ -1749,7 +1755,7 @@ mod tests {
         let mut gd = grid_create(80, 24, 0);
         unsafe {
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             // Fresh grid returns GRID_DEFAULT_CELL (space character).
             assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
             drop(gd);
@@ -1761,10 +1767,10 @@ mod tests {
         let mut gd = grid_create(80, 24, 0);
         unsafe {
             let cell_in = make_cell(b'A', 8, 8);
-            grid_set_cell(&raw mut *gd, 5, 3, &cell_in);
+            gd.set_cell(5, 3, &cell_in);
 
             let mut cell_out: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 5, 3, &mut cell_out);
+            gd.get_cell(5, 3, &mut cell_out);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
             drop(gd);
@@ -1778,13 +1784,13 @@ mod tests {
             let cell_a = make_cell(b'X', 8, 8);
             let cell_b = make_cell(b'Y', 8, 8);
 
-            grid_set_cell(&raw mut *gd, 0, 0, &cell_a);
-            grid_set_cell(&raw mut *gd, 1, 0, &cell_b);
+            gd.set_cell(0, 0, &cell_a);
+            gd.set_cell(1, 0, &cell_b);
 
             let mut out_a: grid_cell = zeroed();
             let mut out_b: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut out_a);
-            grid_get_cell(&raw mut *gd, 1, 0, &mut out_b);
+            gd.get_cell(0, 0, &mut out_a);
+            gd.get_cell(1, 0, &mut out_b);
 
             assert!(grid_cells_equal(&cell_a, &out_a));
             assert!(grid_cells_equal(&cell_b, &out_b));
@@ -1866,8 +1872,8 @@ mod tests {
         let mut gd = grid_create(80, 24, 0);
         unsafe {
             let cell = make_cell(b'A', 8, 8);
-            grid_set_cell(&raw mut *gd, 0, 0, &cell);
-            grid_set_cell(&raw mut *gd, 4, 0, &cell);
+            gd.set_cell(0, 0, &cell);
+            gd.set_cell(4, 0, &cell);
 
             // Line length should be 5 (positions 0..=4, trailing spaces trimmed).
             let len = grid_line_length(&raw mut *gd, 0);
@@ -1881,15 +1887,15 @@ mod tests {
         let mut gd = grid_create(80, 24, 0);
         unsafe {
             let cell = make_cell(b'X', 8, 8);
-            grid_set_cell(&raw mut *gd, 0, 0, &cell);
-            grid_set_cell(&raw mut *gd, 5, 0, &cell);
+            gd.set_cell(0, 0, &cell);
+            gd.set_cell(5, 0, &cell);
 
             // Now empty line 0.
-            grid_empty_line(&raw mut *gd, 0, 8);
+            gd.empty_line(0, 8);
 
             // After emptying, get_cell should return default.
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
 
             let len = grid_line_length(&raw mut *gd, 0);
@@ -1909,7 +1915,7 @@ mod tests {
             let cell = make_cell(b'#', 8, 8);
             // Fill row 0, columns 0..10
             for x in 0..10 {
-                grid_set_cell(&raw mut *gd, x, 0, &cell);
+                gd.set_cell(x, 0, &cell);
             }
 
             // Clear columns 2..6 on row 0 (px=2, py=0, nx=4, ny=1).
@@ -1917,20 +1923,20 @@ mod tests {
 
             // Cells outside cleared region should still be '#'.
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &cell));
-            grid_get_cell(&raw mut *gd, 1, 0, &mut gc);
+            gd.get_cell(1, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &cell));
 
             // Cells inside cleared region should be cleared/default.
-            grid_get_cell(&raw mut *gd, 2, 0, &mut gc);
+            gd.get_cell(2, 0, &mut gc);
             assert!(
                 grid_cells_equal(&gc, &GRID_CLEARED_CELL)
                     || grid_cells_equal(&gc, &GRID_DEFAULT_CELL)
             );
 
             // Cell after cleared region still '#'.
-            grid_get_cell(&raw mut *gd, 6, 0, &mut gc);
+            gd.get_cell(6, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &cell));
 
             drop(gd);
@@ -1965,7 +1971,7 @@ mod tests {
         let mut g2 = grid_create(80, 24, 0);
         unsafe {
             let cell = make_cell(b'A', 8, 8);
-            grid_set_cell(&raw mut *g1, 0, 0, &cell);
+            g1.set_cell(0, 0, &cell);
             // g2 has no cell set at (0,0), so they differ.
             assert_ne!(grid_compare(&raw mut *g1, &raw mut *g2), 0);
             drop(g1);
@@ -1979,8 +1985,8 @@ mod tests {
         let mut g2 = grid_create(80, 24, 0);
         unsafe {
             let cell = make_cell(b'Q', 8, 8);
-            grid_set_cell(&raw mut *g1, 3, 2, &cell);
-            grid_set_cell(&raw mut *g2, 3, 2, &cell);
+            g1.set_cell(3, 2, &cell);
+            g2.set_cell(3, 2, &cell);
             assert_eq!(grid_compare(&raw mut *g1, &raw mut *g2), 0);
             drop(g1);
             drop(g2);
@@ -1992,18 +1998,18 @@ mod tests {
         let mut gd = grid_create(80, 10, 0);
         unsafe {
             let cell = make_cell(b'M', 8, 8);
-            grid_set_cell(&raw mut *gd, 0, 0, &cell);
+            gd.set_cell(0, 0, &cell);
 
             // Move line 0 to line 5.
             grid_move_lines(&raw mut *gd, 5, 0, 1, 8);
 
             // Line 0 should now be empty.
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
 
             // Line 5 should have the cell.
-            grid_get_cell(&raw mut *gd, 0, 5, &mut gc);
+            gd.get_cell(0, 5, &mut gc);
             assert!(grid_cells_equal(&gc, &cell));
 
             drop(gd);
@@ -2022,7 +2028,7 @@ mod tests {
             let cell = make_cell(b'.', 8, 8);
             for y in 0..4 {
                 for x in 0..10 {
-                    grid_set_cell(&raw mut *gd, x, y, &cell);
+                    gd.set_cell(x, y, &cell);
                 }
             }
 
@@ -2088,8 +2094,8 @@ mod tests {
         unsafe {
             let cell_h = make_cell(b'H', 8, 8);
             let cell_i = make_cell(b'i', 8, 8);
-            grid_set_cell(&raw mut *gd, 0, 0, &cell_h);
-            grid_set_cell(&raw mut *gd, 1, 0, &cell_i);
+            gd.set_cell(0, 0, &cell_h);
+            gd.set_cell(1, 0, &cell_i);
 
             let mut lastgc: *mut grid_cell = null_mut();
             let buf = grid_string_cells(
@@ -2121,8 +2127,8 @@ mod tests {
         let mut dst = grid_create(80, 5, 0);
         unsafe {
             let cell = make_cell(b'D', 8, 8);
-            grid_set_cell(&raw mut *src, 0, 0, &cell);
-            grid_set_cell(&raw mut *src, 3, 2, &cell);
+            src.set_cell(0, 0, &cell);
+            src.set_cell(3, 2, &cell);
 
             grid_duplicate_lines(&raw mut *dst, 0, &raw mut *src, 0, 5);
 
@@ -2153,13 +2159,13 @@ mod tests {
         let mut gd = grid_create(80, 10, 0);
         unsafe {
             let cell = make_cell(b'N', 8, 8);
-            grid_set_cell(&raw mut *gd, 0, 2, &cell);
+            gd.set_cell(0, 2, &cell);
 
             // Moving line 2 to line 2 should be a no-op.
             grid_move_lines(&raw mut *gd, 2, 2, 1, 8);
 
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 2, &mut gc);
+            gd.get_cell(0, 2, &mut gc);
             assert!(grid_cells_equal(&gc, &cell));
 
             drop(gd);
@@ -2251,10 +2257,10 @@ mod tests {
         let mut gd = grid_create(80, 24, 0);
         unsafe {
             let cell_in = make_rgb_fg_cell(b'R', 255, 0, 128);
-            grid_set_cell(&raw mut *gd, 0, 0, &cell_in);
+            gd.set_cell(0, 0, &cell_in);
 
             let mut cell_out: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut cell_out);
+            gd.get_cell(0, 0, &mut cell_out);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
             // Verify the RGB value survived the extended storage round-trip.
@@ -2268,10 +2274,10 @@ mod tests {
         let mut gd = grid_create(80, 24, 0);
         unsafe {
             let cell_in = make_rgb_bg_cell(b'B', 0, 128, 255);
-            grid_set_cell(&raw mut *gd, 3, 1, &cell_in);
+            gd.set_cell(3, 1, &cell_in);
 
             let mut cell_out: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 3, 1, &mut cell_out);
+            gd.get_cell(3, 1, &mut cell_out);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
             assert_eq!(cell_out.bg, colour_join_rgb(0, 128, 255));
@@ -2284,10 +2290,10 @@ mod tests {
         let mut gd = grid_create(80, 24, 0);
         unsafe {
             let cell_in = make_wide_cell();
-            grid_set_cell(&raw mut *gd, 0, 0, &cell_in);
+            gd.set_cell(0, 0, &cell_in);
 
             let mut cell_out: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut cell_out);
+            gd.get_cell(0, 0, &mut cell_out);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
             assert_eq!(cell_out.data.width, 2);
@@ -2302,10 +2308,10 @@ mod tests {
         unsafe {
             // us != 8 forces EXTENDED.
             let cell_in = make_us_cell(b'U', COLOUR_FLAG_256 | 42);
-            grid_set_cell(&raw mut *gd, 2, 0, &cell_in);
+            gd.set_cell(2, 0, &cell_in);
 
             let mut cell_out: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 2, 0, &mut cell_out);
+            gd.get_cell(2, 0, &mut cell_out);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
             assert_eq!(cell_out.us, COLOUR_FLAG_256 | 42);
@@ -2327,10 +2333,10 @@ mod tests {
                 8,
                 0,
             );
-            grid_set_cell(&raw mut *gd, 0, 0, &cell_in);
+            gd.set_cell(0, 0, &cell_in);
 
             let mut cell_out: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut cell_out);
+            gd.get_cell(0, 0, &mut cell_out);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
             assert!(cell_out.attr.contains(grid_attr::GRID_ATTR_BRIGHT));
@@ -2349,16 +2355,16 @@ mod tests {
 
             for x in 0..10u32 {
                 if x % 2 == 0 {
-                    grid_set_cell(&raw mut *gd, x, 0, &simple);
+                    gd.set_cell(x, 0, &simple);
                 } else {
-                    grid_set_cell(&raw mut *gd, x, 0, &extended);
+                    gd.set_cell(x, 0, &extended);
                 }
             }
 
             // Verify all round-trip correctly.
             for x in 0..10u32 {
                 let mut gc: grid_cell = zeroed();
-                grid_get_cell(&raw mut *gd, x, 0, &mut gc);
+                gd.get_cell(x, 0, &mut gc);
                 if x % 2 == 0 {
                     assert!(grid_cells_equal(&gc, &simple), "mismatch at x={x}");
                 } else {
@@ -2377,11 +2383,11 @@ mod tests {
             let simple = make_cell(b'A', 8, 8);
             let extended = make_rgb_fg_cell(b'B', 10, 20, 30);
 
-            grid_set_cell(&raw mut *gd, 0, 0, &simple);
-            grid_set_cell(&raw mut *gd, 0, 0, &extended);
+            gd.set_cell(0, 0, &simple);
+            gd.set_cell(0, 0, &extended);
 
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &extended));
             drop(gd);
         }
@@ -2395,11 +2401,11 @@ mod tests {
             let extended = make_rgb_fg_cell(b'B', 10, 20, 30);
             let simple = make_cell(b'A', 8, 8);
 
-            grid_set_cell(&raw mut *gd, 0, 0, &extended);
-            grid_set_cell(&raw mut *gd, 0, 0, &simple);
+            gd.set_cell(0, 0, &extended);
+            gd.set_cell(0, 0, &simple);
 
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &simple));
             drop(gd);
         }
@@ -2410,11 +2416,11 @@ mod tests {
         let mut gd = grid_create(80, 24, 0);
         unsafe {
             let wide = make_wide_cell();
-            grid_set_cell(&raw mut *gd, 0, 0, &wide);
-            grid_set_padding(&raw mut *gd, 1, 0);
+            gd.set_cell(0, 0, &wide);
+            gd.set_padding(1, 0);
 
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 1, 0, &mut gc);
+            gd.get_cell(1, 0, &mut gc);
             assert!(gc.flags.intersects(grid_flag::PADDING));
             drop(gd);
         }
@@ -2427,16 +2433,16 @@ mod tests {
         unsafe {
             let extended = make_rgb_fg_cell(b'X', 255, 128, 0);
             let wide = make_wide_cell();
-            grid_set_cell(&raw mut *src, 0, 0, &extended);
-            grid_set_cell(&raw mut *src, 5, 2, &wide);
+            src.set_cell(0, 0, &extended);
+            src.set_cell(5, 2, &wide);
 
             grid_duplicate_lines(&raw mut *dst, 0, &raw mut *src, 0, 5);
 
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *dst, 0, 0, &mut gc);
+            dst.get_cell(0, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &extended));
 
-            grid_get_cell(&raw mut *dst, 5, 2, &mut gc);
+            dst.get_cell(5, 2, &mut gc);
             assert!(grid_cells_equal(&gc, &wide));
 
             drop(src);
@@ -2457,7 +2463,7 @@ mod tests {
 
             // Setting a cell at position 10 should expand the line.
             let cell = make_cell(b'X', 8, 8);
-            grid_set_cell(&raw mut *gd, 10, 0, &cell);
+            gd.set_cell(10, 0, &cell);
 
             let gl = grid_get_line(&raw mut *gd, 0);
             assert!((*gl).celldata.len() as u32 >= 11);
@@ -2473,7 +2479,7 @@ mod tests {
         unsafe {
             let cell = make_cell(b'X', 8, 8);
             // Request expansion to column 2 — should round up to sx/4 = 20.
-            grid_set_cell(&raw mut *gd, 1, 0, &cell);
+            gd.set_cell(1, 0, &cell);
 
             let gl = grid_get_line(&raw mut *gd, 0);
             assert!(
@@ -2490,12 +2496,12 @@ mod tests {
         let mut gd = grid_create(80, 5, 0);
         unsafe {
             let cell = make_cell(b'Z', 8, 8);
-            grid_set_cell(&raw mut *gd, 5, 0, &cell);
+            gd.set_cell(5, 0, &cell);
 
             // Positions 0..5 should be cleared (default-ish) cells.
             let mut gc: grid_cell = zeroed();
             for x in 0..5u32 {
-                grid_get_cell(&raw mut *gd, x, 0, &mut gc);
+                gd.get_cell(x, 0, &mut gc);
                 // Cleared cells have the CLEARED flag OR are default.
                 assert!(
                     grid_cells_equal(&gc, &GRID_CLEARED_CELL)
@@ -2513,11 +2519,11 @@ mod tests {
         unsafe {
             let gc = make_cell(b'A', 8, 8);
             let data = b"Hello";
-            grid_set_cells(&raw mut *gd, 0, 0, &gc, data.as_ptr(), data.len());
+            gd.set_cells(0, 0, &gc, data.as_ptr(), data.len());
 
             let mut out: grid_cell = zeroed();
             for (i, &ch) in data.iter().enumerate() {
-                grid_get_cell(&raw mut *gd, i as u32, 0, &mut out);
+                gd.get_cell(i as u32, 0, &mut out);
                 assert_eq!(out.data.data[0], ch, "mismatch at i={i}");
             }
             drop(gd);
@@ -2533,7 +2539,7 @@ mod tests {
         let mut gd = grid_create(80, 5, 1000);
         unsafe {
             let cell = make_cell(b'H', 8, 8);
-            grid_set_cell(&raw mut *gd, 0, 0, &cell);
+            gd.set_cell(0, 0, &cell);
 
             assert_eq!(gd.hsize, 0);
             grid_scroll_history(&raw mut *gd, 8);
@@ -2542,7 +2548,7 @@ mod tests {
 
             // The old visible line 0 is now history line 0.
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &cell));
 
             // New visible line 0 (= line hsize) should be empty.
@@ -2560,7 +2566,7 @@ mod tests {
             // Fill 3 visible lines.
             for y in 0..3u32 {
                 let cell = make_cell(b'0' + y as u8, 8, 8);
-                grid_set_cell(&raw mut *gd, 0, y, &cell);
+                gd.set_cell(0, y, &cell);
             }
 
             // Scroll twice.
@@ -2570,9 +2576,9 @@ mod tests {
 
             // History lines should contain '0' and '1'.
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert_eq!(gc.data.data[0], b'0');
-            grid_get_cell(&raw mut *gd, 0, 1, &mut gc);
+            gd.get_cell(0, 1, &mut gc);
             assert_eq!(gc.data.data[0], b'1');
 
             drop(gd);
@@ -2586,7 +2592,7 @@ mod tests {
             // Fill lines with distinct characters.
             for y in 0..5u32 {
                 let cell = make_cell(b'A' + y as u8, 8, 8);
-                grid_set_cell(&raw mut *gd, 0, y, &cell);
+                gd.set_cell(0, y, &cell);
             }
 
             // Scroll region [1..3] — line at upper=1 moves to history.
@@ -2595,7 +2601,7 @@ mod tests {
 
             // History line 0 should be line that had 'B'.
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert_eq!(gc.data.data[0], b'B');
 
             drop(gd);
@@ -2607,7 +2613,7 @@ mod tests {
         let mut gd = grid_create(80, 3, 1000);
         unsafe {
             let cell = make_cell(b'H', 8, 8);
-            grid_set_cell(&raw mut *gd, 0, 0, &cell);
+            gd.set_cell(0, 0, &cell);
 
             grid_scroll_history(&raw mut *gd, 8);
             grid_scroll_history(&raw mut *gd, 8);
@@ -2627,7 +2633,7 @@ mod tests {
         unsafe {
             for _ in 0..10 {
                 let cell = make_cell(b'.', 8, 8);
-                grid_set_cell(&raw mut *gd, 0, gd.hsize, &cell);
+                gd.set_cell(0, gd.hsize, &cell);
                 grid_scroll_history(&raw mut *gd, 8);
             }
             assert_eq!(gd.hsize, 10);
@@ -2645,7 +2651,7 @@ mod tests {
         unsafe {
             for y in 0..3u32 {
                 let cell = make_cell(b'0' + y as u8, 8, 8);
-                grid_set_cell(&raw mut *gd, 0, y, &cell);
+                gd.set_cell(0, y, &cell);
             }
             grid_scroll_history(&raw mut *gd, 8);
             grid_scroll_history(&raw mut *gd, 8);
@@ -2656,7 +2662,7 @@ mod tests {
 
             // Remaining history line should be the oldest ('0').
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert_eq!(gc.data.data[0], b'0');
             drop(gd);
         }
@@ -2672,7 +2678,7 @@ mod tests {
         unsafe {
             let cell = make_cell(b'X', 8, 8);
             for y in 0..5u32 {
-                grid_set_cell(&raw mut *gd, 0, y, &cell);
+                gd.set_cell(0, y, &cell);
             }
 
             grid_clear_lines(&raw mut *gd, 1, 2, 8);
@@ -2682,9 +2688,9 @@ mod tests {
             assert_eq!(grid_line_length(&raw mut *gd, 1), 0);
             assert_eq!(grid_line_length(&raw mut *gd, 2), 0);
             // Lines 0, 3, 4 should still have content.
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &cell));
-            grid_get_cell(&raw mut *gd, 0, 3, &mut gc);
+            gd.get_cell(0, 3, &mut gc);
             assert!(grid_cells_equal(&gc, &cell));
             drop(gd);
         }
@@ -2696,20 +2702,20 @@ mod tests {
         unsafe {
             let cell_a = make_cell(b'A', 8, 8);
             let cell_b = make_cell(b'B', 8, 8);
-            grid_set_cell(&raw mut *gd, 0, 0, &cell_a);
-            grid_set_cell(&raw mut *gd, 1, 0, &cell_b);
+            gd.set_cell(0, 0, &cell_a);
+            gd.set_cell(1, 0, &cell_b);
 
             // Move 2 cells from position 0 to position 5.
             grid_move_cells(&raw mut *gd, 5, 0, 0, 2, 8);
 
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 5, 0, &mut gc);
+            gd.get_cell(5, 0, &mut gc);
             assert_eq!(gc.data.data[0], b'A');
-            grid_get_cell(&raw mut *gd, 6, 0, &mut gc);
+            gd.get_cell(6, 0, &mut gc);
             assert_eq!(gc.data.data[0], b'B');
 
             // Original positions should be cleared.
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert!(
                 grid_cells_equal(&gc, &GRID_CLEARED_CELL)
                     || grid_cells_equal(&gc, &GRID_DEFAULT_CELL)
@@ -2729,7 +2735,7 @@ mod tests {
             // Write 20 characters across line 0 then scroll into history.
             let cell = make_cell(b'.', 8, 8);
             for x in 0..20u32 {
-                grid_set_cell(&raw mut *gd, x, 0, &cell);
+                gd.set_cell(x, 0, &cell);
             }
             // Mark line as wrapped (as tmux does for long lines).
             (*grid_get_line(&raw mut *gd, 0)).flags |= grid_line_flag::WRAPPED;
@@ -2746,7 +2752,7 @@ mod tests {
 
             // Content should be preserved.
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert_eq!(gc.data.data[0], b'.');
             drop(gd);
         }
@@ -2759,12 +2765,12 @@ mod tests {
             // Write 10 chars on line 0 (wrapped), 5 chars on line 1.
             let cell = make_cell(b'A', 8, 8);
             for x in 0..10u32 {
-                grid_set_cell(&raw mut *gd, x, 0, &cell);
+                gd.set_cell(x, 0, &cell);
             }
             (*grid_get_line(&raw mut *gd, 0)).flags |= grid_line_flag::WRAPPED;
             let cell_b = make_cell(b'B', 8, 8);
             for x in 0..5u32 {
-                grid_set_cell(&raw mut *gd, x, 1, &cell_b);
+                gd.set_cell(x, 1, &cell_b);
             }
 
             // Scroll both into history.
@@ -2791,7 +2797,7 @@ mod tests {
             // Write a short line (not wrapped) and scroll to history.
             let cell = make_cell(b'S', 8, 8);
             for x in 0..5u32 {
-                grid_set_cell(&raw mut *gd, x, 0, &cell);
+                gd.set_cell(x, 0, &cell);
             }
             // Don't set WRAPPED flag — this is a short line.
             grid_scroll_history(&raw mut *gd, 8);
@@ -2800,9 +2806,9 @@ mod tests {
             grid_reflow(&raw mut *gd, 10);
 
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert_eq!(gc.data.data[0], b'S');
-            grid_get_cell(&raw mut *gd, 4, 0, &mut gc);
+            gd.get_cell(4, 0, &mut gc);
             assert_eq!(gc.data.data[0], b'S');
             drop(gd);
         }
@@ -2814,7 +2820,7 @@ mod tests {
         unsafe {
             let cell = make_cell(b'I', 8, 8);
             for x in 0..10u32 {
-                grid_set_cell(&raw mut *gd, x, 0, &cell);
+                gd.set_cell(x, 0, &cell);
             }
             grid_scroll_history(&raw mut *gd, 8);
             let hsize_before = gd.hsize;
@@ -2824,7 +2830,7 @@ mod tests {
             assert_eq!(gd.hsize, hsize_before);
 
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert_eq!(gc.data.data[0], b'I');
             drop(gd);
         }
@@ -2839,10 +2845,10 @@ mod tests {
         let mut gd = grid_create(80, 24, 0);
         unsafe {
             let wide = make_wide_cell();
-            grid_set_cell(&raw mut *gd, 0, 0, &wide);
-            grid_set_padding(&raw mut *gd, 1, 0);
+            gd.set_cell(0, 0, &wide);
+            gd.set_padding(1, 0);
             let ascii = make_cell(b'!', 8, 8);
-            grid_set_cell(&raw mut *gd, 2, 0, &ascii);
+            gd.set_cell(2, 0, &ascii);
 
             let mut lastgc: *mut grid_cell = null_mut();
             let buf = grid_string_cells(
@@ -2874,9 +2880,9 @@ mod tests {
             let extended = make_rgb_fg_cell(b' ', 255, 0, 0);
             let cell = make_cell(b'A', 8, 8);
 
-            grid_set_cell(&raw mut *gd, 0, 0, &cell);
+            gd.set_cell(0, 0, &cell);
             // Trailing spaces (even with color) count as spaces for length trimming.
-            grid_set_cell(&raw mut *gd, 1, 0, &extended);
+            gd.set_cell(1, 0, &extended);
 
             let len = grid_line_length(&raw mut *gd, 0);
             // grid_line_length trims trailing spaces regardless of style.
@@ -2894,13 +2900,13 @@ mod tests {
         let mut gd = grid_create(80, 3, 1000);
         unsafe {
             let extended = make_rgb_fg_cell(b'C', 0, 255, 0);
-            grid_set_cell(&raw mut *gd, 0, 0, &extended);
+            gd.set_cell(0, 0, &extended);
 
             grid_scroll_history(&raw mut *gd, 8);
 
             // Extended cell should survive in history.
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 0, &mut gc);
+            gd.get_cell(0, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &extended));
             assert_eq!(gc.fg, colour_join_rgb(0, 255, 0));
             drop(gd);
@@ -2917,10 +2923,10 @@ mod tests {
         unsafe {
             // Only set cell at position 0, then read beyond cellsize.
             let cell = make_cell(b'X', 8, 8);
-            grid_set_cell(&raw mut *gd, 0, 0, &cell);
+            gd.set_cell(0, 0, &cell);
 
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 50, 0, &mut gc);
+            gd.get_cell(50, 0, &mut gc);
             assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
             drop(gd);
         }
@@ -2932,14 +2938,14 @@ mod tests {
         let mut g2 = grid_create(80, 5, 0);
         unsafe {
             let extended = make_rgb_fg_cell(b'E', 128, 64, 32);
-            grid_set_cell(&raw mut *g1, 0, 0, &extended);
-            grid_set_cell(&raw mut *g2, 0, 0, &extended);
+            g1.set_cell(0, 0, &extended);
+            g2.set_cell(0, 0, &extended);
 
             assert_eq!(grid_compare(&raw mut *g1, &raw mut *g2), 0);
 
             // Change one — should differ.
             let other = make_rgb_fg_cell(b'E', 128, 64, 33);
-            grid_set_cell(&raw mut *g2, 0, 0, &other);
+            g2.set_cell(0, 0, &other);
             assert_ne!(grid_compare(&raw mut *g1, &raw mut *g2), 0);
 
             drop(g1);
@@ -2953,7 +2959,7 @@ mod tests {
         unsafe {
             let cell = make_cell(b'X', 8, 8);
             for x in 0..10 {
-                grid_set_cell(&raw mut *gd, x, 0, &cell);
+                gd.set_cell(x, 0, &cell);
             }
 
             // Clear with a non-default background (256 color).
@@ -2962,7 +2968,7 @@ mod tests {
 
             // Cleared cells should have a non-default bg.
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 2, 0, &mut gc);
+            gd.get_cell(2, 0, &mut gc);
             assert!(gc.flags.intersects(grid_flag::CLEARED));
             drop(gd);
         }
@@ -2975,17 +2981,17 @@ mod tests {
         unsafe {
             for y in 0..3u32 {
                 let cell = make_cell(b'A' + y as u8, 8, 8);
-                grid_set_cell(&raw mut *gd, 0, y, &cell);
+                gd.set_cell(0, y, &cell);
             }
 
             grid_move_lines(&raw mut *gd, 2, 0, 3, 8);
 
             let mut gc: grid_cell = zeroed();
-            grid_get_cell(&raw mut *gd, 0, 2, &mut gc);
+            gd.get_cell(0, 2, &mut gc);
             assert_eq!(gc.data.data[0], b'A');
-            grid_get_cell(&raw mut *gd, 0, 3, &mut gc);
+            gd.get_cell(0, 3, &mut gc);
             assert_eq!(gc.data.data[0], b'B');
-            grid_get_cell(&raw mut *gd, 0, 4, &mut gc);
+            gd.get_cell(0, 4, &mut gc);
             assert_eq!(gc.data.data[0], b'C');
             drop(gd);
         }

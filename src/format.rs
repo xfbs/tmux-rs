@@ -5395,7 +5395,7 @@ pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String 
         let ws: *const u8 = options_get_string_(GLOBAL_S_OPTIONS, "word-separators");
 
         loop {
-            grid_get_cell(gd, x, y, gc);
+            (*gd).get_cell(x, y, gc);
             if (*gc).flags.intersects(grid_flag::PADDING) {
                 break;
             }
@@ -5441,7 +5441,7 @@ pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String 
             }
             found = true;
 
-            grid_get_cell(gd, x, y, gc);
+            (*gd).get_cell(x, y, gc);
             if (*gc).flags.intersects(grid_flag::PADDING) {
                 break;
             }
@@ -5465,7 +5465,7 @@ pub unsafe fn format_grid_line(gd: *mut grid, y: u32) -> String {
         let mut gc = MaybeUninit::<grid_cell>::uninit();
         let gc = gc.as_mut_ptr();
         for x in 0..grid_line_length(gd, y) {
-            grid_get_cell(gd, x, y, gc);
+            (*gd).get_cell(x, y, gc);
             if (*gc).flags.intersects(grid_flag::PADDING) {
                 break;
             }
@@ -5488,7 +5488,7 @@ pub unsafe fn format_grid_hyperlink(
         let mut gc = MaybeUninit::<grid_cell>::uninit();
         let gc = gc.as_mut_ptr();
 
-        grid_get_cell(gd, x, y, gc);
+        (*gd).get_cell(x, y, gc);
         if (*gc).flags.intersects(grid_flag::PADDING) {
             return None;
         }

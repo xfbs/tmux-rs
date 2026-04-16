@@ -450,7 +450,7 @@ unsafe fn screen_resize_y(s: *mut screen, sy: u32, eat_empty: i32, cy: *mut u32)
 
             // Then fill the rest in with blanks
             for i in ((*gd).hsize + sy - needed)..((*gd).hsize + sy) {
-                grid_empty_line(gd, i, 8);
+                (*gd).empty_line(i, 8);
             }
         }
 

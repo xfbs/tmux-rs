@@ -37,20 +37,20 @@ unsafe fn grid_view_y(gd: *mut grid, y: u32) -> u32 {
 /// Get a cell from the visible area at view coordinates (px, py).
 pub unsafe fn grid_view_get_cell(gd: *mut grid, px: u32, py: u32, gc: *mut grid_cell) {
     unsafe {
-        grid_get_cell(gd, grid_view_x(gd, px), grid_view_y(gd, py), gc);
+        (*gd).get_cell(grid_view_x(gd, px), grid_view_y(gd, py), gc);
     }
 }
 
 /// Set a cell in the visible area at view coordinates (px, py).
 pub unsafe fn grid_view_set_cell(gd: *mut grid, px: u32, py: u32, gc: *const grid_cell) {
     unsafe {
-        grid_set_cell(gd, grid_view_x(gd, px), grid_view_y(gd, py), gc);
+        (*gd).set_cell(grid_view_x(gd, px), grid_view_y(gd, py), gc);
     }
 }
 
 pub unsafe fn grid_view_set_padding(gd: *mut grid, px: u32, py: u32) {
     unsafe {
-        grid_set_padding(gd, grid_view_x(gd, px), grid_view_y(gd, py));
+        (*gd).set_padding(grid_view_x(gd, px), grid_view_y(gd, py));
     }
 }
 
@@ -63,7 +63,7 @@ pub unsafe fn grid_view_set_cells(
     slen: usize,
 ) {
     unsafe {
-        grid_set_cells(gd, grid_view_x(gd, px), grid_view_y(gd, py), gc, s, slen);
+        (*gd).set_cells(grid_view_x(gd, px), grid_view_y(gd, py), gc, s, slen);
     }
 }
 
@@ -346,7 +346,7 @@ mod tests {
 
             // The old 'X' should still be in grid row 0 (history).
             let mut gc_read: grid_cell = std::mem::zeroed();
-            grid_get_cell(gd_ptr, 0, 0, &raw mut gc_read);
+            (*gd_ptr).get_cell(0, 0, &raw mut gc_read);
             assert_eq!(gc_read.data.data[0], b'X');
 
             drop(gd);

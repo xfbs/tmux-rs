@@ -643,7 +643,7 @@ pub unsafe fn screen_write_fast_copy(
                 if xx as usize >= (*grid_get_line(gd, yy)).celldata.len() {
                     break;
                 }
-                grid_get_cell(gd, xx, yy, &raw mut gc);
+                (*gd).get_cell(xx, yy, &raw mut gc);
                 if xx + gc.data.width as u32 > px + nx {
                     break;
                 }
