@@ -194,7 +194,7 @@ unsafe fn cmd_capture_pane_history(
 
         let mut buf = null_mut();
         for i in top..=bottom {
-            line = grid_string_cells(gd, 0, i, sx, &raw mut gc, flags, (*wp).screen);
+            line = (*gd).string_cells(0, i, sx, &raw mut gc, flags, (*wp).screen);
             linelen = strlen(line);
 
             buf = cmd_capture_pane_append(buf, len, line, linelen);

@@ -235,8 +235,7 @@ pub unsafe fn grid_view_string_cells(gd: *mut grid, mut px: u32, mut py: u32, nx
         px = grid_view_x(gd, px);
         py = grid_view_y(gd, py);
 
-        grid_string_cells(
-            gd,
+        (*gd).string_cells(
             px,
             py,
             nx,

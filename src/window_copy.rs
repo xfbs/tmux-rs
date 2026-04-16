@@ -282,7 +282,7 @@ pub unsafe fn window_copy_clone_screen(
         // Ensure history is on for the backing grid so lines are not deleted
         // during resizing.
         (*(*dst).grid).flags |= GRID_HISTORY;
-        grid_duplicate_lines(&raw mut *(*dst).grid, 0, &raw mut *(*src).grid, 0, sy);
+        (*(*dst).grid).duplicate_lines(0, &raw mut *(*src).grid, 0, sy);
 
         (*(*dst).grid).sy = sy - screen_hsize(src);
         (*(*dst).grid).hsize = screen_hsize(src);
@@ -303,11 +303,11 @@ pub unsafe fn window_copy_clone_screen(
             reflow = false;
         }
         if reflow {
-            grid_wrap_position(&raw mut *(*dst).grid, *cx, *cy, &raw mut wx, &raw mut wy);
+            (*(*dst).grid).wrap_position(*cx, *cy, &raw mut wx, &raw mut wy);
         }
         screen_resize_cursor(dst, screen_size_x(hint), screen_size_y(hint), 1, 0, 0);
         if reflow {
-            grid_unwrap_position(&raw mut *(*dst).grid, cx, cy, wx, wy);
+            (*(*dst).grid).unwrap_position(cx, cy, wx, wy);
         }
 
         dst
@@ -879,11 +879,11 @@ pub unsafe fn window_copy_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u
         let mut cy = (*gd).hsize + (*data).cy - (*data).oy;
         let reflow = (*gd).sx != sx;
         if reflow {
-            grid_wrap_position(gd, cx, cy, &raw mut wx, &raw mut wy);
+            (*gd).wrap_position(cx, cy, &raw mut wx, &raw mut wy);
         }
         screen_resize_cursor((*data).backing, sx, sy, 1, 0, 0);
         if reflow {
-            grid_unwrap_position(gd, &raw mut cx, &raw mut cy, wx, wy);
+            (*gd).unwrap_position(&raw mut cx, &raw mut cy, wx, wy);
         }
 
         (*data).cx = cx;

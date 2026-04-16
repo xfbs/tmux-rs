@@ -658,7 +658,7 @@ unsafe fn screen_reflow(s: *mut screen, new_x: u32, cx: *mut u32, cy: *mut u32, 
         let mut wy: u32 = 0;
 
         if cursor != 0 {
-            grid_wrap_position(&raw mut *(*s).grid, *cx, *cy, &mut wx, &mut wy);
+            (*s).grid.wrap_position(*cx, *cy, &mut wx, &mut wy);
             log_debug!(
                 "{}: cursor {},{} is {},{}",
                 "screen_reflow",
@@ -669,10 +669,10 @@ unsafe fn screen_reflow(s: *mut screen, new_x: u32, cx: *mut u32, cy: *mut u32, 
             );
         }
 
-        grid_reflow(&raw mut *(*s).grid, new_x);
+        (*s).grid.reflow(new_x);
 
         if cursor != 0 {
-            grid_unwrap_position(&raw mut *(*s).grid, cx, cy, wx, wy);
+            (*s).grid.unwrap_position(cx, cy, wx, wy);
             log_debug!("{}: new cursor is {},{}", "screen_reflow", *cx, *cy);
         } else {
             *cx = 0;
@@ -693,7 +693,7 @@ pub unsafe fn screen_alternate_on(s: *mut screen, gc: *mut grid_cell, cursor: i3
 
         (*s).saved_grid = Some(grid_create(sx, sy, 0));
         let sg: *mut grid = &raw mut **(*s).saved_grid.as_mut().unwrap();
-        grid_duplicate_lines(sg, 0, &raw mut *(*s).grid, screen_hsize(s), sy);
+        (*sg).duplicate_lines(0, &raw mut *(*s).grid, screen_hsize(s), sy);
         if cursor != 0 {
             (*s).saved_cx = (*s).cx;
             (*s).saved_cy = (*s).cy;
@@ -744,8 +744,7 @@ pub unsafe fn screen_alternate_off(s: *mut screen, gc: *mut grid_cell, cursor: i
         let sg = (*s).saved_grid.as_ref().unwrap();
         let sg_sy = sg.sy;
         let sg_ptr: *mut grid = &**sg as *const grid as *mut grid;
-        grid_duplicate_lines(
-            &raw mut *(*s).grid,
+        (*s).grid.duplicate_lines(
             screen_hsize(s),
             sg_ptr,
             0,
