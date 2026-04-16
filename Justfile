@@ -2,14 +2,30 @@
 default:
   @just --list
 
-# run unit and integration tests
+# run unit and integration tests; fails if any server panics occur
 test:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  # Clear any stale server panic files before starting.
+  rm -f server-panic-*.txt
   # run all (unit and integration) tests
   cargo nextest run
   # run integration tests against system tmux
   TMUX_SERVER_BIN=/usr/bin/tmux TMUX_CLIENT_BIN=/usr/bin/tmux cargo nextest run --tests
   TMUX_CLIENT_BIN=/usr/bin/tmux cargo nextest run --tests
   TMUX_SERVER_BIN=/usr/bin/tmux cargo nextest run --tests
+  # Fail if any server panics occurred during the test run.
+  shopt -s nullglob
+  panics=(server-panic-*.txt)
+  if [ ${#panics[@]} -gt 0 ]; then
+    echo
+    echo "FAIL: ${#panics[@]} server panic file(s) produced during tests:"
+    for f in "${panics[@]}"; do
+      echo "  $f:"
+      head -2 "$f" | sed 's/^/    /'
+    done
+    exit 1
+  fi
 
 coverage:
   cargo llvm-cov --html
