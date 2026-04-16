@@ -96,7 +96,8 @@ pub const CONTROL_WRITE_MINIMUM: i32 = 32;
 /// Write data to a control client's output buffer and arm the write `IoHandle`.
 unsafe fn control_write_bytes(c: *mut client, data: &[u8]) {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
         (*cs).write_output.add(data);
         control_arm_write(c);
     }
@@ -105,7 +106,8 @@ unsafe fn control_write_bytes(c: *mut client, data: &[u8]) {
 /// Arm the write `IoHandle` if it's not already registered.
 unsafe fn control_arm_write(c: *mut client) {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
         if (*cs).write_io.is_none() {
             let write_fd = if (*c).flags.intersects(client_flag::CONTROLCONTROL) {
                 (*c).fd
@@ -167,9 +169,10 @@ pub unsafe fn control_get_pane(c: *mut client, wp: *mut window_pane) -> *mut con
     }
 }
 
-pub unsafe fn control_add_pane(c: *mut client, wp: *mut window_pane) -> NonNull<control_pane> {
+pub unsafe fn control_add_pane(c: *mut client, wp: *mut window_pane) -> Option<NonNull<control_pane>> {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let cs_box = (*c).control_state.as_mut()?;
+        let cs = &raw mut **cs_box;
         let id = (*wp).id;
 
         let cp = (*cs).panes.entry(id).or_insert_with(|| {
@@ -183,13 +186,14 @@ pub unsafe fn control_add_pane(c: *mut client, wp: *mut window_pane) -> NonNull<
             })
         });
 
-        NonNull::new_unchecked(&mut **cp as *mut control_pane)
+        Some(NonNull::new_unchecked(&mut **cp as *mut control_pane))
     }
 }
 
 pub unsafe fn control_discard_pane(c: *mut client, cp: *mut control_pane) {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
 
         for &cb in &(*cp).blocks {
             control_free_block(cs, cb);
@@ -213,7 +217,8 @@ pub unsafe fn control_window_pane(c: *mut client, pane: u32) -> Option<NonNull<w
 
 pub unsafe fn control_reset_offsets(c: *mut client) {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
 
         (*cs).panes.clear();
 
@@ -228,7 +233,11 @@ pub unsafe fn control_pane_offset(
     off: *mut i32,
 ) -> *mut window_pane_offset {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else {
+            *off = 0;
+            return null_mut();
+        };
+        let cs = &raw mut **cs_box;
 
         if (*c).flags.intersects(client_flag::CONTROL_NOOUTPUT) {
             *off = 0;
@@ -262,7 +271,7 @@ pub unsafe fn control_set_pane_on(c: *mut client, wp: *mut window_pane) {
 
 pub unsafe fn control_set_pane_off(c: *mut client, wp: *mut window_pane) {
     unsafe {
-        let cp = control_add_pane(c, wp);
+        let Some(cp) = control_add_pane(c, wp) else { return; };
         (*cp.as_ptr()).flags |= CONTROL_PANE_OFF;
     }
 }
@@ -281,7 +290,8 @@ pub unsafe fn control_continue_pane(c: *mut client, wp: *mut window_pane) {
 
 pub unsafe fn control_pause_pane(c: *mut client, wp: *mut window_pane) {
     unsafe {
-        let cp = control_add_pane(c, wp).as_ptr();
+        let Some(cp) = control_add_pane(c, wp) else { return; };
+        let cp = cp.as_ptr();
         if !(*cp).flags & CONTROL_PANE_PAUSED != 0 {
             (*cp).flags |= CONTROL_PANE_PAUSED;
             control_discard_pane(c, cp);
@@ -292,10 +302,7 @@ pub unsafe fn control_pause_pane(c: *mut client, wp: *mut window_pane) {
 
 pub unsafe fn control_vwrite(c: *mut client, args: std::fmt::Arguments) {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
-        if cs.is_null() {
-            return;
-        }
+        let Some(_cs_box) = (*c).control_state.as_mut() else { return; };
 
         let mut s = args.to_string();
         s.push('\0');
@@ -326,10 +333,8 @@ pub(crate) use control_write;
 
 pub unsafe fn control_write_(c: *mut client, args: std::fmt::Arguments) {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
-        if cs.is_null() {
-            return;
-        }
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
 
         if (*cs).all_blocks.is_empty() {
             control_vwrite(c, args);
@@ -403,7 +408,8 @@ pub unsafe fn control_check_age(
 pub unsafe fn control_write_output(c: *mut client, wp: *mut window_pane) {
     let __func__ = "control_write_output";
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
         let cp: *mut control_pane;
         let mut new_size = 0usize;
 
@@ -419,7 +425,8 @@ pub unsafe fn control_write_output(c: *mut client, wp: *mut window_pane) {
                 }
                 return;
             }
-            cp = control_add_pane(c, wp).as_ptr();
+            let Some(cp_nn) = control_add_pane(c, wp) else { return; };
+            cp = cp_nn.as_ptr();
             if (*cp).flags & (CONTROL_PANE_OFF | CONTROL_PANE_PAUSED) != 0 {
                 break 'ignore;
             }
@@ -496,7 +503,8 @@ unsafe fn control_read_fire(cid: ClientId) {
 
     unsafe {
         let Some(c) = client_from_id(cid) else { return };
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
 
         let n = (*cs).read_input.read_from_fd((*c).fd, 4096);
         if n <= 0 {
@@ -540,7 +548,8 @@ unsafe fn control_read_fire(cid: ClientId) {
 
 pub unsafe fn control_all_done(c: *mut client) -> i32 {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return 1; };
+        let cs = &raw mut **cs_box;
 
         if !(*cs).all_blocks.is_empty() {
             return 0;
@@ -552,7 +561,8 @@ pub unsafe fn control_all_done(c: *mut client) -> i32 {
 pub unsafe fn control_flush_all_blocks(c: *mut client) {
     let __func__ = "control_flush_all_blocks";
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
 
         while let Some(&cb) = (*cs).all_blocks.first() {
             if (*cb).size != 0 {
@@ -616,7 +626,11 @@ pub unsafe fn control_append_data(
 
 pub unsafe fn control_write_data(c: *mut client, message: *mut evbuffer) {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else {
+            evbuffer_free(message);
+            return;
+        };
+        let cs = &raw mut **cs_box;
 
         log_debug!(
             "control_write_data: {0}: {2:1$}",
@@ -635,7 +649,8 @@ pub unsafe fn control_write_data(c: *mut client, message: *mut evbuffer) {
 
 pub unsafe fn control_write_pending(c: *mut client, cp: *mut control_pane, limit: usize) -> i32 {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return 0; };
+        let cs = &raw mut **cs_box;
         let mut message: *mut evbuffer = null_mut();
         let mut used = 0;
         let mut size;
@@ -709,7 +724,8 @@ pub unsafe fn control_write_pending(c: *mut client, cp: *mut control_pane, limit
 unsafe fn control_write_fire(cid: ClientId) {
     unsafe {
         let Some(c) = client_from_id(cid) else { return };
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
 
         // Drain buffered data to the fd.
         if !(*cs).write_output.is_empty() {
@@ -806,7 +822,8 @@ pub unsafe fn control_start(c: *mut client) {
 
 pub unsafe fn control_ready(c: *mut client) {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
         // Re-arm the read IoHandle if it was dropped by control_discard.
         if (*cs).read_io.is_none() {
             let cid = (*c).id;
@@ -821,7 +838,8 @@ pub unsafe fn control_ready(c: *mut client) {
 
 pub unsafe fn control_discard(c: *mut client) {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
         for cp in (*cs).panes.values_mut() {
             control_discard_pane(c, &mut **cp as *mut control_pane);
         }
@@ -1038,7 +1056,8 @@ pub unsafe fn control_check_subs_all_windows(c: *mut client, csub: *mut control_
 unsafe fn control_check_subs_timer_fire(cid: ClientId) {
     unsafe {
         let Some(c) = client_from_id(cid) else { return };
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
 
         log_debug!("{}: timer fired", "control_check_subs_timer");
 
@@ -1071,7 +1090,8 @@ pub unsafe fn control_add_sub(
     format: *const u8,
 ) {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
         let _tv = timeval {
             tv_sec: 1,
             tv_usec: 0,
@@ -1103,7 +1123,8 @@ pub unsafe fn control_add_sub(
 
 pub unsafe fn control_remove_sub(c: *mut client, name: *mut u8) {
     unsafe {
-        let cs = &raw mut **(*c).control_state.as_mut().unwrap();
+        let Some(cs_box) = (*c).control_state.as_mut() else { return; };
+        let cs = &raw mut **cs_box;
 
         let key = cstr_to_str(name);
         control_free_sub(cs, key);
