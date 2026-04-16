@@ -51,7 +51,7 @@ unsafe fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
             if adjust > (*gd).hsize {
                 adjust = (*gd).hsize;
             }
-            grid_remove_history(gd, adjust);
+            (*gd).remove_history(adjust);
             (*wp).base.cy += adjust;
             (*wp).flags |= window_pane_flags::PANE_REDRAW;
             return cmd_retval::CMD_RETURN_NORMAL;

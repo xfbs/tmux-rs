@@ -346,106 +346,7 @@ unsafe fn grid_trim_history(gd: *mut grid, ny: c_uint) {
     }
 }
 
-/// Collect lines from the history if at the limit. Free the top (oldest) 10% and shift up.
-pub unsafe fn grid_collect_history(gd: *mut grid) {
-    unsafe {
-        if (*gd).hsize == 0 || (*gd).hsize < (*gd).hlimit {
-            return;
-        }
-
-        let mut ny = (*gd).hlimit / 10;
-        if ny < 1 {
-            ny = 1;
-        }
-        if ny > (*gd).hsize {
-            ny = (*gd).hsize;
-        }
-
-        // Free the lines from 0 to ny then move the remaining lines over them.
-        grid_trim_history(gd, ny);
-
-        (*gd).hsize -= ny;
-        if (*gd).hscrolled > (*gd).hsize {
-            (*gd).hscrolled = (*gd).hsize;
-        }
-    }
-}
-
-/// Remove lines from the bottom of the history.
-pub unsafe fn grid_remove_history(gd: *mut grid, ny: c_uint) {
-    unsafe {
-        if ny > (*gd).hsize {
-            return;
-        }
-        for yy in 0..ny {
-            grid_free_line(gd, (*gd).hsize + (*gd).sy - 1 - yy);
-        }
-        (*gd).hsize -= ny;
-    }
-}
-
-/// Scroll the entire visible screen, moving one line into the history. Just
-/// allocate a new line at the bottom and move the history size indicator.
-pub unsafe fn grid_scroll_history(gd: *mut grid, bg: c_uint) {
-    unsafe {
-        let yy = (*gd).hsize + (*gd).sy;
-        (*gd).linedata.push(grid_line::new());
-
-        (*gd).empty_line(yy, bg);
-
-        (*gd).hscrolled += 1;
-        let hsize = (*gd).hsize as usize;
-        let gl = (*gd).linedata.as_mut_ptr().add(hsize);
-        grid_compact_line(&mut *gl);
-        (*gl).time = CURRENT_TIME;
-        (*gd).hsize += 1;
-    }
-}
-
-/// Clear the history.
-pub unsafe fn grid_clear_history(gd: *mut grid) {
-    unsafe {
-        grid_trim_history(gd, (*gd).hsize);
-
-        (*gd).hscrolled = 0;
-        (*gd).hsize = 0;
-
-        (*gd).linedata.resize_with((*gd).sy as usize, grid_line::new);
-    }
-}
-
-/// Scroll a region up, moving the top line into the history.
-pub unsafe fn grid_scroll_history_region(
-    gd: *mut grid,
-    upper: c_uint,
-    lower: c_uint,
-    bg: c_uint,
-) {
-    unsafe {
-        // The upper line of the region moves into history.
-        // Indices are relative to the visible screen; adjust for hsize.
-        let hsize = (*gd).hsize as usize;
-        let upper_abs = hsize + upper as usize;
-        let lower_abs = hsize + lower as usize;
-
-        // Remove the upper line from its position (this shifts everything above down).
-        let upper_line = (*gd).linedata.remove(upper_abs);
-
-        // Insert it at the history position (hsize), pushing visible lines down.
-        (*gd).linedata.insert(hsize, upper_line);
-        (&mut (*gd).linedata)[hsize].time = CURRENT_TIME;
-
-        // The region shifted up by one. Insert a new empty line at the lower position.
-        (*gd).linedata.insert(lower_abs + 1, grid_line::new());
-        if !COLOUR_DEFAULT(bg as i32) {
-            grid_expand_line(gd, (lower_abs + 1) as u32, (*gd).sx, bg);
-        }
-
-        // Move history offset down
-        (*gd).hscrolled += 1;
-        (*gd).hsize += 1;
-    }
-}
+// History operations converted to methods (see impl grid below).
 
 /// Expand line to fit to cell.
 unsafe fn grid_expand_line(gd: *mut grid, py: c_uint, mut sx: c_uint, bg: c_uint) {
@@ -645,6 +546,103 @@ impl grid {
                     grid_store_cell(gce, gc, *s.add(i));
                 }
             }
+        }
+    }
+
+    /// Collect lines from the history if at the limit. Free the top (oldest) 10% and shift up.
+    pub unsafe fn collect_history(&mut self) {
+        unsafe {
+            if self.hsize == 0 || self.hsize < self.hlimit {
+                return;
+            }
+
+            let mut ny = self.hlimit / 10;
+            if ny < 1 {
+                ny = 1;
+            }
+            if ny > self.hsize {
+                ny = self.hsize;
+            }
+
+            let gd = self as *mut grid;
+            grid_trim_history(gd, ny);
+
+            self.hsize -= ny;
+            if self.hscrolled > self.hsize {
+                self.hscrolled = self.hsize;
+            }
+        }
+    }
+
+    /// Remove lines from the bottom of the history.
+    pub unsafe fn remove_history(&mut self, ny: c_uint) {
+        unsafe {
+            if ny > self.hsize {
+                return;
+            }
+            let gd = self as *mut grid;
+            for yy in 0..ny {
+                grid_free_line(gd, self.hsize + self.sy - 1 - yy);
+            }
+            self.hsize -= ny;
+        }
+    }
+
+    /// Scroll the entire visible screen, moving one line into the history.
+    pub unsafe fn scroll_history(&mut self, bg: c_uint) {
+        unsafe {
+            let yy = self.hsize + self.sy;
+            self.linedata.push(grid_line::new());
+
+            self.empty_line(yy, bg);
+
+            self.hscrolled += 1;
+            let hsize = self.hsize as usize;
+            let gl = self.linedata.as_mut_ptr().add(hsize);
+            grid_compact_line(&mut *gl);
+            (*gl).time = CURRENT_TIME;
+            self.hsize += 1;
+        }
+    }
+
+    /// Clear the history.
+    pub unsafe fn clear_history(&mut self) {
+        unsafe {
+            let gd = self as *mut grid;
+            grid_trim_history(gd, self.hsize);
+
+            self.hscrolled = 0;
+            self.hsize = 0;
+
+            self.linedata.resize_with(self.sy as usize, grid_line::new);
+        }
+    }
+
+    /// Scroll a region up, moving the top line into the history.
+    pub unsafe fn scroll_history_region(&mut self, upper: c_uint, lower: c_uint, bg: c_uint) {
+        unsafe {
+            // Indices are relative to the visible screen; adjust for hsize.
+            let hsize = self.hsize as usize;
+            let upper_abs = hsize + upper as usize;
+            let lower_abs = hsize + lower as usize;
+
+            // Remove the upper line from its position (this shifts everything above down).
+            let upper_line = self.linedata.remove(upper_abs);
+
+            // Insert it at the history position (hsize), pushing visible lines down.
+            self.linedata.insert(hsize, upper_line);
+            self.linedata[hsize].time = CURRENT_TIME;
+
+            // The region shifted up by one. Insert a new empty line at the lower position.
+            self.linedata.insert(lower_abs + 1, grid_line::new());
+            if !COLOUR_DEFAULT(bg as i32) {
+                let gd = self as *mut grid;
+                grid_expand_line(gd, (lower_abs + 1) as u32, self.sx, bg);
+            }
+
+            // Move history offset down
+            self.hscrolled += 1;
+            self.hsize += 1;
         }
     }
 
@@ -2539,7 +2537,7 @@ mod tests {
             gd.set_cell(0, 0, &cell);
 
             assert_eq!(gd.hsize, 0);
-            grid_scroll_history(&raw mut *gd, 8);
+            gd.scroll_history(8);
             assert_eq!(gd.hsize, 1);
             assert_eq!(gd.hscrolled, 1);
 
@@ -2567,8 +2565,8 @@ mod tests {
             }
 
             // Scroll twice.
-            grid_scroll_history(&raw mut *gd, 8);
-            grid_scroll_history(&raw mut *gd, 8);
+            gd.scroll_history(8);
+            gd.scroll_history(8);
             assert_eq!(gd.hsize, 2);
 
             // History lines should contain '0' and '1'.
@@ -2593,7 +2591,7 @@ mod tests {
             }
 
             // Scroll region [1..3] — line at upper=1 moves to history.
-            grid_scroll_history_region(&raw mut *gd, 1, 3, 8);
+            gd.scroll_history_region(1, 3, 8);
             assert_eq!(gd.hsize, 1);
 
             // History line 0 should be line that had 'B'.
@@ -2612,11 +2610,11 @@ mod tests {
             let cell = make_cell(b'H', 8, 8);
             gd.set_cell(0, 0, &cell);
 
-            grid_scroll_history(&raw mut *gd, 8);
-            grid_scroll_history(&raw mut *gd, 8);
+            gd.scroll_history(8);
+            gd.scroll_history(8);
             assert_eq!(gd.hsize, 2);
 
-            grid_clear_history(&raw mut *gd);
+            gd.clear_history();
             assert_eq!(gd.hsize, 0);
             assert_eq!(gd.hscrolled, 0);
             drop(gd);
@@ -2631,11 +2629,11 @@ mod tests {
             for _ in 0..10 {
                 let cell = make_cell(b'.', 8, 8);
                 gd.set_cell(0, gd.hsize, &cell);
-                grid_scroll_history(&raw mut *gd, 8);
+                gd.scroll_history(8);
             }
             assert_eq!(gd.hsize, 10);
 
-            grid_collect_history(&raw mut *gd);
+            gd.collect_history();
             // Should have trimmed 1 line (10% of 10, minimum 1).
             assert_eq!(gd.hsize, 9);
             drop(gd);
@@ -2650,11 +2648,11 @@ mod tests {
                 let cell = make_cell(b'0' + y as u8, 8, 8);
                 gd.set_cell(0, y, &cell);
             }
-            grid_scroll_history(&raw mut *gd, 8);
-            grid_scroll_history(&raw mut *gd, 8);
+            gd.scroll_history(8);
+            gd.scroll_history(8);
             assert_eq!(gd.hsize, 2);
 
-            grid_remove_history(&raw mut *gd, 1);
+            gd.remove_history(1);
             assert_eq!(gd.hsize, 1);
 
             // Remaining history line should be the oldest ('0').
@@ -2736,7 +2734,7 @@ mod tests {
             }
             // Mark line as wrapped (as tmux does for long lines).
             (*gd.get_line(0)).flags |= grid_line_flag::WRAPPED;
-            grid_scroll_history(&raw mut *gd, 8);
+            gd.scroll_history(8);
             let hsize_before = gd.hsize;
 
             // Reflow to width 10 — the 20-char history line should split into 2.
@@ -2771,8 +2769,8 @@ mod tests {
             }
 
             // Scroll both into history.
-            grid_scroll_history(&raw mut *gd, 8);
-            grid_scroll_history(&raw mut *gd, 8);
+            gd.scroll_history(8);
+            gd.scroll_history(8);
             let hsize_before = gd.hsize;
 
             // Reflow to width 20 — the two wrapped lines should join.
@@ -2797,7 +2795,7 @@ mod tests {
                 gd.set_cell(x, 0, &cell);
             }
             // Don't set WRAPPED flag — this is a short line.
-            grid_scroll_history(&raw mut *gd, 8);
+            gd.scroll_history(8);
 
             // Reflow to width 10 — short unwrapped line should stay as-is.
             grid_reflow(&raw mut *gd, 10);
@@ -2819,7 +2817,7 @@ mod tests {
             for x in 0..10u32 {
                 gd.set_cell(x, 0, &cell);
             }
-            grid_scroll_history(&raw mut *gd, 8);
+            gd.scroll_history(8);
             let hsize_before = gd.hsize;
 
             // Reflow to same width — should be essentially a no-op.
@@ -2899,7 +2897,7 @@ mod tests {
             let extended = make_rgb_fg_cell(b'C', 0, 255, 0);
             gd.set_cell(0, 0, &extended);
 
-            grid_scroll_history(&raw mut *gd, 8);
+            gd.scroll_history(8);
 
             // Extended cell should survive in history.
             let mut gc: grid_cell = zeroed();

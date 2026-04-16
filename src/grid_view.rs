@@ -85,8 +85,8 @@ pub unsafe fn grid_view_clear_history(gd: *mut grid, bg: u32) {
         }
 
         for _ in 0..(*gd).sy {
-            grid_collect_history(gd);
-            grid_scroll_history(gd, bg);
+            (*gd).collect_history();
+            (*gd).scroll_history(bg);
         }
         if last < (*gd).sy {
             grid_view_clear(gd, 0, 0, (*gd).sx, (*gd).sy - last, bg);
@@ -108,13 +108,13 @@ pub unsafe fn grid_view_clear(gd: *mut grid, mut px: u32, mut py: u32, nx: u32, 
 pub unsafe fn grid_view_scroll_region_up(gd: *mut grid, mut rupper: u32, mut rlower: u32, bg: u32) {
     unsafe {
         if (*gd).flags & GRID_HISTORY != 0 {
-            grid_collect_history(gd);
+            (*gd).collect_history();
             if rupper == 0 && rlower == (*gd).sy - 1 {
-                grid_scroll_history(gd, bg);
+                (*gd).scroll_history(bg);
             } else {
                 rupper = grid_view_y(gd, rupper);
                 rlower = grid_view_y(gd, rlower);
-                grid_scroll_history_region(gd, rupper, rlower, bg);
+                (*gd).scroll_history_region(rupper, rlower, bg);
             }
         } else {
             rupper = grid_view_y(gd, rupper);
@@ -294,7 +294,7 @@ mod tests {
             assert_eq!(grid_view_y(gd_ptr, 3), 3);
 
             // Simulate history by scrolling a line into history.
-            grid_scroll_history(gd_ptr, 8);
+            (*gd_ptr).scroll_history(8);
             assert_eq!(gd.hsize, 1);
             assert_eq!(grid_view_y(gd_ptr, 0), 1);
             assert_eq!(grid_view_y(gd_ptr, 3), 4);
@@ -333,7 +333,7 @@ mod tests {
             assert_eq!(read_view_char(gd_ptr, 0, 0), b'X');
 
             // Scroll into history — view row 0 is now a new empty line.
-            grid_scroll_history(gd_ptr, 8);
+            (*gd_ptr).scroll_history(8);
 
             // 'X' is now in history (grid row 0), not visible view row 0.
             // View row 0 is now grid row 1 (the new line).
@@ -420,7 +420,7 @@ mod tests {
             }
 
             // Scroll it into history.
-            grid_scroll_history(gd_ptr, 8);
+            (*gd_ptr).scroll_history(8);
 
             // Write "Line1" to new view row 0.
             for (i, ch) in b"Line1".iter().enumerate() {

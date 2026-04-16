@@ -1818,7 +1818,7 @@ pub unsafe fn screen_write_clearscreen(ctx: *mut screen_write_ctx, bg: u32) {
 /// Clear entire history.
 pub unsafe fn screen_write_clearhistory(ctx: *mut screen_write_ctx) {
     unsafe {
-        grid_clear_history(&raw mut *(*(*ctx).s).grid);
+        (*(*ctx).s).grid.clear_history();
     }
 }
 

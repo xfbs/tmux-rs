@@ -219,7 +219,7 @@ unsafe fn cmd_capture_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_re
 
         if std::ptr::eq(cmd_get_entry(self_), &CMD_CLEAR_HISTORY_ENTRY) {
             window_pane_reset_mode_all(wp);
-            grid_clear_history(&raw mut *(*wp).base.grid);
+            (*wp).base.grid.clear_history();
             if args_has(args, 'H') {
                 screen_reset_hyperlinks((*wp).screen);
             }
