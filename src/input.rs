@@ -2954,7 +2954,7 @@ unsafe fn input_osc_112(ictx: *mut input_ctx, p: *const u8) {
 /// Handle the OSC 133 sequence.
 unsafe fn input_osc_133(ictx: *mut input_ctx, p: *const u8) {
     unsafe {
-        let gd = (*(*ictx).ctx.s).grid;
+        let gd: *mut grid = &raw mut *(*(*ictx).ctx.s).grid;
         let line = (*(*ictx).ctx.s).cy + (*gd).hsize;
 
         if line > (*gd).hsize + (*gd).sy - 1 {

@@ -1819,7 +1819,7 @@ pub unsafe fn window_pane_search(
         for j in 0..screen_size_y(s) {
             i = j;
 
-            let line = grid_view_string_cells((*s).grid, 0, i, screen_size_x(s));
+            let line = grid_view_string_cells(&raw mut *(*s).grid, 0, i, screen_size_x(s));
             for n in (1..=strlen(line)).rev() {
                 if isspace(line.add(n - 1) as c_uchar as c_int) == 0 {
                     break;

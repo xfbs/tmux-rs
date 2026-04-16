@@ -39,17 +39,16 @@ pub unsafe fn screen_free_titles(s: *mut screen) {
 
 /// Return a valid but uninitialized-equivalent screen placeholder.
 ///
-/// Every field is set to a safe zero/null/None value — no heap allocations.
-/// The caller must follow up with `screen_init` (which overwrites via
-/// `ptr::write`) before using the screen.  This exists so that struct
-/// literals can embed a `screen` field without `zeroed()`, which would be
-/// UB once `images` becomes a `Vec`.
+/// Every field is set to a safe zero/null/None value.  The caller must
+/// follow up with `screen_init` (which overwrites via `ptr::write`)
+/// before using the screen.  This exists so that struct literals can
+/// embed a `screen` field without `zeroed()`.
 pub fn screen_placeholder() -> screen {
     screen {
         title: CString::default(),
         path: None,
         titles: Vec::new(),
-        grid: null_mut(),
+        grid: grid_create(0, 0, 0),
         cx: 0,
         cy: 0,
         cstyle: screen_cursor_style::SCREEN_CURSOR_DEFAULT,
@@ -149,7 +148,7 @@ pub unsafe fn screen_reinit(s: *mut screen) {
 
         screen_reset_tabs(s);
 
-        grid_clear_lines((*s).grid, (*(*s).grid).hsize, (*(*s).grid).sy, 8);
+        grid_clear_lines(&raw mut *(*s).grid, (*s).grid.hsize, (*s).grid.sy, 8);
 
         screen_clear_selection(s);
         screen_free_titles(s);
@@ -183,10 +182,8 @@ pub unsafe fn screen_free(s: *mut screen) {
             screen_write_free_list(s);
         }
 
-        if let Some(sg) = (*s).saved_grid.take() {
-            grid_destroy(sg);
-        }
-        grid_destroy((*s).grid);
+        (*s).saved_grid = None;
+        // grid: Box<grid> drops automatically when screen is freed
 
         if let Some(hl) = (*s).hyperlinks {
             hyperlinks_free(hl);
@@ -382,7 +379,7 @@ pub unsafe fn screen_resize(s: *mut screen, sx: u32, sy: u32, reflow: i32) {
 /// Resize screen vertically.
 unsafe fn screen_resize_y(s: *mut screen, sy: u32, eat_empty: i32, cy: *mut u32) {
     unsafe {
-        let gd = (*s).grid;
+        let gd = &raw mut *(*s).grid;
 
         if sy == 0 {
             fatalx("zero size");
@@ -661,7 +658,7 @@ unsafe fn screen_reflow(s: *mut screen, new_x: u32, cx: *mut u32, cy: *mut u32, 
         let mut wy: u32 = 0;
 
         if cursor != 0 {
-            grid_wrap_position((*s).grid, *cx, *cy, &mut wx, &mut wy);
+            grid_wrap_position(&raw mut *(*s).grid, *cx, *cy, &mut wx, &mut wy);
             log_debug!(
                 "{}: cursor {},{} is {},{}",
                 "screen_reflow",
@@ -672,14 +669,14 @@ unsafe fn screen_reflow(s: *mut screen, new_x: u32, cx: *mut u32, cy: *mut u32, 
             );
         }
 
-        grid_reflow((*s).grid, new_x);
+        grid_reflow(&raw mut *(*s).grid, new_x);
 
         if cursor != 0 {
-            grid_unwrap_position((*s).grid, cx, cy, wx, wy);
+            grid_unwrap_position(&raw mut *(*s).grid, cx, cy, wx, wy);
             log_debug!("{}: new cursor is {},{}", "screen_reflow", *cx, *cy);
         } else {
             *cx = 0;
-            *cy = (*(*s).grid).hsize;
+            *cy = (*s).grid.hsize;
         }
     }
 }
@@ -694,19 +691,19 @@ pub unsafe fn screen_alternate_on(s: *mut screen, gc: *mut grid_cell, cursor: i3
         let sx = screen_size_x(s);
         let sy = screen_size_y(s);
 
-        let sg = grid_create(sx, sy, 0);
-        (*s).saved_grid = Some(sg);
-        grid_duplicate_lines(sg, 0, (*s).grid, screen_hsize(s), sy);
+        (*s).saved_grid = Some(grid_create(sx, sy, 0));
+        let sg: *mut grid = &raw mut **(*s).saved_grid.as_mut().unwrap();
+        grid_duplicate_lines(sg, 0, &raw mut *(*s).grid, screen_hsize(s), sy);
         if cursor != 0 {
             (*s).saved_cx = (*s).cx;
             (*s).saved_cy = (*s).cy;
         }
         memcpy__(&raw mut (*s).saved_cell, gc);
 
-        grid_view_clear((*s).grid, 0, 0, sx, sy, 8);
+        grid_view_clear(&raw mut *(*s).grid, 0, 0, sx, sy, 8);
 
-        (*s).saved_flags = (*(*s).grid).flags;
-        (*(*s).grid).flags &= !GRID_HISTORY;
+        (*s).saved_flags = (*s).grid.flags;
+        (*s).grid.flags &= !GRID_HISTORY;
     }
 }
 
@@ -718,8 +715,8 @@ pub unsafe fn screen_alternate_off(s: *mut screen, gc: *mut grid_cell, cursor: i
 
         // If the current size is different, temporarily resize to the old size
         // before copying back.
-        if let Some(sg) = (*s).saved_grid {
-            screen_resize(s, (*sg).sx, (*sg).sy, 0);
+        if let Some(ref sg) = (*s).saved_grid {
+            screen_resize(s, sg.sx, sg.sy, 0);
         }
 
         // Restore the cursor position and cell. This happens even if not
@@ -744,24 +741,25 @@ pub unsafe fn screen_alternate_off(s: *mut screen, gc: *mut grid_cell, cursor: i
         }
 
         // Restore the saved grid.
-        let sg = (*s).saved_grid.unwrap();
+        let sg = (*s).saved_grid.as_ref().unwrap();
+        let sg_sy = sg.sy;
+        let sg_ptr: *mut grid = &**sg as *const grid as *mut grid;
         grid_duplicate_lines(
-            (*s).grid,
+            &raw mut *(*s).grid,
             screen_hsize(s),
-            sg,
+            sg_ptr,
             0,
-            (*sg).sy,
+            sg_sy,
         );
 
         // Turn history back on (so resize can use it) and then resize back to
         // the current size.
         if (*s).saved_flags & GRID_HISTORY != 0 {
-            (*(*s).grid).flags |= GRID_HISTORY;
+            (*s).grid.flags |= GRID_HISTORY;
         }
         screen_resize(s, sx, sy, 1);
 
-        grid_destroy(sg);
-        (*s).saved_grid = None;
+        drop((*s).saved_grid.take());
 
         if (*s).cx > screen_size_x(s) - 1 {
             (*s).cx = screen_size_x(s) - 1;
@@ -941,9 +939,8 @@ mod tests {
     fn screen_init_creates_grid() {
         unsafe {
             let s = make_screen(40, 10);
-            assert!(!(*s).grid.is_null());
-            assert_eq!((*(*s).grid).sx, 40);
-            assert_eq!((*(*s).grid).sy, 10);
+            assert_eq!((*s).grid.sx, 40);
+            assert_eq!((*s).grid.sy, 10);
             destroy_screen(s);
         }
     }
@@ -1308,7 +1305,7 @@ mod tests {
         let s = screen_placeholder();
         assert!(s.title.is_empty());
         assert!(s.path.is_none());
-        assert!(s.grid.is_null());
+        assert_eq!(s.grid.sx, 0); // placeholder grid is empty
         assert!(s.saved_grid.is_none());
         assert!(s.sel.is_none());
         assert!(s.tabs.is_none());

@@ -428,7 +428,7 @@ pub unsafe fn screen_redraw_make_pane_status(
         let mut px: u32;
         let mut py: u32;
         let mut ctx: MaybeUninit<screen_write_ctx> = MaybeUninit::uninit();
-        let mut old: screen;
+        let mut old_grid: Box<grid>;
         let pane_status = (*rctx).pane_status;
 
         let ft = format_create(
@@ -462,7 +462,7 @@ pub unsafe fn screen_redraw_make_pane_status(
             width = (*wp).sx - 4;
         }
 
-        old = (*wp).status_screen.clone();
+        old_grid = std::mem::replace(&mut (*wp).status_screen.grid, grid_create(0, 0, 0));
         screen_init(&raw mut (*wp).status_screen, width, 1, 0);
         (*wp).status_screen.mode = mode_flag::empty();
 
@@ -495,11 +495,9 @@ pub unsafe fn screen_redraw_make_pane_status(
         free_(expanded);
         format_free(ft);
 
-        if grid_compare((*wp).status_screen.grid, old.grid) == 0 {
-            screen_free(&raw mut old);
+        if grid_compare(&raw mut *(*wp).status_screen.grid, &raw mut *old_grid) == 0 {
             return 0;
         }
-        screen_free(&raw mut old);
         1
     }
 }

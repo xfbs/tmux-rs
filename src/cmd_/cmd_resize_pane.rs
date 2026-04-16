@@ -41,7 +41,7 @@ unsafe fn cmd_resize_pane_exec(self_: *mut cmd, item: *mut cmdq_item) -> cmd_ret
         let mut adjust;
         let x: i32;
         let mut y: i32;
-        let gd = (*wp).base.grid;
+        let gd: *mut grid = &raw mut *(*wp).base.grid;
 
         if args_has(args, 'T') {
             if !(*wp).modes.is_empty() {

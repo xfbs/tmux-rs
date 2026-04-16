@@ -881,7 +881,7 @@ pub unsafe fn format_cb_history_bytes(ft: &format_tree) -> format_table_type {
             return format_table_type::None;
         }
 
-        let gd = (*wp).base.grid;
+        let gd: *mut grid = &raw mut *(*wp).base.grid;
         let mut size: usize = 0;
 
         for i in 0..((*gd).hsize + (*gd).sy) {
@@ -904,13 +904,13 @@ pub unsafe fn format_cb_history_all_bytes(ft: &format_tree) -> format_table_type
             return format_table_type::None;
         }
 
-        let gd = (*wp).base.grid;
+        let gd: *mut grid = &raw mut *(*wp).base.grid;
         let lines = (*gd).hsize + (*gd).sy;
         let mut cells = 0;
         let mut extended_cells = 0;
 
         for i in 0..lines {
-            let gl = grid_get_line(gd, i);
+            let gl: *mut grid_line = grid_get_line(gd, i);
             cells += (*gl).celldata.len() as u32;
             extended_cells += (*gl).extddata.len() as u32;
         }
@@ -1142,7 +1142,7 @@ pub unsafe fn format_cb_cursor_character(ft: &format_tree) -> format_table_type 
         }
         let mut gc = MaybeUninit::<grid_cell>::uninit();
         grid_view_get_cell(
-            (*wp).base.grid,
+            &raw mut *(*wp).base.grid,
             (*wp).base.cx,
             (*wp).base.cy,
             gc.as_mut_ptr(),
@@ -1181,7 +1181,7 @@ pub unsafe fn format_cb_mouse_word(ft: &format_tree) -> format_table_type {
             }
             return format_table_type::None;
         }
-        let gd = (*wp.as_ptr()).base.grid;
+        let gd: *mut grid = &raw mut *(*wp.as_ptr()).base.grid;
         format_grid_word(gd, x, (*gd).hsize + y).into()
     }
 }
@@ -1200,7 +1200,7 @@ pub unsafe fn format_cb_mouse_hyperlink(ft: &format_tree) -> format_table_type {
         if cmd_mouse_at(wp.as_ptr(), &ft.m, &mut x, &mut y, 0) != 0 {
             return format_table_type::None;
         }
-        let gd = (*wp.as_ptr()).base.grid;
+        let gd: *mut grid = &raw mut *(*wp.as_ptr()).base.grid;
         format_grid_hyperlink(gd, x, (*gd).hsize + y, (*wp.as_ptr()).screen)
             .map(Into::into)
             .unwrap_or_default()
@@ -1228,7 +1228,7 @@ pub unsafe fn format_cb_mouse_line(ft: &format_tree) -> format_table_type {
             }
             return format_table_type::None;
         }
-        let gd = (*wp.as_ptr()).base.grid;
+        let gd: *mut grid = &raw mut *(*wp.as_ptr()).base.grid;
         format_grid_line(gd, (*gd).hsize + y).into()
     }
 }

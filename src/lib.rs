@@ -1036,14 +1036,13 @@ enum screen_cursor_style {
 
 /// Virtual screen.
 
-#[derive(Clone)]
 struct screen {
     title: CString,
     path: Option<CString>,
     titles: Vec<CString>,
 
     /// grid data
-    grid: *mut grid,
+    grid: Box<grid>,
 
     /// cursor x
     cx: u32,
@@ -1068,7 +1067,7 @@ struct screen {
 
     saved_cx: u32,
     saved_cy: u32,
-    saved_grid: Option<*mut grid>,
+    saved_grid: Option<Box<grid>>,
     saved_cell: grid_cell,
     saved_flags: i32,
 

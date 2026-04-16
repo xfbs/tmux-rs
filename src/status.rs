@@ -583,7 +583,8 @@ pub unsafe fn status_message_redraw(c: *mut client) -> i32 {
         if (*c).tty.sx == 0 || (*c).tty.sy == 0 {
             return 0;
         }
-        let mut old_screen = (*(*sl).active).clone();
+        // Snapshot the old grid before reinit overwrites it.
+        let mut old_grid = std::mem::replace(&mut (*(*sl).active).grid, grid_create(0, 0, 0));
 
         let mut lines = status_line_size(c);
         if lines <= 1 {
@@ -640,11 +641,9 @@ pub unsafe fn status_message_redraw(c: *mut client) -> i32 {
         }
         screen_write_stop(&raw mut ctx);
 
-        if grid_compare((*(*sl).active).grid, old_screen.grid) == 0 {
-            screen_free(&raw mut old_screen);
+        if grid_compare(&raw mut *(*(*sl).active).grid, &raw mut *old_grid) == 0 {
             return 0;
         }
-        screen_free(&raw mut old_screen);
         1
     }
 }
@@ -810,13 +809,14 @@ pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
 
         let mut gc: grid_cell = zeroed();
         let mut cursorgc: grid_cell = zeroed();
-        let mut old_screen: screen;
+        let mut old_grid: Box<grid>;
 
         'finished: {
             if (*c).tty.sx == 0 || (*c).tty.sy == 0 {
                 return 0;
             }
-            old_screen = (*(*sl).active).clone();
+            // Snapshot the old grid before reinit overwrites it.
+            old_grid = std::mem::replace(&mut (*(*sl).active).grid, grid_create(0, 0, 0));
 
             let mut lines = status_line_size(c);
             if lines <= 1 {
@@ -923,11 +923,9 @@ pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
         // finished:
         screen_write_stop(&raw mut ctx);
 
-        if grid_compare((*(*sl).active).grid, old_screen.grid) == 0 {
-            screen_free(&raw mut old_screen);
+        if grid_compare(&raw mut *(*(*sl).active).grid, &raw mut *old_grid) == 0 {
             return 0;
         }
-        screen_free(&raw mut old_screen);
         1
     }
 }

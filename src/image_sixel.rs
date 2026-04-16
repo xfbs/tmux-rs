@@ -659,7 +659,7 @@ unsafe fn sixel_to_screen(si: *mut sixel_image) -> *mut screen {
         if sx == 1 || sy == 1 {
             for y in 0..sy {
                 for x in 0..sx {
-                    grid_view_set_cell((*s).grid, x, y, &gc);
+                    grid_view_set_cell(&raw mut *(*s).grid, x, y, &gc);
                 }
             }
         } else {
@@ -673,7 +673,7 @@ unsafe fn sixel_to_screen(si: *mut sixel_image) -> *mut screen {
             );
             for y in 1..(sy - 1) {
                 for x in 1..(sx - 1) {
-                    grid_view_set_cell((*s).grid, x, y, &raw const gc);
+                    grid_view_set_cell(&raw mut *(*s).grid, x, y, &raw const gc);
                 }
             }
         }

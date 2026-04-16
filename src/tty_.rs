@@ -1756,7 +1756,7 @@ pub unsafe fn tty_draw_line(
     palette: *const colour_palette,
 ) {
     unsafe {
-        let gd = (*s).grid;
+        let gd: *mut grid = &raw mut *(*s).grid;
         let mut gc: grid_cell = zeroed();
         let mut last: grid_cell = zeroed();
         let c = (*tty).client;
