@@ -148,7 +148,7 @@ pub unsafe fn screen_reinit(s: *mut screen) {
 
         screen_reset_tabs(s);
 
-        grid_clear_lines(&raw mut *(*s).grid, (*s).grid.hsize, (*s).grid.sy, 8);
+        (*s).grid.clear_lines((*s).grid.hsize, (*s).grid.sy, 8);
 
         screen_clear_selection(s);
         screen_free_titles(s);

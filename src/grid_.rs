@@ -648,6 +648,158 @@ impl grid {
         }
     }
 
+    /// Clear a rectangular area.
+    pub unsafe fn clear(&mut self, px: c_uint, py: c_uint, nx: c_uint, ny: c_uint, bg: c_uint) {
+        unsafe {
+            if nx == 0 || ny == 0 {
+                return;
+            }
+
+            let gd = self as *mut grid;
+            if px == 0 && nx == self.sx {
+                self.clear_lines(py, ny, bg);
+                return;
+            }
+
+            if grid_check_y(gd, c!("grid_clear"), py) != 0 {
+                return;
+            }
+            if grid_check_y(gd, c!("grid_clear"), py + ny - 1) != 0 {
+                return;
+            }
+
+            for yy in py..py + ny {
+                let mut sx = self.sx;
+                let celldata_len = self.linedata[yy as usize].celldata.len() as u32;
+                if sx > celldata_len {
+                    sx = celldata_len;
+                }
+                let mut ox = nx;
+                if COLOUR_DEFAULT(bg as i32) {
+                    if px > sx {
+                        continue;
+                    }
+                    if px + nx > sx {
+                        ox = sx - px;
+                    }
+                }
+
+                grid_expand_line(gd, yy, px + ox, 8); // default bg first
+                for xx in px..px + ox {
+                    grid_clear_cell(gd, xx, yy, bg);
+                }
+            }
+        }
+    }
+
+    /// Clear a range of lines. Frees and truncates them.
+    pub unsafe fn clear_lines(&mut self, py: c_uint, ny: c_uint, bg: c_uint) {
+        unsafe {
+            if ny == 0 {
+                return;
+            }
+
+            let gd = self as *mut grid;
+            if grid_check_y(gd, c!("grid_clear_lines"), py) != 0 {
+                return;
+            }
+            if grid_check_y(gd, c!("grid_clear_lines"), py + ny - 1) != 0 {
+                return;
+            }
+
+            for yy in py..py + ny {
+                grid_free_line(gd, yy);
+                self.empty_line(yy, bg);
+            }
+            if py != 0 {
+                self.linedata[py as usize - 1].flags &= !grid_line_flag::WRAPPED;
+            }
+        }
+    }
+
+    /// Move a group of lines.
+    pub unsafe fn move_lines(&mut self, dy: c_uint, py: c_uint, ny: c_uint, bg: c_uint) {
+        unsafe {
+            if ny == 0 || py == dy {
+                return;
+            }
+
+            let gd = self as *mut grid;
+            if grid_check_y(gd, c!("grid_move_lines"), py) != 0 {
+                return;
+            }
+            if grid_check_y(gd, c!("grid_move_lines"), py + ny - 1) != 0 {
+                return;
+            }
+            if grid_check_y(gd, c!("grid_move_lines"), dy) != 0 {
+                return;
+            }
+            if grid_check_y(gd, c!("grid_move_lines"), dy + ny - 1) != 0 {
+                return;
+            }
+
+            // Free any lines which are being replaced
+            for yy in dy..dy + ny {
+                if yy >= py && yy < py + ny {
+                    continue;
+                }
+                grid_free_line(gd, yy);
+            }
+            if dy != 0 {
+                self.linedata[dy as usize - 1].flags &= !grid_line_flag::WRAPPED;
+            }
+
+            // Move the lines (memmove semantics — handles overlap).
+            // Can't use copy_within because grid_line is not Copy (contains Vec).
+            let src = self.linedata.as_mut_ptr().add(py as usize);
+            let dst = self.linedata.as_mut_ptr().add(dy as usize);
+            std::ptr::copy(src, dst, ny as usize);
+
+            // Wipe source lines that are outside the destination range.
+            // These were bitwise-moved, so DON'T drop their Vec fields — the data
+            // is now owned by the destination. Use grid_init_line (no drop).
+            for yy in py..py + ny {
+                if yy < dy || yy >= dy + ny {
+                    grid_init_line(gd, yy, bg);
+                }
+            }
+            if py != 0 && (py < dy || py >= dy + ny) {
+                self.linedata[py as usize - 1].flags &= !grid_line_flag::WRAPPED;
+            }
+        }
+    }
+
+    /// Move a group of cells within a line.
+    pub unsafe fn move_cells(&mut self, dx: c_uint, px: c_uint, py: c_uint, nx: c_uint, bg: c_uint) {
+        unsafe {
+            if nx == 0 || px == dx {
+                return;
+            }
+
+            let gd = self as *mut grid;
+            if grid_check_y(gd, c!("grid_move_cells"), py) != 0 {
+                return;
+            }
+            grid_expand_line(gd, py, px + nx, 8);
+            grid_expand_line(gd, py, dx + nx, 8);
+
+            let gl = &mut self.linedata[py as usize];
+            gl.celldata.copy_within(px as usize..(px + nx) as usize, dx as usize);
+
+            if dx + nx > gl.cellused {
+                gl.cellused = dx + nx;
+            }
+
+            // Wipe any cells that have been moved
+            for xx in px..px + nx {
+                if xx >= dx && xx < dx + nx {
+                    continue;
+                }
+                grid_clear_cell(gd, xx, py, bg);
+            }
+        }
+    }
+
     /// Empty a line and optionally fill with a background color.
     pub unsafe fn empty_line(&mut self, py: c_uint, bg: c_uint) {
         unsafe {
@@ -660,167 +812,7 @@ impl grid {
     }
 }
 
-/// Clear area.
-pub unsafe fn grid_clear(
-    gd: *mut grid,
-    px: c_uint,
-    py: c_uint,
-    nx: c_uint,
-    ny: c_uint,
-    bg: c_uint,
-) {
-    unsafe {
-        if nx == 0 || ny == 0 {
-            return;
-        }
-
-        if px == 0 && nx == (*gd).sx {
-            grid_clear_lines(gd, py, ny, bg);
-            return;
-        }
-
-        if grid_check_y(gd, c!("grid_clear"), py) != 0 {
-            return;
-        }
-        if grid_check_y(gd, c!("grid_clear"), py + ny - 1) != 0 {
-            return;
-        }
-
-        for yy in py..py + ny {
-            let mut sx = (*gd).sx;
-            let celldata_len = (&(*gd).linedata)[yy as usize].celldata.len() as u32;
-            if sx > celldata_len {
-                sx = celldata_len;
-            }
-            let mut ox = nx;
-            if COLOUR_DEFAULT(bg as i32) {
-                if px > sx {
-                    continue;
-                }
-                if px + nx > sx {
-                    ox = sx - px;
-                }
-            }
-
-            grid_expand_line(gd, yy, px + ox, 8); // default bg first
-            for xx in px..px + ox {
-                grid_clear_cell(gd, xx, yy, bg);
-            }
-        }
-    }
-}
-
-/// Clear lines. This just frees and truncates the lines.
-pub unsafe fn grid_clear_lines(gd: *mut grid, py: c_uint, ny: c_uint, bg: c_uint) {
-    unsafe {
-        if ny == 0 {
-            return;
-        }
-
-        if grid_check_y(gd, c!("grid_clear_lines"), py) != 0 {
-            return;
-        }
-        if grid_check_y(gd, c!("grid_clear_lines"), py + ny - 1) != 0 {
-            return;
-        }
-
-        for yy in py..py + ny {
-            grid_free_line(gd, yy);
-            (*gd).empty_line(yy, bg);
-        }
-        if py != 0 {
-            (&mut (*gd).linedata)[py as usize - 1].flags &= !grid_line_flag::WRAPPED;
-        }
-    }
-}
-
-/// Move a group of lines.
-pub unsafe fn grid_move_lines(gd: *mut grid, dy: c_uint, py: c_uint, ny: c_uint, bg: c_uint) {
-    unsafe {
-        if ny == 0 || py == dy {
-            return;
-        }
-
-        if grid_check_y(gd, c!("grid_move_lines"), py) != 0 {
-            return;
-        }
-        if grid_check_y(gd, c!("grid_move_lines"), py + ny - 1) != 0 {
-            return;
-        }
-        if grid_check_y(gd, c!("grid_move_lines"), dy) != 0 {
-            return;
-        }
-        if grid_check_y(gd, c!("grid_move_lines"), dy + ny - 1) != 0 {
-            return;
-        }
-
-        // Free any lines which are being replaced
-        for yy in dy..dy + ny {
-            if yy >= py && yy < py + ny {
-                continue;
-            }
-            grid_free_line(gd, yy);
-        }
-        if dy != 0 {
-            (&mut (*gd).linedata)[dy as usize - 1].flags &= !grid_line_flag::WRAPPED;
-        }
-
-        // Move the lines (memmove semantics — handles overlap).
-        // Can't use copy_within because grid_line is not Copy (contains Vec).
-        let src = (*gd).linedata.as_mut_ptr().add(py as usize);
-        let dst = (*gd).linedata.as_mut_ptr().add(dy as usize);
-        std::ptr::copy(src, dst, ny as usize);
-
-        // Wipe source lines that are outside the destination range.
-        // These were bitwise-moved, so DON'T drop their Vec fields — the data
-        // is now owned by the destination. Use grid_init_line (no drop).
-        for yy in py..py + ny {
-            if yy < dy || yy >= dy + ny {
-                grid_init_line(gd, yy, bg);
-            }
-        }
-        if py != 0 && (py < dy || py >= dy + ny) {
-            (&mut (*gd).linedata)[py as usize - 1].flags &= !grid_line_flag::WRAPPED;
-        }
-    }
-}
-
-/// Move a group of cells.
-pub unsafe fn grid_move_cells(
-    gd: *mut grid,
-    dx: c_uint,
-    px: c_uint,
-    py: c_uint,
-    nx: c_uint,
-    bg: c_uint,
-) {
-    unsafe {
-        if nx == 0 || px == dx {
-            return;
-        }
-
-        if grid_check_y(gd, c!("grid_move_cells"), py) != 0 {
-            return;
-        }
-        grid_expand_line(gd, py, px + nx, 8);
-        grid_expand_line(gd, py, dx + nx, 8);
-
-        let gl = &mut (&mut (*gd).linedata)[py as usize];
-        gl.celldata.copy_within(px as usize..(px + nx) as usize, dx as usize);
-
-        if dx + nx > gl.cellused {
-            gl.cellused = dx + nx;
-        }
-
-        // Wipe any cells that have been moved
-        for xx in px..px + nx {
-            if xx >= dx && xx < dx + nx {
-                continue;
-            }
-            grid_clear_cell(gd, xx, py, bg);
-        }
-    }
-}
+// grid_clear, grid_clear_lines, grid_move_lines, grid_move_cells converted to methods.
 
 /// Get ANSI foreground sequence.
 unsafe fn grid_string_cells_fg(gc: *const grid_cell, values: *mut c_int) -> usize {
@@ -1462,7 +1454,7 @@ unsafe fn grid_reflow_join(
         // If we consumed entire line and it wasn't wrapped, remove wrap flag.
         let left = (*from).cellused - want;
         if left != 0 {
-            grid_move_cells(gd, 0, want, yy + lines, left, 8);
+            (*gd).move_cells(0, want, yy + lines, left, 8);
             (*from).celldata.truncate(left as usize);
             (*from).cellused = left;
             lines -= 1;
@@ -1924,7 +1916,7 @@ mod tests {
             }
 
             // Clear columns 2..6 on row 0 (px=2, py=0, nx=4, ny=1).
-            grid_clear(&raw mut *gd, 2, 0, 4, 1, 8);
+            gd.clear(2, 0, 4, 1, 8);
 
             // Cells outside cleared region should still be '#'.
             let mut gc: grid_cell = zeroed();
@@ -2006,7 +1998,7 @@ mod tests {
             gd.set_cell(0, 0, &cell);
 
             // Move line 0 to line 5.
-            grid_move_lines(&raw mut *gd, 5, 0, 1, 8);
+            gd.move_lines(5, 0, 1, 8);
 
             // Line 0 should now be empty.
             let mut gc: grid_cell = zeroed();
@@ -2153,8 +2145,8 @@ mod tests {
         let mut gd = grid_create(80, 24, 0);
         unsafe {
             // nx=0 or ny=0 should be no-op.
-            grid_clear(&raw mut *gd, 0, 0, 0, 1, 8);
-            grid_clear(&raw mut *gd, 0, 0, 1, 0, 8);
+            gd.clear(0, 0, 0, 1, 8);
+            gd.clear(0, 0, 1, 0, 8);
             drop(gd);
         }
     }
@@ -2167,7 +2159,7 @@ mod tests {
             gd.set_cell(0, 2, &cell);
 
             // Moving line 2 to line 2 should be a no-op.
-            grid_move_lines(&raw mut *gd, 2, 2, 1, 8);
+            gd.move_lines(2, 2, 1, 8);
 
             let mut gc: grid_cell = zeroed();
             gd.get_cell(0, 2, &mut gc);
@@ -2686,7 +2678,7 @@ mod tests {
                 gd.set_cell(0, y, &cell);
             }
 
-            grid_clear_lines(&raw mut *gd, 1, 2, 8);
+            gd.clear_lines(1, 2, 8);
 
             let mut gc: grid_cell = zeroed();
             // Lines 1 and 2 should be empty.
@@ -2711,7 +2703,7 @@ mod tests {
             gd.set_cell(1, 0, &cell_b);
 
             // Move 2 cells from position 0 to position 5.
-            grid_move_cells(&raw mut *gd, 5, 0, 0, 2, 8);
+            gd.move_cells(5, 0, 0, 2, 8);
 
             let mut gc: grid_cell = zeroed();
             gd.get_cell(5, 0, &mut gc);
@@ -2969,7 +2961,7 @@ mod tests {
 
             // Clear with a non-default background (256 color).
             let bg = (COLOUR_FLAG_256 | 42) as u32;
-            grid_clear(&raw mut *gd, 2, 0, 3, 1, bg);
+            gd.clear(2, 0, 3, 1, bg);
 
             // Cleared cells should have a non-default bg.
             let mut gc: grid_cell = zeroed();
@@ -2989,7 +2981,7 @@ mod tests {
                 gd.set_cell(0, y, &cell);
             }
 
-            grid_move_lines(&raw mut *gd, 2, 0, 3, 8);
+            gd.move_lines(2, 0, 3, 8);
 
             let mut gc: grid_cell = zeroed();
             gd.get_cell(0, 2, &mut gc);

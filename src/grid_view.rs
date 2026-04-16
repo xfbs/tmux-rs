@@ -101,7 +101,7 @@ pub unsafe fn grid_view_clear(gd: *mut grid, mut px: u32, mut py: u32, nx: u32, 
         px = grid_view_x(gd, px);
         py = grid_view_y(gd, py);
 
-        grid_clear(gd, px, py, nx, ny, bg);
+        (*gd).clear(px, py, nx, ny, bg);
     }
 }
 
@@ -119,7 +119,7 @@ pub unsafe fn grid_view_scroll_region_up(gd: *mut grid, mut rupper: u32, mut rlo
         } else {
             rupper = grid_view_y(gd, rupper);
             rlower = grid_view_y(gd, rlower);
-            grid_move_lines(gd, rupper, rupper + 1, rlower - rupper, bg);
+            (*gd).move_lines(rupper, rupper + 1, rlower - rupper, bg);
         }
     }
 }
@@ -134,7 +134,7 @@ pub unsafe fn grid_view_scroll_region_down(
         rupper = grid_view_y(gd, rupper);
         rlower = grid_view_y(gd, rlower);
 
-        grid_move_lines(gd, rupper + 1, rupper, rlower - rupper, bg);
+        (*gd).move_lines(rupper + 1, rupper, rlower - rupper, bg);
     }
 }
 
@@ -144,7 +144,7 @@ pub unsafe fn grid_view_insert_lines(gd: *mut grid, mut py: u32, ny: u32, bg: u3
 
         let sy = grid_view_y(gd, (*gd).sy);
 
-        grid_move_lines(gd, py + ny, py, sy - py - ny, bg);
+        (*gd).move_lines(py + ny, py, sy - py - ny, bg);
     }
 }
 
@@ -162,9 +162,9 @@ pub unsafe fn grid_view_insert_lines_region(
         py = grid_view_y(gd, py);
 
         let ny2 = rlower + 1 - py - ny;
-        grid_move_lines(gd, rlower + 1 - ny2, py, ny2, bg);
+        (*gd).move_lines(rlower + 1 - ny2, py, ny2, bg);
         // TODO does this bug exist upstream?
-        grid_clear(gd, 0, py + ny2, (*gd).sx, ny.saturating_sub(ny2), bg);
+        (*gd).clear(0, py + ny2, (*gd).sx, ny.saturating_sub(ny2), bg);
     }
 }
 
@@ -175,8 +175,8 @@ pub unsafe fn grid_view_delete_lines(gd: *mut grid, mut py: u32, ny: u32, bg: u3
 
         let sy = grid_view_y(gd, (*gd).sy);
 
-        grid_move_lines(gd, py, py + ny, sy - py - ny, bg);
-        grid_clear(gd, 0, sy.saturating_sub(ny), (*gd).sx, ny, bg);
+        (*gd).move_lines(py, py + ny, sy - py - ny, bg);
+        (*gd).clear(0, sy.saturating_sub(ny), (*gd).sx, ny, bg);
     }
 }
 
@@ -194,9 +194,9 @@ pub unsafe fn grid_view_delete_lines_region(
         py = grid_view_y(gd, py);
 
         let ny2 = rlower + 1 - py - ny;
-        grid_move_lines(gd, py, py + ny, ny2, bg);
+        (*gd).move_lines(py, py + ny, ny2, bg);
         // TODO does this bug exist in the tmux source code too
-        grid_clear(gd, 0, py + ny2, (*gd).sx, ny.saturating_sub(ny2), bg);
+        (*gd).clear(0, py + ny2, (*gd).sx, ny.saturating_sub(ny2), bg);
     }
 }
 
@@ -209,9 +209,9 @@ pub unsafe fn grid_view_insert_cells(gd: *mut grid, mut px: u32, mut py: u32, nx
         let sx = grid_view_x(gd, (*gd).sx);
 
         if px >= sx - 1 {
-            grid_clear(gd, px, py, 1, 1, bg);
+            (*gd).clear(px, py, 1, 1, bg);
         } else {
-            grid_move_cells(gd, px + nx, px, py, sx - px - nx, bg);
+            (*gd).move_cells(px + nx, px, py, sx - px - nx, bg);
         }
     }
 }
@@ -224,8 +224,8 @@ pub unsafe fn grid_view_delete_cells(gd: *mut grid, mut px: u32, mut py: u32, nx
 
         let sx = grid_view_x(gd, (*gd).sx);
 
-        grid_move_cells(gd, px, px + nx, py, sx - px - nx, bg);
-        grid_clear(gd, sx - nx, py, nx, 1, bg);
+        (*gd).move_cells(px, px + nx, py, sx - px - nx, bg);
+        (*gd).clear(sx - nx, py, nx, 1, bg);
     }
 }
 
