@@ -425,7 +425,7 @@ impl grid {
     }
 
     /// Adjust number of lines.
-    pub unsafe fn adjust_lines(&mut self, lines: c_uint) {
+    pub fn adjust_lines(&mut self, lines: c_uint) {
         self.linedata.resize_with(lines as usize, grid_line::new);
     }
 
@@ -536,7 +536,7 @@ impl grid {
     }
 
     /// Collect lines from the history if at the limit. Free the top (oldest) 10% and shift up.
-    pub unsafe fn collect_history(&mut self) {
+    pub fn collect_history(&mut self) {
         if self.hsize == 0 || self.hsize < self.hlimit {
             return;
         }
@@ -558,7 +558,7 @@ impl grid {
     }
 
     /// Remove lines from the bottom of the history.
-    pub unsafe fn remove_history(&mut self, ny: c_uint) {
+    pub fn remove_history(&mut self, ny: c_uint) {
         if ny > self.hsize {
             return;
         }
@@ -586,7 +586,7 @@ impl grid {
     }
 
     /// Clear the history.
-    pub unsafe fn clear_history(&mut self) {
+    pub fn clear_history(&mut self) {
         grid_trim_history(self, self.hsize);
 
         self.hscrolled = 0;
@@ -624,69 +624,65 @@ impl grid {
     }
 
     /// Clear a rectangular area.
-    pub unsafe fn clear(&mut self, px: c_uint, py: c_uint, nx: c_uint, ny: c_uint, bg: c_uint) {
-        unsafe {
-            if nx == 0 || ny == 0 {
-                return;
-            }
+    pub fn clear(&mut self, px: c_uint, py: c_uint, nx: c_uint, ny: c_uint, bg: c_uint) {
+        if nx == 0 || ny == 0 {
+            return;
+        }
 
-            if px == 0 && nx == self.sx {
-                self.clear_lines(py, ny, bg);
-                return;
-            }
+        if px == 0 && nx == self.sx {
+            self.clear_lines(py, ny, bg);
+            return;
+        }
 
-            if grid_check_y(self, c!("grid_clear"), py) != 0 {
-                return;
-            }
-            if grid_check_y(self, c!("grid_clear"), py + ny - 1) != 0 {
-                return;
-            }
+        if grid_check_y(self, c!("grid_clear"), py) != 0 {
+            return;
+        }
+        if grid_check_y(self, c!("grid_clear"), py + ny - 1) != 0 {
+            return;
+        }
 
-            for yy in py..py + ny {
-                let mut sx = self.sx;
-                let celldata_len = self.linedata[yy as usize].celldata.len() as u32;
-                if sx > celldata_len {
-                    sx = celldata_len;
+        for yy in py..py + ny {
+            let mut sx = self.sx;
+            let celldata_len = self.linedata[yy as usize].celldata.len() as u32;
+            if sx > celldata_len {
+                sx = celldata_len;
+            }
+            let mut ox = nx;
+            if COLOUR_DEFAULT(bg as i32) {
+                if px > sx {
+                    continue;
                 }
-                let mut ox = nx;
-                if COLOUR_DEFAULT(bg as i32) {
-                    if px > sx {
-                        continue;
-                    }
-                    if px + nx > sx {
-                        ox = sx - px;
-                    }
+                if px + nx > sx {
+                    ox = sx - px;
                 }
+            }
 
-                grid_expand_line(self, yy, px + ox, 8); // default bg first
-                for xx in px..px + ox {
-                    grid_clear_cell(self, xx, yy, bg);
-                }
+            grid_expand_line(self, yy, px + ox, 8); // default bg first
+            for xx in px..px + ox {
+                grid_clear_cell(self, xx, yy, bg);
             }
         }
     }
 
     /// Clear a range of lines. Frees and truncates them.
-    pub unsafe fn clear_lines(&mut self, py: c_uint, ny: c_uint, bg: c_uint) {
-        unsafe {
-            if ny == 0 {
-                return;
-            }
+    pub fn clear_lines(&mut self, py: c_uint, ny: c_uint, bg: c_uint) {
+        if ny == 0 {
+            return;
+        }
 
-            if grid_check_y(self, c!("grid_clear_lines"), py) != 0 {
-                return;
-            }
-            if grid_check_y(self, c!("grid_clear_lines"), py + ny - 1) != 0 {
-                return;
-            }
+        if grid_check_y(self, c!("grid_clear_lines"), py) != 0 {
+            return;
+        }
+        if grid_check_y(self, c!("grid_clear_lines"), py + ny - 1) != 0 {
+            return;
+        }
 
-            for yy in py..py + ny {
-                grid_free_line(self, yy);
-                self.empty_line(yy, bg);
-            }
-            if py != 0 {
-                self.linedata[py as usize - 1].flags &= !grid_line_flag::WRAPPED;
-            }
+        for yy in py..py + ny {
+            grid_free_line(self, yy);
+            self.empty_line(yy, bg);
+        }
+        if py != 0 {
+            self.linedata[py as usize - 1].flags &= !grid_line_flag::WRAPPED;
         }
     }
 
@@ -742,7 +738,7 @@ impl grid {
     }
 
     /// Move a group of cells within a line.
-    pub unsafe fn move_cells(&mut self, dx: c_uint, px: c_uint, py: c_uint, nx: c_uint, bg: c_uint) {
+    pub fn move_cells(&mut self, dx: c_uint, px: c_uint, py: c_uint, nx: c_uint, bg: c_uint) {
         if nx == 0 || px == dx {
             return;
         }
@@ -770,7 +766,7 @@ impl grid {
     }
 
     /// Empty a line and optionally fill with a background color.
-    pub unsafe fn empty_line(&mut self, py: c_uint, bg: c_uint) {
+    pub fn empty_line(&mut self, py: c_uint, bg: c_uint) {
         self.linedata[py as usize] = grid_line::new();
         if !COLOUR_DEFAULT(bg as i32) {
             let sx = self.sx;
@@ -1125,10 +1121,8 @@ impl grid {
     }
 
     /// Clear a rectangular region in view coordinates.
-    pub unsafe fn view_clear(&mut self, px: u32, py: u32, nx: u32, ny: u32, bg: u32) {
-        unsafe {
-            self.clear(px, self.hsize + py, nx, ny, bg);
-        }
+    pub fn view_clear(&mut self, px: u32, py: u32, nx: u32, ny: u32, bg: u32) {
+        self.clear(px, self.hsize + py, nx, ny, bg);
     }
 
     /// Scroll a region upward: contents of `[rupper, rlower]` move up by one line.
@@ -1207,28 +1201,24 @@ impl grid {
     }
 
     /// Insert `nx` blank cells at view position (px, py).
-    pub unsafe fn view_insert_cells(&mut self, px: u32, py: u32, nx: u32, bg: u32) {
-        unsafe {
-            let py_abs = self.hsize + py;
-            let sx = self.sx;
+    pub fn view_insert_cells(&mut self, px: u32, py: u32, nx: u32, bg: u32) {
+        let py_abs = self.hsize + py;
+        let sx = self.sx;
 
-            if px >= sx - 1 {
-                self.clear(px, py_abs, 1, 1, bg);
-            } else {
-                self.move_cells(px + nx, px, py_abs, sx - px - nx, bg);
-            }
+        if px >= sx - 1 {
+            self.clear(px, py_abs, 1, 1, bg);
+        } else {
+            self.move_cells(px + nx, px, py_abs, sx - px - nx, bg);
         }
     }
 
     /// Delete `nx` cells at view position (px, py).
-    pub unsafe fn view_delete_cells(&mut self, px: u32, py: u32, nx: u32, bg: u32) {
-        unsafe {
-            let py_abs = self.hsize + py;
-            let sx = self.sx;
+    pub fn view_delete_cells(&mut self, px: u32, py: u32, nx: u32, bg: u32) {
+        let py_abs = self.hsize + py;
+        let sx = self.sx;
 
-            self.move_cells(px, px + nx, py_abs, sx - px - nx, bg);
-            self.clear(sx - nx, py_abs, nx, 1, bg);
-        }
+        self.move_cells(px, px + nx, py_abs, sx - px - nx, bg);
+        self.clear(sx - nx, py_abs, nx, 1, bg);
     }
 
     /// Convert `nx` cells in the visible area starting at (px, py) into a string.
@@ -2293,12 +2283,10 @@ mod tests {
     #[test]
     fn grid_clear_zero_size_does_not_crash() {
         let mut gd = grid_create(80, 24, 0);
-        unsafe {
-            // nx=0 or ny=0 should be no-op.
-            gd.clear(0, 0, 0, 1, 8);
-            gd.clear(0, 0, 1, 0, 8);
-            drop(gd);
-        }
+        // nx=0 or ny=0 should be no-op.
+        gd.clear(0, 0, 0, 1, 8);
+        gd.clear(0, 0, 1, 0, 8);
+        drop(gd);
     }
 
     #[test]
