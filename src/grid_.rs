@@ -986,66 +986,71 @@ impl grid {
         }
     }
 
-    /// Convert to position based on wrapped lines.
-    pub unsafe fn wrap_position(&self, px: u32, py: u32, wx: *mut u32, wy: *mut u32) {
-        unsafe {
-            let mut ax = 0;
-            let mut ay = 0;
+    /// Convert grid position `(px, py)` to wrapped-line position `(wx, wy)`.
+    ///
+    /// Collapses contiguous runs of lines that have `grid_line_flag::WRAPPED`
+    /// on the previous line into a single logical line: `wy` counts the
+    /// number of unwrapped ("visual") lines above `py`, and `wx` is the
+    /// column within that logical line. If `px` is past the end of the
+    /// line's used cells, `wx` is returned as `u32::MAX`.
+    pub fn wrap_position(&self, px: u32, py: u32) -> (u32, u32) {
+        let mut ax = 0;
+        let mut ay = 0;
 
-            for yy in 0..py as usize {
-                if self.linedata[yy].flags.intersects(grid_line_flag::WRAPPED) {
-                    ax += self.linedata[yy].cellused;
-                } else {
-                    ax = 0;
-                    ay += 1;
-                }
-            }
-
-            if px >= self.linedata[py as usize].cellused {
-                ax = u32::MAX;
+        for yy in 0..py as usize {
+            if self.linedata[yy].flags.intersects(grid_line_flag::WRAPPED) {
+                ax += self.linedata[yy].cellused;
             } else {
-                ax += px;
+                ax = 0;
+                ay += 1;
             }
-            *wx = ax;
-            *wy = ay;
         }
+
+        let wx = if px >= self.linedata[py as usize].cellused {
+            u32::MAX
+        } else {
+            ax + px
+        };
+        (wx, ay)
     }
 
-    /// Convert position based on wrapped lines back.
-    pub unsafe fn unwrap_position(&self, px: *mut u32, py: *mut u32, mut wx: u32, wy: u32) {
-        unsafe {
-            let mut ay = 0;
-            let mut yy: usize = 0;
+    /// Convert wrapped-line position `(wx, wy)` back to grid position
+    /// `(px, py)`.
+    ///
+    /// Inverse of [`wrap_position`](Self::wrap_position). `wx == u32::MAX`
+    /// means "end of the logical line" and is resolved to the end of the
+    /// last wrapped segment.
+    pub fn unwrap_position(&self, mut wx: u32, wy: u32) -> (u32, u32) {
+        let mut ay = 0;
+        let mut yy: usize = 0;
 
-            while yy < (self.hsize + self.sy - 1) as usize {
-                if ay == wy {
-                    break;
-                }
-                if !self.linedata[yy].flags.intersects(grid_line_flag::WRAPPED) {
-                    ay += 1;
-                }
+        while yy < (self.hsize + self.sy - 1) as usize {
+            if ay == wy {
+                break;
+            }
+            if !self.linedata[yy].flags.intersects(grid_line_flag::WRAPPED) {
+                ay += 1;
+            }
+            yy += 1;
+        }
+
+        // yy is now 0 on unwrapped line containing wx
+        // Walk forwards until we find end or line now containing wx
+        if wx == u32::MAX {
+            while self.linedata[yy].flags.intersects(grid_line_flag::WRAPPED) {
                 yy += 1;
             }
-
-            // yy is now 0 on unwrapped line containing wx
-            // Walk forwards until we find end or line now containing wx
-            if wx == u32::MAX {
-                while self.linedata[yy].flags.intersects(grid_line_flag::WRAPPED) {
-                    yy += 1;
+            wx = self.linedata[yy].cellused;
+        } else {
+            while self.linedata[yy].flags.intersects(grid_line_flag::WRAPPED) {
+                if wx < self.linedata[yy].cellused {
+                    break;
                 }
-                wx = self.linedata[yy].cellused;
-            } else {
-                while self.linedata[yy].flags.intersects(grid_line_flag::WRAPPED) {
-                    if wx < self.linedata[yy].cellused {
-                        break;
-                    }
-                    wx -= self.linedata[yy].cellused;
-                    yy += 1;
-                }
+                wx -= self.linedata[yy].cellused;
+                yy += 1;
             }
-            *px = wx;
-            *py = yy as u32;
         }
+        (wx, yy as u32)
     }
 
     // ---------------------------------------------------------------
@@ -2171,13 +2176,8 @@ mod tests {
                 }
             }
 
-            let mut wx: u32 = 0;
-            let mut wy: u32 = 0;
-            gd.wrap_position(5, 3, &mut wx, &mut wy);
-
-            let mut px: u32 = 0;
-            let mut py: u32 = 0;
-            gd.unwrap_position(&mut px, &mut py, wx, wy);
+            let (wx, wy) = gd.wrap_position(5, 3);
+            let (px, py) = gd.unwrap_position(wx, wy);
 
             assert_eq!(px, 5);
             assert_eq!(py, 3);
@@ -2188,17 +2188,12 @@ mod tests {
 
     #[test]
     fn grid_wrap_position_at_end_of_line() {
-        let mut gd = grid_create(80, 10, 0);
-        unsafe {
-            // Position past cellused gives wx = u32::MAX.
-            let mut wx: u32 = 0;
-            let mut wy: u32 = 0;
-            // cellused for line 0 is 0 on a fresh grid, so px=0 >= cellused=0.
-            gd.wrap_position(0, 0, &mut wx, &mut wy);
-            assert_eq!(wx, u32::MAX);
-            assert_eq!(wy, 0);
-            drop(gd);
-        }
+        let gd = grid_create(80, 10, 0);
+        // cellused for line 0 is 0 on a fresh grid, so px=0 >= cellused=0.
+        let (wx, wy) = gd.wrap_position(0, 0);
+        assert_eq!(wx, u32::MAX);
+        assert_eq!(wy, 0);
+        drop(gd);
     }
 
     // ---------------------------------------------------------------

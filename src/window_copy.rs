@@ -303,11 +303,11 @@ pub unsafe fn window_copy_clone_screen(
             reflow = false;
         }
         if reflow {
-            (*(*dst).grid).wrap_position(*cx, *cy, &raw mut wx, &raw mut wy);
+            (wx, wy) = (*(*dst).grid).wrap_position(*cx, *cy);
         }
         screen_resize_cursor(dst, screen_size_x(hint), screen_size_y(hint), 1, 0, 0);
         if reflow {
-            (*(*dst).grid).unwrap_position(cx, cy, wx, wy);
+            (*cx, *cy) = (*(*dst).grid).unwrap_position(wx, wy);
         }
 
         dst
@@ -879,11 +879,11 @@ pub unsafe fn window_copy_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u
         let mut cy = (*gd).hsize + (*data).cy - (*data).oy;
         let reflow = (*gd).sx != sx;
         if reflow {
-            (*gd).wrap_position(cx, cy, &raw mut wx, &raw mut wy);
+            (wx, wy) = (*gd).wrap_position(cx, cy);
         }
         screen_resize_cursor((*data).backing, sx, sy, 1, 0, 0);
         if reflow {
-            (*gd).unwrap_position(&raw mut cx, &raw mut cy, wx, wy);
+            (cx, cy) = (*gd).unwrap_position(wx, wy);
         }
 
         (*data).cx = cx;
