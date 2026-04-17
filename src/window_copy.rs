@@ -5707,14 +5707,13 @@ pub unsafe fn window_copy_cursor_start_of_line(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_start_of_line(1);
         gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
@@ -5725,14 +5724,13 @@ pub unsafe fn window_copy_cursor_back_to_indentation(wme: *mut window_mode_entry
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_back_to_indentation();
         gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
@@ -5743,14 +5741,13 @@ pub unsafe fn window_copy_cursor_end_of_line(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         if (*data).screen.sel.is_some() && (*data).rectflag {
             gr.cursor_end_of_line(1, 1);
         } else {
@@ -5827,14 +5824,13 @@ pub unsafe fn window_copy_cursor_left(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_left(1);
         gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
@@ -5845,14 +5841,13 @@ pub unsafe fn window_copy_cursor_right(wme: *mut window_mode_entry, all: i32) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_right(1, all);
         gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_down(
@@ -6018,14 +6013,13 @@ pub unsafe fn window_copy_cursor_jump(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx + 1;
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         if gr.cursor_jump((*data).jumpchar) != 0 {
             gr.get_cursor(&raw mut px, &raw mut py);
             window_copy_acquire_cursor_down(
@@ -6046,14 +6040,13 @@ pub unsafe fn window_copy_cursor_jump_back(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_left(0);
         if gr.cursor_jump_back((*data).jumpchar) != 0 {
             gr.get_cursor(&raw mut px, &raw mut py);
@@ -6066,14 +6059,13 @@ pub unsafe fn window_copy_cursor_jump_to(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx + 2;
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         if gr.cursor_jump((*data).jumpchar) != 0 {
             gr.cursor_left(1);
             gr.get_cursor(&raw mut px, &raw mut py);
@@ -6095,14 +6087,13 @@ pub unsafe fn window_copy_cursor_jump_to_back(wme: *mut window_mode_entry) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_left(0);
         gr.cursor_left(0);
         if gr.cursor_jump_back((*data).jumpchar) != 0 {
@@ -6117,14 +6108,13 @@ pub unsafe fn window_copy_cursor_next_word(wme: *mut window_mode_entry, separato
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_next_word(separators);
         gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_down(
@@ -6152,13 +6142,12 @@ pub unsafe fn window_copy_cursor_next_word_end_pos(
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let oo: *mut options = (*window_pane_window(wp)).options;
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         if modekey::try_from(options_get_number_(oo, "mode-keys") as i32) == Ok(modekey::MODEKEY_VI)
         {
             if !gr.in_set(WHITESPACE) {
@@ -6186,14 +6175,13 @@ pub unsafe fn window_copy_cursor_next_word_end(
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let oo: *mut options = (*window_pane_window(wp)).options;
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         if modekey::try_from(options_get_number_(oo, "mode-keys") as i32) == Ok(modekey::MODEKEY_VI)
         {
             if !gr.in_set(WHITESPACE) {
@@ -6228,13 +6216,12 @@ pub unsafe fn window_copy_cursor_previous_word_pos(
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let mut px = (*data).cx;
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_previous_word(
             separators,
             // already=
@@ -6258,7 +6245,6 @@ pub unsafe fn window_copy_cursor_previous_word(
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let w: *mut window = window_pane_window(pane_ptr_from_id((*wme).wp));
         let back_s: *mut screen = (*data).backing;
-        let mut gr: grid_reader = zeroed();
 
         let stop_at_eol = matches!(modekey::try_from(options_get_number_((*w).options, "mode-keys") as i32), Ok(modekey::MODEKEY_EMACS));
 
@@ -6267,7 +6253,7 @@ pub unsafe fn window_copy_cursor_previous_word(
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        gr.start(&raw mut *(*back_s).grid, px, py);
+        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_previous_word(separators, already, stop_at_eol);
         gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);

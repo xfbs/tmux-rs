@@ -928,9 +928,11 @@ struct grid {
 }
 
 /// Virtual cursor in a grid.
-
-struct grid_reader {
-    gd: *mut grid,
+///
+/// Borrows the grid for the lifetime `'a`, so the reader cannot outlive
+/// the grid it navigates. Construct with `grid_reader::new`.
+struct grid_reader<'a> {
+    gd: &'a mut grid,
     cx: u32,
     cy: u32,
 }

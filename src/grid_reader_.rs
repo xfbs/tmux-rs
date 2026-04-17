@@ -39,12 +39,13 @@
 
 use crate::*;
 
-impl grid_reader {
-    /// Initialize a grid reader at the given position.
-    pub unsafe fn start(&mut self, gd: *mut grid, cx: u32, cy: u32) {
-        self.gd = gd;
-        self.cx = cx;
-        self.cy = cy;
+impl<'a> grid_reader<'a> {
+    /// Create a grid reader at the given position over the given grid.
+    ///
+    /// The reader borrows `gd` mutably for the lifetime `'a`, so it cannot
+    /// outlive the grid it navigates.
+    pub fn new(gd: &'a mut grid, cx: u32, cy: u32) -> Self {
+        Self { gd, cx, cy }
     }
 
     /// Read the current cursor position.
@@ -57,7 +58,7 @@ impl grid_reader {
 
     /// Return the length of the current line (number of non-default cells from the left).
     pub unsafe fn line_length(&mut self) -> u32 {
-        unsafe { (*self.gd).line_length(self.cy) }
+        unsafe { self.gd.line_length(self.cy) }
     }
 
     /// Move cursor right by one character, skipping PADDING cells.
@@ -69,18 +70,18 @@ impl grid_reader {
             let mut gc = MaybeUninit::<grid_cell>::uninit();
 
             let px = if all != 0 {
-                (*self.gd).sx
+                self.gd.sx
             } else {
                 self.line_length()
             };
 
-            if wrap != 0 && self.cx >= px && self.cy < (*self.gd).hsize + (*self.gd).sy - 1 {
+            if wrap != 0 && self.cx >= px && self.cy < self.gd.hsize + self.gd.sy - 1 {
                 self.cursor_start_of_line(0);
                 self.cursor_down();
             } else if self.cx < px {
                 self.cx += 1;
                 while self.cx < px {
-                    (*self.gd).get_cell(self.cx, self.cy, gc.as_mut_ptr());
+                    self.gd.get_cell(self.cx, self.cy, gc.as_mut_ptr());
                     if !(*gc.as_ptr()).flags.intersects(grid_flag::PADDING) {
                         break;
                     }
@@ -98,7 +99,7 @@ impl grid_reader {
             let mut gc = MaybeUninit::<grid_cell>::uninit();
 
             while self.cx > 0 {
-                (*self.gd).get_cell(self.cx, self.cy, gc.as_mut_ptr());
+                self.gd.get_cell(self.cx, self.cy, gc.as_mut_ptr());
                 if !(*gc.as_ptr()).flags.intersects(grid_flag::PADDING) {
                     break;
                 }
@@ -107,7 +108,7 @@ impl grid_reader {
             if self.cx == 0
                 && self.cy > 0
                 && (wrap != 0
-                    || (*(*self.gd).get_line(self.cy - 1))
+                    || (*self.gd.get_line(self.cy - 1))
                         .flags
                         .intersects(grid_line_flag::WRAPPED))
             {
@@ -125,11 +126,11 @@ impl grid_reader {
             let mut gc = MaybeUninit::<grid_cell>::uninit();
             let gc = gc.as_mut_ptr();
 
-            if self.cy < (*self.gd).hsize + (*self.gd).sy - 1 {
+            if self.cy < self.gd.hsize + self.gd.sy - 1 {
                 self.cy += 1;
             }
             while self.cx > 0 {
-                (*self.gd).get_cell(self.cx, self.cy, gc);
+                self.gd.get_cell(self.cx, self.cy, gc);
                 if !(*gc).flags.intersects(grid_flag::PADDING) {
                     break;
                 }
@@ -148,7 +149,7 @@ impl grid_reader {
                 self.cy -= 1;
             }
             while self.cx > 0 {
-                (*self.gd).get_cell(self.cx, self.cy, gc);
+                self.gd.get_cell(self.cx, self.cy, gc);
                 if !(*gc).flags.intersects(grid_flag::PADDING) {
                     break;
                 }
@@ -164,7 +165,7 @@ impl grid_reader {
         unsafe {
             if wrap != 0 {
                 while self.cy > 0
-                    && (*(*self.gd).get_line(self.cy - 1))
+                    && (*self.gd.get_line(self.cy - 1))
                         .flags
                         .intersects(grid_line_flag::WRAPPED)
                 {
@@ -181,9 +182,9 @@ impl grid_reader {
     pub unsafe fn cursor_end_of_line(&mut self, wrap: i32, all: i32) {
         unsafe {
             if wrap != 0 {
-                let yy = (*self.gd).hsize + (*self.gd).sy - 1;
+                let yy = self.gd.hsize + self.gd.sy - 1;
                 while self.cy < yy
-                    && (*(*self.gd).get_line(self.cy))
+                    && (*self.gd.get_line(self.cy))
                         .flags
                         .intersects(grid_line_flag::WRAPPED)
                 {
@@ -191,7 +192,7 @@ impl grid_reader {
                 }
             }
             if all != 0 {
-                self.cx = (*self.gd).sx;
+                self.cx = self.gd.sx;
             } else {
                 self.cx = self.line_length();
             }
@@ -211,11 +212,11 @@ impl grid_reader {
                 self.cursor_start_of_line(0);
                 self.cursor_down();
 
-                if (*(*self.gd).get_line(self.cy))
+                if (*self.gd.get_line(self.cy))
                     .flags
                     .intersects(grid_line_flag::WRAPPED)
                 {
-                    *xx = (*self.gd).sx - 1;
+                    *xx = self.gd.sx - 1;
                 } else {
                     *xx = self.line_length();
                 }
@@ -232,7 +233,7 @@ impl grid_reader {
             let mut gc = MaybeUninit::<grid_cell>::uninit();
             let gc = gc.as_mut_ptr();
 
-            (*self.gd).get_cell(self.cx, self.cy, gc);
+            self.gd.get_cell(self.cx, self.cy, gc);
             if (*gc).flags.intersects(grid_flag::PADDING) {
                 return false;
             }
@@ -247,15 +248,15 @@ impl grid_reader {
     pub unsafe fn cursor_next_word(&mut self, separators: *const u8) {
         unsafe {
             // Do not break up wrapped words.
-            let mut xx = if (*(*self.gd).get_line(self.cy))
+            let mut xx = if (*self.gd.get_line(self.cy))
                 .flags
                 .intersects(grid_line_flag::WRAPPED)
             {
-                (*self.gd).sx - 1
+                self.gd.sx - 1
             } else {
                 self.line_length()
             };
-            let mut yy = (*self.gd).hsize + (*self.gd).sy - 1;
+            let mut yy = self.gd.hsize + self.gd.sy - 1;
 
             if self.handle_wrap(&raw mut xx, &raw mut yy) == 0 {
                 return;
@@ -299,15 +300,15 @@ impl grid_reader {
     pub unsafe fn cursor_next_word_end(&mut self, separators: *const u8) {
         unsafe {
             // Do not break up wrapped words.
-            let mut xx = if (*(*self.gd).get_line(self.cy))
+            let mut xx = if (*self.gd.get_line(self.cy))
                 .flags
                 .intersects(grid_line_flag::WRAPPED)
             {
-                (*self.gd).sx - 1
+                self.gd.sx - 1
             } else {
                 self.line_length()
             };
-            let mut yy = (*self.gd).hsize + (*self.gd).sy - 1;
+            let mut yy = self.gd.hsize + self.gd.sy - 1;
 
             while self.handle_wrap(&raw mut xx, &raw mut yy) != 0 {
                 if self.in_set(WHITESPACE) {
@@ -395,7 +396,7 @@ impl grid_reader {
                 oldy = self.cy;
                 if self.cx == 0 {
                     if self.cy == 0
-                        || (!(*(*self.gd).get_line(self.cy - 1))
+                        || (!(*self.gd.get_line(self.cy - 1))
                             .flags
                             .intersects(grid_line_flag::WRAPPED))
                     {
@@ -426,13 +427,13 @@ impl grid_reader {
             let gc = gc.as_mut_ptr();
 
             let mut px = self.cx;
-            let yy = (*self.gd).hsize + (*self.gd).sy - 1;
+            let yy = self.gd.hsize + self.gd.sy - 1;
 
             let mut py = self.cy;
             while py <= yy {
-                let xx = (*self.gd).line_length(py);
+                let xx = self.gd.line_length(py);
                 while px < xx {
-                    (*self.gd).get_cell(px, py, gc);
+                    self.gd.get_cell(px, py, gc);
                     if !(*gc).flags.intersects(grid_flag::PADDING)
                         && (*gc).data.size == (*jc).size
                         && memcmp(
@@ -449,7 +450,7 @@ impl grid_reader {
                 }
 
                 if py == yy
-                    || !(*(*self.gd).get_line(py))
+                    || !(*self.gd.get_line(py))
                         .flags
                         .intersects(grid_line_flag::WRAPPED)
                 {
@@ -477,7 +478,7 @@ impl grid_reader {
             while py > 0 {
                 px = xx;
                 while px > 0 {
-                    (*self.gd).get_cell(px - 1, py - 1, gc);
+                    self.gd.get_cell(px - 1, py - 1, gc);
                     if !(*gc).flags.intersects(grid_flag::PADDING)
                         && (*gc).data.size == (*jc).size
                         && memcmp(
@@ -494,13 +495,13 @@ impl grid_reader {
                 }
 
                 if py == 1
-                    || !(*(*self.gd).get_line(py - 2))
+                    || !(*self.gd.get_line(py - 2))
                         .flags
                         .intersects(grid_line_flag::WRAPPED)
                 {
                     return 0;
                 }
-                xx = (*self.gd).line_length(py - 2);
+                xx = self.gd.line_length(py - 2);
                 py -= 1;
             }
         }
@@ -513,22 +514,22 @@ impl grid_reader {
             let mut gc = MaybeUninit::<grid_cell>::uninit();
             let gc = gc.as_mut_ptr();
 
-            let yy = (*self.gd).hsize + (*self.gd).sy - 1;
+            let yy = self.gd.hsize + self.gd.sy - 1;
             let oldx = self.cx;
             let oldy = self.cy;
             self.cursor_start_of_line(1);
 
             for py in self.cy..=yy {
-                let xx = (*self.gd).line_length(py);
+                let xx = self.gd.line_length(py);
                 for px in 0..xx {
-                    (*self.gd).get_cell(px, py, gc);
+                    self.gd.get_cell(px, py, gc);
                     if (*gc).data.size != 1 || (*gc).data.data[0] != b' ' {
                         self.cx = px;
                         self.cy = py;
                         return;
                     }
                 }
-                if !(*(*self.gd).get_line(py))
+                if !(*self.gd.get_line(py))
                     .flags
                     .intersects(grid_line_flag::WRAPPED)
                 {
@@ -544,7 +545,6 @@ impl grid_reader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::mem::zeroed;
 
     /// Helper: create a grid and fill lines with ASCII text.
     unsafe fn make_grid_with_text(lines: &[&str], width: u32) -> Box<grid> {
@@ -576,8 +576,7 @@ mod tests {
     fn start_sets_cursor_position() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 3, 0);
+            let mut gr = grid_reader::new(&mut *gd, 3, 0);
             assert_eq!(gr.cx, 3);
             assert_eq!(gr.cy, 0);
             drop(gd);
@@ -588,8 +587,7 @@ mod tests {
     fn cursor_right_advances() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 0, 0);
+            let mut gr = grid_reader::new(&mut *gd, 0, 0);
             gr.cursor_right(0, 0);
             assert_eq!(gr.cx, 1);
             drop(gd);
@@ -600,8 +598,7 @@ mod tests {
     fn cursor_left_retreats() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 3, 0);
+            let mut gr = grid_reader::new(&mut *gd, 3, 0);
             gr.cursor_left(0);
             assert_eq!(gr.cx, 2);
             drop(gd);
@@ -612,8 +609,7 @@ mod tests {
     fn cursor_left_at_zero_stays() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 0, 0);
+            let mut gr = grid_reader::new(&mut *gd, 0, 0);
             gr.cursor_left(0);
             assert_eq!(gr.cx, 0);
             assert_eq!(gr.cy, 0);
@@ -625,8 +621,7 @@ mod tests {
     fn cursor_down_advances_row() {
         unsafe {
             let mut gd = make_grid_with_text(&["line1", "line2"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 2, 0);
+            let mut gr = grid_reader::new(&mut *gd, 2, 0);
             gr.cursor_down();
             assert_eq!(gr.cy, 1);
             assert_eq!(gr.cx, 2);
@@ -638,8 +633,7 @@ mod tests {
     fn cursor_up_retreats_row() {
         unsafe {
             let mut gd = make_grid_with_text(&["line1", "line2"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 2, 1);
+            let mut gr = grid_reader::new(&mut *gd, 2, 1);
             gr.cursor_up();
             assert_eq!(gr.cy, 0);
             assert_eq!(gr.cx, 2);
@@ -651,8 +645,7 @@ mod tests {
     fn cursor_up_at_top_stays() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 0, 0);
+            let mut gr = grid_reader::new(&mut *gd, 0, 0);
             gr.cursor_up();
             assert_eq!(gr.cy, 0);
             drop(gd);
@@ -667,8 +660,7 @@ mod tests {
     fn start_of_line_moves_to_column_zero() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello world"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 5, 0);
+            let mut gr = grid_reader::new(&mut *gd, 5, 0);
             gr.cursor_start_of_line(0);
             assert_eq!(gr.cx, 0);
             drop(gd);
@@ -679,8 +671,7 @@ mod tests {
     fn end_of_line_moves_to_line_length() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 0, 0);
+            let mut gr = grid_reader::new(&mut *gd, 0, 0);
             gr.cursor_end_of_line(0, 0);
             assert_eq!(gr.cx, 5);
             drop(gd);
@@ -695,8 +686,7 @@ mod tests {
     fn jump_forward_finds_character() {
         unsafe {
             let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 0, 0);
+            let mut gr = grid_reader::new(&mut *gd, 0, 0);
             let jc = make_utf8_char(b'e');
             assert_eq!(gr.cursor_jump(&jc), 1);
             assert_eq!(gr.cx, 4);
@@ -708,8 +698,7 @@ mod tests {
     fn jump_forward_not_found() {
         unsafe {
             let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 0, 0);
+            let mut gr = grid_reader::new(&mut *gd, 0, 0);
             let jc = make_utf8_char(b'z');
             assert_eq!(gr.cursor_jump(&jc), 0);
             assert_eq!(gr.cx, 0);
@@ -721,8 +710,7 @@ mod tests {
     fn jump_forward_from_middle() {
         unsafe {
             let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 5, 0);
+            let mut gr = grid_reader::new(&mut *gd, 5, 0);
             let jc = make_utf8_char(b'i');
             assert_eq!(gr.cursor_jump(&jc), 1);
             assert_eq!(gr.cx, 8);
@@ -734,8 +722,7 @@ mod tests {
     fn jump_backward_finds_character() {
         unsafe {
             let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 9, 0);
+            let mut gr = grid_reader::new(&mut *gd, 9, 0);
             let mut jc = make_utf8_char(b'c');
             assert_eq!(gr.cursor_jump_back(&mut jc), 1);
             assert_eq!(gr.cx, 2);
@@ -747,8 +734,7 @@ mod tests {
     fn jump_backward_not_found() {
         unsafe {
             let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 9, 0);
+            let mut gr = grid_reader::new(&mut *gd, 9, 0);
             let mut jc = make_utf8_char(b'z');
             assert_eq!(gr.cursor_jump_back(&mut jc), 0);
             assert_eq!(gr.cx, 9);
@@ -761,18 +747,17 @@ mod tests {
         unsafe {
             // "abcaefaghi" has 'a' at 0, 3, 6
             let mut gd = make_grid_with_text(&["abcaefaghi"], 80);
-            let mut gr: grid_reader = zeroed();
             let mut jc = make_utf8_char(b'a');
 
-            gr.start(&raw mut *gd, 9, 0);
+            let mut gr = grid_reader::new(&mut *gd, 9, 0);
             assert_eq!(gr.cursor_jump_back(&mut jc), 1);
             assert_eq!(gr.cx, 6);
 
-            gr.start(&raw mut *gd, 5, 0);
+            let mut gr = grid_reader::new(&mut *gd, 5, 0);
             assert_eq!(gr.cursor_jump_back(&mut jc), 1);
             assert_eq!(gr.cx, 3);
 
-            gr.start(&raw mut *gd, 2, 0);
+            let mut gr = grid_reader::new(&mut *gd, 2, 0);
             assert_eq!(gr.cursor_jump_back(&mut jc), 1);
             assert_eq!(gr.cx, 0);
 
@@ -788,8 +773,7 @@ mod tests {
     fn next_word_moves_to_next_word_start() {
         unsafe {
             let mut gd = make_grid_with_text(&["one two three"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 0, 0);
+            let mut gr = grid_reader::new(&mut *gd, 0, 0);
 
             gr.cursor_next_word(c!(""));
             assert_eq!(gr.cx, 4, "should land on 'two'");
@@ -805,8 +789,7 @@ mod tests {
     fn next_word_from_whitespace() {
         unsafe {
             let mut gd = make_grid_with_text(&["  hello world"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 0, 0);
+            let mut gr = grid_reader::new(&mut *gd, 0, 0);
 
             gr.cursor_next_word(c!(""));
             assert_eq!(gr.cx, 2, "should skip leading spaces to 'hello'");
@@ -819,8 +802,7 @@ mod tests {
     fn next_word_with_separators() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello.world end"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 0, 0);
+            let mut gr = grid_reader::new(&mut *gd, 0, 0);
 
             gr.cursor_next_word(c!("."));
             assert_eq!(gr.cx, 5, "should stop at separator '.'");
@@ -836,8 +818,7 @@ mod tests {
     fn next_word_end_moves_to_end_of_word() {
         unsafe {
             let mut gd = make_grid_with_text(&["one two three"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 0, 0);
+            let mut gr = grid_reader::new(&mut *gd, 0, 0);
 
             gr.cursor_next_word_end(c!(""));
             assert_eq!(gr.cx, 3, "should land on 'e' of 'one'");
@@ -850,10 +831,9 @@ mod tests {
     fn next_word_end_from_end_of_word() {
         unsafe {
             let mut gd = make_grid_with_text(&["one   two"], 80);
-            let mut gr: grid_reader = zeroed();
             // Start at 'e' of "one" (col 2). Cursor is inside the word,
             // so next-word-end advances past the remaining word chars.
-            gr.start(&raw mut *gd, 2, 0);
+            let mut gr = grid_reader::new(&mut *gd, 2, 0);
 
             gr.cursor_next_word_end(c!(""));
             assert_eq!(gr.cx, 3, "should advance past end of current word");
@@ -866,15 +846,18 @@ mod tests {
     fn previous_word_moves_back() {
         unsafe {
             let mut gd = make_grid_with_text(&["one two three"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 8, 0);
 
             // Verify the grid is set up correctly
-            assert!(gr.in_set(WHITESPACE) == false, "col 8 should be 't'");
-            gr.start(&raw mut *gd, 3, 0);
-            assert!(gr.in_set(WHITESPACE) == true, "col 3 should be space");
-            gr.start(&raw mut *gd, 8, 0);
+            {
+                let mut gr = grid_reader::new(&mut *gd, 8, 0);
+                assert!(gr.in_set(WHITESPACE) == false, "col 8 should be 't'");
+            }
+            {
+                let mut gr = grid_reader::new(&mut *gd, 3, 0);
+                assert!(gr.in_set(WHITESPACE) == true, "col 3 should be space");
+            }
 
+            let mut gr = grid_reader::new(&mut *gd, 8, 0);
             // Use already=1, matching how tmux's previous-word command calls this.
             gr.cursor_previous_word(c!(""), 1, false);
             assert_eq!((gr.cx, gr.cy), (4, 0), "should land on 'two'");
@@ -890,8 +873,7 @@ mod tests {
     fn previous_word_from_middle_of_word() {
         unsafe {
             let mut gd = make_grid_with_text(&["one two three"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 5, 0);
+            let mut gr = grid_reader::new(&mut *gd, 5, 0);
 
             gr.cursor_previous_word(c!(""), 1, false);
             assert_eq!(gr.cx, 4, "should land on start of 'two'");
@@ -908,8 +890,7 @@ mod tests {
     fn back_to_indentation_skips_spaces() {
         unsafe {
             let mut gd = make_grid_with_text(&["    indented"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 8, 0);
+            let mut gr = grid_reader::new(&mut *gd, 8, 0);
 
             gr.cursor_back_to_indentation();
             assert_eq!(gr.cx, 4, "should skip 4 leading spaces");
@@ -921,8 +902,7 @@ mod tests {
     fn back_to_indentation_no_indent() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 3, 0);
+            let mut gr = grid_reader::new(&mut *gd, 3, 0);
 
             gr.cursor_back_to_indentation();
             assert_eq!(gr.cx, 0, "no indent means column 0");
@@ -934,8 +914,7 @@ mod tests {
     fn back_to_indentation_all_spaces_stays() {
         unsafe {
             let mut gd = make_grid_with_text(&["     "], 80);
-            let mut gr: grid_reader = zeroed();
-            gr.start(&raw mut *gd, 3, 0);
+            let mut gr = grid_reader::new(&mut *gd, 3, 0);
 
             gr.cursor_back_to_indentation();
             assert_eq!(gr.cx, 3, "all spaces — should stay at original position");
@@ -951,15 +930,13 @@ mod tests {
     fn in_set_detects_whitespace() {
         unsafe {
             let mut gd = make_grid_with_text(&["a b"], 80);
-            let mut gr: grid_reader = zeroed();
-
-            gr.start(&raw mut *gd, 0, 0);
+            let mut gr = grid_reader::new(&mut *gd, 0, 0);
             assert!(!gr.in_set(WHITESPACE));
 
-            gr.start(&raw mut *gd, 1, 0);
+            gr.cx = 1;
             assert!(gr.in_set(WHITESPACE));
 
-            gr.start(&raw mut *gd, 2, 0);
+            gr.cx = 2;
             assert!(!gr.in_set(WHITESPACE));
 
             drop(gd);
@@ -970,12 +947,10 @@ mod tests {
     fn in_set_detects_separators() {
         unsafe {
             let mut gd = make_grid_with_text(&["a.b"], 80);
-            let mut gr: grid_reader = zeroed();
-
-            gr.start(&raw mut *gd, 0, 0);
+            let mut gr = grid_reader::new(&mut *gd, 0, 0);
             assert!(!gr.in_set(c!(".")));
 
-            gr.start(&raw mut *gd, 1, 0);
+            gr.cx = 1;
             assert!(gr.in_set(c!(".")));
 
             drop(gd);
