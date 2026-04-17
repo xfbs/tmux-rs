@@ -183,15 +183,19 @@ unsafe fn grid_compact_line(gl: &mut grid_line) {
 }
 
 /// Copy default into a cell.
-unsafe fn grid_clear_cell(gd: *mut grid, px: c_uint, py: c_uint, bg: c_uint) {
-    unsafe {
-        let gl = (*gd).linedata.as_mut_ptr().add(py as usize);
-        (&mut (*gl).celldata)[px as usize] = GRID_CLEARED_ENTRY;
-        if bg != 8 {
-            let gce = (*gl).celldata.as_mut_ptr().add(px as usize);
+fn grid_clear_cell(gd: &mut grid, px: c_uint, py: c_uint, bg: c_uint) {
+    let gl = &mut gd.linedata[py as usize];
+    gl.celldata[px as usize] = GRID_CLEARED_ENTRY;
+    if bg != 8 {
+        // SAFETY: grid_get_extended_cell / grid_extended_cell take raw pointers
+        // into the same grid_line; we hand them a pointer derived from the &mut
+        // we already hold. No aliasing for the duration of the call.
+        unsafe {
+            let gl_ptr: *mut grid_line = gl;
+            let gce = gl.celldata.as_mut_ptr().add(px as usize);
             if (bg & COLOUR_FLAG_RGB as u32) != 0 {
-                grid_get_extended_cell(gl, gce, (*gce).flags);
-                let gee = grid_extended_cell(gl, gce, &raw const GRID_CLEARED_CELL);
+                grid_get_extended_cell(gl_ptr, gce, (*gce).flags);
+                let gee = grid_extended_cell(gl_ptr, gce, &raw const GRID_CLEARED_CELL);
                 (*gee).bg = bg as i32;
             } else {
                 if (bg & COLOUR_FLAG_256 as u32) != 0 {
@@ -204,12 +208,12 @@ unsafe fn grid_clear_cell(gd: *mut grid, px: c_uint, py: c_uint, bg: c_uint) {
 }
 
 /// Check grid y position.
-unsafe fn grid_check_y(gd: *mut grid, from: *const u8, py: c_uint) -> c_int {
-    unsafe {
-        if py >= (*gd).hsize as c_uint + (*gd).sy as c_uint {
-            log_debug!("{}: y out of range: {}", _s(from), py);
-            return -1;
-        }
+fn grid_check_y(gd: &grid, from: *const u8, py: c_uint) -> c_int {
+    if py >= gd.hsize + gd.sy {
+        // SAFETY: `from` is a NUL-terminated ASCII tag passed in from a c!()
+        // literal; log_debug is the only safe consumer.
+        unsafe { log_debug!("{}: y out of range: {}", _s(from), py) };
+        return -1;
     }
     0
 }
@@ -251,21 +255,17 @@ pub unsafe fn grid_cells_equal(gc1: *const grid_cell, gc2: *const grid_cell) -> 
 }
 
 /// Free one line.
-unsafe fn grid_free_line(gd: *mut grid, py: c_uint) {
-    unsafe {
-        let gl = &mut (&mut (*gd).linedata)[py as usize];
-        gl.celldata = Vec::new();
-        gl.cellused = 0;
-        gl.extddata = Vec::new();
-    }
+fn grid_free_line(gd: &mut grid, py: c_uint) {
+    let gl = &mut gd.linedata[py as usize];
+    gl.celldata = Vec::new();
+    gl.cellused = 0;
+    gl.extddata = Vec::new();
 }
 
 /// Free several lines.
-unsafe fn grid_free_lines(gd: *mut grid, py: c_uint, ny: c_uint) {
-    unsafe {
-        for yy in py..(py + ny) {
-            grid_free_line(gd, yy);
-        }
+fn grid_free_lines(gd: &mut grid, py: c_uint, ny: c_uint) {
+    for yy in py..(py + ny) {
+        grid_free_line(gd, yy);
     }
 }
 
@@ -335,50 +335,49 @@ pub unsafe fn grid_compare(ga: *mut grid, gb: *mut grid) -> c_int {
 }
 
 /// Trim lines from the history.
-unsafe fn grid_trim_history(gd: *mut grid, ny: c_uint) {
-    unsafe {
-        grid_free_lines(gd, 0, ny);
-        // Remove the first `ny` lines (already freed above) by draining them.
-        // drain(0..ny) shifts the remaining lines to the front.
-        (*gd).linedata.drain(0..ny as usize);
-    }
+fn grid_trim_history(gd: &mut grid, ny: c_uint) {
+    grid_free_lines(gd, 0, ny);
+    // Remove the first `ny` lines (already freed above) by draining them.
+    // drain(0..ny) shifts the remaining lines to the front.
+    gd.linedata.drain(0..ny as usize);
 }
 
 /// Expand line to fit to cell.
-unsafe fn grid_expand_line(gd: *mut grid, py: c_uint, mut sx: c_uint, bg: c_uint) {
-    unsafe {
-        let old_len = (&(*gd).linedata)[py as usize].celldata.len() as u32;
-        if sx <= old_len {
-            return;
-        }
+fn grid_expand_line(gd: &mut grid, py: c_uint, mut sx: c_uint, bg: c_uint) {
+    let old_len = gd.linedata[py as usize].celldata.len() as u32;
+    if sx <= old_len {
+        return;
+    }
 
-        if sx < (*gd).sx / 4 {
-            sx = (*gd).sx / 4;
-        } else if sx < (*gd).sx / 2 {
-            sx = (*gd).sx / 2;
-        } else if (*gd).sx > sx {
-            sx = (*gd).sx;
-        }
+    if sx < gd.sx / 4 {
+        sx = gd.sx / 4;
+    } else if sx < gd.sx / 2 {
+        sx = gd.sx / 2;
+    } else if gd.sx > sx {
+        sx = gd.sx;
+    }
 
-        (&mut (*gd).linedata)[py as usize].celldata.resize(sx as usize, GRID_CLEARED_ENTRY);
+    gd.linedata[py as usize].celldata.resize(sx as usize, GRID_CLEARED_ENTRY);
 
-        for xx in old_len..sx {
-            grid_clear_cell(gd, xx, py, bg);
-        }
+    for xx in old_len..sx {
+        grid_clear_cell(gd, xx, py, bg);
     }
 }
 
 /// Initialize a line slot without dropping (for after `ptr::copy` where
 /// the old data was bitwise-moved to another location).
-unsafe fn grid_init_line(gd: *mut grid, py: c_uint, bg: c_uint) {
+fn grid_init_line(gd: &mut grid, py: c_uint, bg: c_uint) {
+    // Write a fresh line. The old value was bitwise-moved away, so we must
+    // NOT drop it. Use ptr::write to avoid the implicit drop from assignment.
+    // SAFETY: the caller guarantees that the slot at `py` holds bitwise-moved
+    // data that must not be dropped.
     unsafe {
-        // Write a fresh line. The old value was bitwise-moved away, so we must
-        // NOT drop it. Use ptr::write to avoid the implicit drop from assignment.
-        let gl = (*gd).linedata.as_mut_ptr().add(py as usize);
+        let gl = gd.linedata.as_mut_ptr().add(py as usize);
         std::ptr::write(gl, grid_line::new());
-        if !COLOUR_DEFAULT(bg as i32) {
-            grid_expand_line(gd, py, (*gd).sx, bg);
-        }
+    }
+    if !COLOUR_DEFAULT(bg as i32) {
+        let sx = gd.sx;
+        grid_expand_line(gd, py, sx, bg);
     }
 }
 
@@ -433,8 +432,7 @@ impl grid {
     /// Peek at grid line — returns null if py is out of range.
     pub unsafe fn peek_line(&mut self, py: c_uint) -> *mut grid_line {
         unsafe {
-            let gd = self as *mut grid;
-            if grid_check_y(gd, c!("grid_peek_line"), py) != 0 {
+            if grid_check_y(self, c!("grid_peek_line"), py) != 0 {
                 return null_mut();
             }
             self.linedata.as_mut_ptr().add(py as usize)
@@ -466,8 +464,7 @@ impl grid {
     /// Get cell for reading.
     pub unsafe fn get_cell(&self, px: c_uint, py: c_uint, gc: *mut grid_cell) {
         unsafe {
-            let gd = self as *const grid as *mut grid;
-            if grid_check_y(gd, c!("grid_get_cell"), py) != 0
+            if grid_check_y(self, c!("grid_get_cell"), py) != 0
                 || px as usize >= self.linedata[py as usize].celldata.len()
             {
                 std::ptr::copy(&raw const GRID_DEFAULT_CELL, gc, 1);
@@ -480,12 +477,11 @@ impl grid {
     /// Set cell at position.
     pub unsafe fn set_cell(&mut self, px: c_uint, py: c_uint, gc: *const grid_cell) {
         unsafe {
-            let gd = self as *mut grid;
-            if grid_check_y(gd, c!("grid_set_cell"), py) != 0 {
+            if grid_check_y(self, c!("grid_set_cell"), py) != 0 {
                 return;
             }
 
-            grid_expand_line(gd, py, px + 1, 8);
+            grid_expand_line(self, py, px + 1, 8);
 
             let gl = &mut self.linedata[py as usize];
             if px + 1 > gl.cellused {
@@ -516,12 +512,11 @@ impl grid {
         slen: usize,
     ) {
         unsafe {
-            let gd = self as *mut grid;
-            if grid_check_y(gd, c!("grid_set_cells"), py) != 0 {
+            if grid_check_y(self, c!("grid_set_cells"), py) != 0 {
                 return;
             }
 
-            grid_expand_line(gd, py, px + slen as c_uint, 8);
+            grid_expand_line(self, py, px + slen as c_uint, 8);
 
             let gl = self.linedata.as_mut_ptr().add(py as usize);
             if px + slen as c_uint > (*gl).cellused {
@@ -542,41 +537,35 @@ impl grid {
 
     /// Collect lines from the history if at the limit. Free the top (oldest) 10% and shift up.
     pub unsafe fn collect_history(&mut self) {
-        unsafe {
-            if self.hsize == 0 || self.hsize < self.hlimit {
-                return;
-            }
+        if self.hsize == 0 || self.hsize < self.hlimit {
+            return;
+        }
 
-            let mut ny = self.hlimit / 10;
-            if ny < 1 {
-                ny = 1;
-            }
-            if ny > self.hsize {
-                ny = self.hsize;
-            }
+        let mut ny = self.hlimit / 10;
+        if ny < 1 {
+            ny = 1;
+        }
+        if ny > self.hsize {
+            ny = self.hsize;
+        }
 
-            let gd = self as *mut grid;
-            grid_trim_history(gd, ny);
+        grid_trim_history(self, ny);
 
-            self.hsize -= ny;
-            if self.hscrolled > self.hsize {
-                self.hscrolled = self.hsize;
-            }
+        self.hsize -= ny;
+        if self.hscrolled > self.hsize {
+            self.hscrolled = self.hsize;
         }
     }
 
     /// Remove lines from the bottom of the history.
     pub unsafe fn remove_history(&mut self, ny: c_uint) {
-        unsafe {
-            if ny > self.hsize {
-                return;
-            }
-            let gd = self as *mut grid;
-            for yy in 0..ny {
-                grid_free_line(gd, self.hsize + self.sy - 1 - yy);
-            }
-            self.hsize -= ny;
+        if ny > self.hsize {
+            return;
         }
+        for yy in 0..ny {
+            grid_free_line(self, self.hsize + self.sy - 1 - yy);
+        }
+        self.hsize -= ny;
     }
 
     /// Scroll the entire visible screen, moving one line into the history.
@@ -598,15 +587,12 @@ impl grid {
 
     /// Clear the history.
     pub unsafe fn clear_history(&mut self) {
-        unsafe {
-            let gd = self as *mut grid;
-            grid_trim_history(gd, self.hsize);
+        grid_trim_history(self, self.hsize);
 
-            self.hscrolled = 0;
-            self.hsize = 0;
+        self.hscrolled = 0;
+        self.hsize = 0;
 
-            self.linedata.resize_with(self.sy as usize, grid_line::new);
-        }
+        self.linedata.resize_with(self.sy as usize, grid_line::new);
     }
 
     /// Scroll a region up, moving the top line into the history.
@@ -627,8 +613,8 @@ impl grid {
             // The region shifted up by one. Insert a new empty line at the lower position.
             self.linedata.insert(lower_abs + 1, grid_line::new());
             if !COLOUR_DEFAULT(bg as i32) {
-                let gd = self as *mut grid;
-                grid_expand_line(gd, (lower_abs + 1) as u32, self.sx, bg);
+                let sx = self.sx;
+                grid_expand_line(self, (lower_abs + 1) as u32, sx, bg);
             }
 
             // Move history offset down
@@ -644,16 +630,15 @@ impl grid {
                 return;
             }
 
-            let gd = self as *mut grid;
             if px == 0 && nx == self.sx {
                 self.clear_lines(py, ny, bg);
                 return;
             }
 
-            if grid_check_y(gd, c!("grid_clear"), py) != 0 {
+            if grid_check_y(self, c!("grid_clear"), py) != 0 {
                 return;
             }
-            if grid_check_y(gd, c!("grid_clear"), py + ny - 1) != 0 {
+            if grid_check_y(self, c!("grid_clear"), py + ny - 1) != 0 {
                 return;
             }
 
@@ -673,9 +658,9 @@ impl grid {
                     }
                 }
 
-                grid_expand_line(gd, yy, px + ox, 8); // default bg first
+                grid_expand_line(self, yy, px + ox, 8); // default bg first
                 for xx in px..px + ox {
-                    grid_clear_cell(gd, xx, yy, bg);
+                    grid_clear_cell(self, xx, yy, bg);
                 }
             }
         }
@@ -688,16 +673,15 @@ impl grid {
                 return;
             }
 
-            let gd = self as *mut grid;
-            if grid_check_y(gd, c!("grid_clear_lines"), py) != 0 {
+            if grid_check_y(self, c!("grid_clear_lines"), py) != 0 {
                 return;
             }
-            if grid_check_y(gd, c!("grid_clear_lines"), py + ny - 1) != 0 {
+            if grid_check_y(self, c!("grid_clear_lines"), py + ny - 1) != 0 {
                 return;
             }
 
             for yy in py..py + ny {
-                grid_free_line(gd, yy);
+                grid_free_line(self, yy);
                 self.empty_line(yy, bg);
             }
             if py != 0 {
@@ -713,17 +697,16 @@ impl grid {
                 return;
             }
 
-            let gd = self as *mut grid;
-            if grid_check_y(gd, c!("grid_move_lines"), py) != 0 {
+            if grid_check_y(self, c!("grid_move_lines"), py) != 0 {
                 return;
             }
-            if grid_check_y(gd, c!("grid_move_lines"), py + ny - 1) != 0 {
+            if grid_check_y(self, c!("grid_move_lines"), py + ny - 1) != 0 {
                 return;
             }
-            if grid_check_y(gd, c!("grid_move_lines"), dy) != 0 {
+            if grid_check_y(self, c!("grid_move_lines"), dy) != 0 {
                 return;
             }
-            if grid_check_y(gd, c!("grid_move_lines"), dy + ny - 1) != 0 {
+            if grid_check_y(self, c!("grid_move_lines"), dy + ny - 1) != 0 {
                 return;
             }
 
@@ -732,7 +715,7 @@ impl grid {
                 if yy >= py && yy < py + ny {
                     continue;
                 }
-                grid_free_line(gd, yy);
+                grid_free_line(self, yy);
             }
             if dy != 0 {
                 self.linedata[dy as usize - 1].flags &= !grid_line_flag::WRAPPED;
@@ -749,7 +732,7 @@ impl grid {
             // is now owned by the destination. Use grid_init_line (no drop).
             for yy in py..py + ny {
                 if yy < dy || yy >= dy + ny {
-                    grid_init_line(gd, yy, bg);
+                    grid_init_line(self, yy, bg);
                 }
             }
             if py != 0 && (py < dy || py >= dy + ny) {
@@ -760,43 +743,38 @@ impl grid {
 
     /// Move a group of cells within a line.
     pub unsafe fn move_cells(&mut self, dx: c_uint, px: c_uint, py: c_uint, nx: c_uint, bg: c_uint) {
-        unsafe {
-            if nx == 0 || px == dx {
-                return;
-            }
+        if nx == 0 || px == dx {
+            return;
+        }
 
-            let gd = self as *mut grid;
-            if grid_check_y(gd, c!("grid_move_cells"), py) != 0 {
-                return;
-            }
-            grid_expand_line(gd, py, px + nx, 8);
-            grid_expand_line(gd, py, dx + nx, 8);
+        if grid_check_y(self, c!("grid_move_cells"), py) != 0 {
+            return;
+        }
+        grid_expand_line(self, py, px + nx, 8);
+        grid_expand_line(self, py, dx + nx, 8);
 
-            let gl = &mut self.linedata[py as usize];
-            gl.celldata.copy_within(px as usize..(px + nx) as usize, dx as usize);
+        let gl = &mut self.linedata[py as usize];
+        gl.celldata.copy_within(px as usize..(px + nx) as usize, dx as usize);
 
-            if dx + nx > gl.cellused {
-                gl.cellused = dx + nx;
-            }
+        if dx + nx > gl.cellused {
+            gl.cellused = dx + nx;
+        }
 
-            // Wipe any cells that have been moved
-            for xx in px..px + nx {
-                if xx >= dx && xx < dx + nx {
-                    continue;
-                }
-                grid_clear_cell(gd, xx, py, bg);
+        // Wipe any cells that have been moved
+        for xx in px..px + nx {
+            if xx >= dx && xx < dx + nx {
+                continue;
             }
+            grid_clear_cell(self, xx, py, bg);
         }
     }
 
     /// Empty a line and optionally fill with a background color.
     pub unsafe fn empty_line(&mut self, py: c_uint, bg: c_uint) {
-        unsafe {
-            let gd = self as *mut grid;
-            self.linedata[py as usize] = grid_line::new();
-            if !COLOUR_DEFAULT(bg as i32) {
-                grid_expand_line(gd, py, self.sx, bg);
-            }
+        self.linedata[py as usize] = grid_line::new();
+        if !COLOUR_DEFAULT(bg as i32) {
+            let sx = self.sx;
+            grid_expand_line(self, py, sx, bg);
         }
     }
 
@@ -914,14 +892,13 @@ impl grid {
         mut ny: c_uint,
     ) {
         unsafe {
-            let dst = self as *mut grid;
             if dy + ny > self.hsize + self.sy {
                 ny = self.hsize + self.sy - dy;
             }
             if sy + ny > (*src).hsize + (*src).sy {
                 ny = (*src).hsize + (*src).sy - sy;
             }
-            grid_free_lines(dst, dy, ny);
+            grid_free_lines(self, dy, ny);
 
             for _ in 0..ny {
                 let srcl = &(&(*src).linedata)[sy as usize];
