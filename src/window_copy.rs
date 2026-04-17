@@ -5714,9 +5714,9 @@ pub unsafe fn window_copy_cursor_start_of_line(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
-        grid_reader_cursor_start_of_line(&raw mut gr, 1);
-        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.start(&raw mut *(*back_s).grid, px, py);
+        gr.cursor_start_of_line(1);
+        gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
     }
 }
@@ -5732,9 +5732,9 @@ pub unsafe fn window_copy_cursor_back_to_indentation(wme: *mut window_mode_entry
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
-        grid_reader_cursor_back_to_indentation(&raw mut gr);
-        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.start(&raw mut *(*back_s).grid, px, py);
+        gr.cursor_back_to_indentation();
+        gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
     }
 }
@@ -5750,13 +5750,13 @@ pub unsafe fn window_copy_cursor_end_of_line(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
+        gr.start(&raw mut *(*back_s).grid, px, py);
         if (*data).screen.sel.is_some() && (*data).rectflag {
-            grid_reader_cursor_end_of_line(&raw mut gr, 1, 1);
+            gr.cursor_end_of_line(1, 1);
         } else {
-            grid_reader_cursor_end_of_line(&raw mut gr, 1, 0);
+            gr.cursor_end_of_line(1, 0);
         }
-        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_down(
             wme,
             hsize,
@@ -5834,9 +5834,9 @@ pub unsafe fn window_copy_cursor_left(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
-        grid_reader_cursor_left(&raw mut gr, 1);
-        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.start(&raw mut *(*back_s).grid, px, py);
+        gr.cursor_left(1);
+        gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
     }
 }
@@ -5852,9 +5852,9 @@ pub unsafe fn window_copy_cursor_right(wme: *mut window_mode_entry, all: i32) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
-        grid_reader_cursor_right(&raw mut gr, 1, all);
-        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.start(&raw mut *(*back_s).grid, px, py);
+        gr.cursor_right(1, all);
+        gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_down(
             wme,
             hsize,
@@ -6025,9 +6025,9 @@ pub unsafe fn window_copy_cursor_jump(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
-        if grid_reader_cursor_jump(&raw mut gr, (*data).jumpchar) != 0 {
-            grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.start(&raw mut *(*back_s).grid, px, py);
+        if gr.cursor_jump((*data).jumpchar) != 0 {
+            gr.get_cursor(&raw mut px, &raw mut py);
             window_copy_acquire_cursor_down(
                 wme,
                 hsize,
@@ -6053,10 +6053,10 @@ pub unsafe fn window_copy_cursor_jump_back(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
-        grid_reader_cursor_left(&raw mut gr, 0);
-        if grid_reader_cursor_jump_back(&raw mut gr, (*data).jumpchar) != 0 {
-            grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.start(&raw mut *(*back_s).grid, px, py);
+        gr.cursor_left(0);
+        if gr.cursor_jump_back((*data).jumpchar) != 0 {
+            gr.get_cursor(&raw mut px, &raw mut py);
             window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
         }
     }
@@ -6073,10 +6073,10 @@ pub unsafe fn window_copy_cursor_jump_to(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
-        if grid_reader_cursor_jump(&raw mut gr, (*data).jumpchar) != 0 {
-            grid_reader_cursor_left(&raw mut gr, 1);
-            grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.start(&raw mut *(*back_s).grid, px, py);
+        if gr.cursor_jump((*data).jumpchar) != 0 {
+            gr.cursor_left(1);
+            gr.get_cursor(&raw mut px, &raw mut py);
             window_copy_acquire_cursor_down(
                 wme,
                 hsize,
@@ -6102,12 +6102,12 @@ pub unsafe fn window_copy_cursor_jump_to_back(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
-        grid_reader_cursor_left(&raw mut gr, 0);
-        grid_reader_cursor_left(&raw mut gr, 0);
-        if grid_reader_cursor_jump_back(&raw mut gr, (*data).jumpchar) != 0 {
-            grid_reader_cursor_right(&raw mut gr, 1, 0);
-            grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.start(&raw mut *(*back_s).grid, px, py);
+        gr.cursor_left(0);
+        gr.cursor_left(0);
+        if gr.cursor_jump_back((*data).jumpchar) != 0 {
+            gr.cursor_right(1, 0);
+            gr.get_cursor(&raw mut px, &raw mut py);
             window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
         }
     }
@@ -6124,9 +6124,9 @@ pub unsafe fn window_copy_cursor_next_word(wme: *mut window_mode_entry, separato
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
-        grid_reader_cursor_next_word(&raw mut gr, separators);
-        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.start(&raw mut *(*back_s).grid, px, py);
+        gr.cursor_next_word(separators);
+        gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_down(
             wme,
             hsize,
@@ -6158,18 +6158,18 @@ pub unsafe fn window_copy_cursor_next_word_end_pos(
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
+        gr.start(&raw mut *(*back_s).grid, px, py);
         if modekey::try_from(options_get_number_(oo, "mode-keys") as i32) == Ok(modekey::MODEKEY_VI)
         {
-            if !grid_reader_in_set(&raw mut gr, WHITESPACE) {
-                grid_reader_cursor_right(&raw mut gr, 0, 0);
+            if !gr.in_set(WHITESPACE) {
+                gr.cursor_right(0, 0);
             }
-            grid_reader_cursor_next_word_end(&raw mut gr, separators);
-            grid_reader_cursor_left(&raw mut gr, 1);
+            gr.cursor_next_word_end(separators);
+            gr.cursor_left(1);
         } else {
-            grid_reader_cursor_next_word_end(&raw mut gr, separators);
+            gr.cursor_next_word_end(separators);
         }
-        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.get_cursor(&raw mut px, &raw mut py);
         *ppx = px;
         *ppy = py;
     }
@@ -6193,18 +6193,18 @@ pub unsafe fn window_copy_cursor_next_word_end(
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
+        gr.start(&raw mut *(*back_s).grid, px, py);
         if modekey::try_from(options_get_number_(oo, "mode-keys") as i32) == Ok(modekey::MODEKEY_VI)
         {
-            if !grid_reader_in_set(&raw mut gr, WHITESPACE) {
-                grid_reader_cursor_right(&raw mut gr, 0, 0);
+            if !gr.in_set(WHITESPACE) {
+                gr.cursor_right(0, 0);
             }
-            grid_reader_cursor_next_word_end(&raw mut gr, separators);
-            grid_reader_cursor_left(&raw mut gr, 1);
+            gr.cursor_next_word_end(separators);
+            gr.cursor_left(1);
         } else {
-            grid_reader_cursor_next_word_end(&raw mut gr, separators);
+            gr.cursor_next_word_end(separators);
         }
-        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_down(
             wme,
             hsize,
@@ -6234,16 +6234,15 @@ pub unsafe fn window_copy_cursor_previous_word_pos(
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
-        grid_reader_cursor_previous_word(
-            &raw mut gr,
+        gr.start(&raw mut *(*back_s).grid, px, py);
+        gr.cursor_previous_word(
             separators,
             // already=
             0,
             // stop_at_eol=
             true,
         );
-        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.get_cursor(&raw mut px, &raw mut py);
         *ppx = px;
         *ppy = py;
     }
@@ -6268,9 +6267,9 @@ pub unsafe fn window_copy_cursor_previous_word(
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        grid_reader_start(&raw mut gr, &raw mut *(*back_s).grid, px, py);
-        grid_reader_cursor_previous_word(&raw mut gr, separators, already, stop_at_eol);
-        grid_reader_get_cursor(&raw mut gr, &raw mut px, &raw mut py);
+        gr.start(&raw mut *(*back_s).grid, px, py);
+        gr.cursor_previous_word(separators, already, stop_at_eol);
+        gr.get_cursor(&raw mut px, &raw mut py);
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
     }
 }
