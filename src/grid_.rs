@@ -182,8 +182,6 @@ unsafe fn grid_compact_line(gl: &mut grid_line) {
     }
 }
 
-// grid_get_line and grid_adjust_lines converted to methods (see impl grid below).
-
 /// Copy default into a cell.
 unsafe fn grid_clear_cell(gd: *mut grid, px: c_uint, py: c_uint, bg: c_uint) {
     unsafe {
@@ -346,8 +344,6 @@ unsafe fn grid_trim_history(gd: *mut grid, ny: c_uint) {
     }
 }
 
-// History operations converted to methods (see impl grid below).
-
 /// Expand line to fit to cell.
 unsafe fn grid_expand_line(gd: *mut grid, py: c_uint, mut sx: c_uint, bg: c_uint) {
     unsafe {
@@ -372,9 +368,6 @@ unsafe fn grid_expand_line(gd: *mut grid, py: c_uint, mut sx: c_uint, bg: c_uint
     }
 }
 
-/// Empty a line and set background colour if needed.
-// grid_empty_line converted to method (see impl grid below).
-
 /// Initialize a line slot without dropping (for after `ptr::copy` where
 /// the old data was bitwise-moved to another location).
 unsafe fn grid_init_line(gd: *mut grid, py: c_uint, bg: c_uint) {
@@ -388,8 +381,6 @@ unsafe fn grid_init_line(gd: *mut grid, py: c_uint, bg: c_uint) {
         }
     }
 }
-
-// grid_peek_line converted to method (see impl grid below).
 
 /// Get cell from line.
 unsafe fn grid_get_cell1(gl: &grid_line, px: c_uint, gc: *mut grid_cell) {
@@ -1279,9 +1270,6 @@ impl grid {
     }
 }
 
-// grid_clear, grid_clear_lines, grid_move_lines, grid_move_cells converted to methods.
-// grid_string_cells, grid_duplicate_lines, grid_reflow, grid_wrap_position, grid_unwrap_position converted to methods.
-// grid_view_* free functions converted to `view_*` methods (see impl grid above).
 
 /// Get ANSI foreground sequence.
 unsafe fn grid_string_cells_fg(gc: *const grid_cell, values: *mut c_int) -> usize {
@@ -1662,10 +1650,6 @@ unsafe fn grid_string_cells_code(
     }
 }
 
-// grid_string_cells converted to method (see impl grid above).
-
-// grid_duplicate_lines converted to method (see impl grid above).
-
 /// Mark line as dead. Caller must ensure the line's Vec fields have already
 /// been moved out or dropped — this overwrites without dropping.
 unsafe fn grid_reflow_dead(gl: *mut grid_line) {
@@ -1885,14 +1869,6 @@ unsafe fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, 
         }
     }
 }
-
-// grid_reflow converted to method (see impl grid above).
-
-// grid_wrap_position converted to method (see impl grid above).
-
-// grid_unwrap_position converted to method (see impl grid above).
-
-// grid_line_length converted to method (see impl grid below).
 
 #[cfg(test)]
 mod tests {
