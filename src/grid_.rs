@@ -1083,10 +1083,205 @@ impl grid {
             *py = yy as u32;
         }
     }
+
+    // ---------------------------------------------------------------
+    // View-coordinate helpers.
+    //
+    // "View" coordinates treat y=0 as the top of the visible screen.
+    // Converting to absolute grid coordinates means adding `hsize`
+    // (the number of scrollback history lines). The x translation is
+    // currently the identity, so we simply inline `self.hsize + py`.
+    // ---------------------------------------------------------------
+
+    /// Get a cell from the visible area at view coordinates (px, py).
+    pub unsafe fn view_get_cell(&self, px: u32, py: u32, gc: *mut grid_cell) {
+        unsafe {
+            self.get_cell(px, self.hsize + py, gc);
+        }
+    }
+
+    /// Set a cell in the visible area at view coordinates (px, py).
+    pub unsafe fn view_set_cell(&mut self, px: u32, py: u32, gc: *const grid_cell) {
+        unsafe {
+            self.set_cell(px, self.hsize + py, gc);
+        }
+    }
+
+    /// Mark a cell in the visible area as padding (following a wide char).
+    pub unsafe fn view_set_padding(&mut self, px: u32, py: u32) {
+        unsafe {
+            self.set_padding(px, self.hsize + py);
+        }
+    }
+
+    /// Set a run of cells in the visible area starting at (px, py).
+    pub unsafe fn view_set_cells(
+        &mut self,
+        px: u32,
+        py: u32,
+        gc: *const grid_cell,
+        s: *const u8,
+        slen: usize,
+    ) {
+        unsafe {
+            self.set_cells(px, self.hsize + py, gc, s, slen);
+        }
+    }
+
+    /// Move all visible content into history and clear the screen.
+    /// Only moves lines up to the last non-empty line.
+    pub unsafe fn view_clear_history(&mut self, bg: u32) {
+        unsafe {
+            let mut last = 0u32;
+
+            for yy in 0..self.sy {
+                let gl = self.get_line(self.hsize + yy);
+                if (*gl).cellused != 0 {
+                    last = yy + 1;
+                }
+            }
+            if last == 0 {
+                self.view_clear(0, 0, self.sx, self.sy, bg);
+                return;
+            }
+
+            for _ in 0..self.sy {
+                self.collect_history();
+                self.scroll_history(bg);
+            }
+            if last < self.sy {
+                self.view_clear(0, 0, self.sx, self.sy - last, bg);
+            }
+            self.hscrolled = 0;
+        }
+    }
+
+    /// Clear a rectangular region in view coordinates.
+    pub unsafe fn view_clear(&mut self, px: u32, py: u32, nx: u32, ny: u32, bg: u32) {
+        unsafe {
+            self.clear(px, self.hsize + py, nx, ny, bg);
+        }
+    }
+
+    /// Scroll a region upward: contents of `[rupper, rlower]` move up by one line.
+    pub unsafe fn view_scroll_region_up(&mut self, rupper: u32, rlower: u32, bg: u32) {
+        unsafe {
+            if self.flags & GRID_HISTORY != 0 {
+                self.collect_history();
+                if rupper == 0 && rlower == self.sy - 1 {
+                    self.scroll_history(bg);
+                } else {
+                    let rupper_abs = self.hsize + rupper;
+                    let rlower_abs = self.hsize + rlower;
+                    self.scroll_history_region(rupper_abs, rlower_abs, bg);
+                }
+            } else {
+                let rupper_abs = self.hsize + rupper;
+                let rlower_abs = self.hsize + rlower;
+                self.move_lines(rupper_abs, rupper_abs + 1, rlower_abs - rupper_abs, bg);
+            }
+        }
+    }
+
+    /// Scroll a region downward: contents of `[rupper, rlower]` move down by one line.
+    pub unsafe fn view_scroll_region_down(&mut self, rupper: u32, rlower: u32, bg: u32) {
+        unsafe {
+            let rupper_abs = self.hsize + rupper;
+            let rlower_abs = self.hsize + rlower;
+            self.move_lines(rupper_abs + 1, rupper_abs, rlower_abs - rupper_abs, bg);
+        }
+    }
+
+    /// Insert `ny` blank lines at view row `py`.
+    pub unsafe fn view_insert_lines(&mut self, py: u32, ny: u32, bg: u32) {
+        unsafe {
+            let py_abs = self.hsize + py;
+            let sy = self.hsize + self.sy;
+            self.move_lines(py_abs + ny, py_abs, sy - py_abs - ny, bg);
+        }
+    }
+
+    /// Insert `ny` blank lines at view row `py` inside scroll region bounded by `rlower`.
+    pub unsafe fn view_insert_lines_region(&mut self, rlower: u32, py: u32, ny: u32, bg: u32) {
+        unsafe {
+            let rlower_abs = self.hsize + rlower;
+            let py_abs = self.hsize + py;
+
+            let ny2 = rlower_abs + 1 - py_abs - ny;
+            self.move_lines(rlower_abs + 1 - ny2, py_abs, ny2, bg);
+            // TODO does this bug exist upstream?
+            self.clear(0, py_abs + ny2, self.sx, ny.saturating_sub(ny2), bg);
+        }
+    }
+
+    /// Delete `ny` lines at view row `py`.
+    pub unsafe fn view_delete_lines(&mut self, py: u32, ny: u32, bg: u32) {
+        unsafe {
+            let py_abs = self.hsize + py;
+            let sy = self.hsize + self.sy;
+
+            self.move_lines(py_abs, py_abs + ny, sy - py_abs - ny, bg);
+            self.clear(0, sy.saturating_sub(ny), self.sx, ny, bg);
+        }
+    }
+
+    /// Delete `ny` lines at view row `py` inside scroll region bounded by `rlower`.
+    pub unsafe fn view_delete_lines_region(&mut self, rlower: u32, py: u32, ny: u32, bg: u32) {
+        unsafe {
+            let rlower_abs = self.hsize + rlower;
+            let py_abs = self.hsize + py;
+
+            let ny2 = rlower_abs + 1 - py_abs - ny;
+            self.move_lines(py_abs, py_abs + ny, ny2, bg);
+            // TODO does this bug exist in the tmux source code too
+            self.clear(0, py_abs + ny2, self.sx, ny.saturating_sub(ny2), bg);
+        }
+    }
+
+    /// Insert `nx` blank cells at view position (px, py).
+    pub unsafe fn view_insert_cells(&mut self, px: u32, py: u32, nx: u32, bg: u32) {
+        unsafe {
+            let py_abs = self.hsize + py;
+            let sx = self.sx;
+
+            if px >= sx - 1 {
+                self.clear(px, py_abs, 1, 1, bg);
+            } else {
+                self.move_cells(px + nx, px, py_abs, sx - px - nx, bg);
+            }
+        }
+    }
+
+    /// Delete `nx` cells at view position (px, py).
+    pub unsafe fn view_delete_cells(&mut self, px: u32, py: u32, nx: u32, bg: u32) {
+        unsafe {
+            let py_abs = self.hsize + py;
+            let sx = self.sx;
+
+            self.move_cells(px, px + nx, py_abs, sx - px - nx, bg);
+            self.clear(sx - nx, py_abs, nx, 1, bg);
+        }
+    }
+
+    /// Convert `nx` cells in the visible area starting at (px, py) into a string.
+    pub unsafe fn view_string_cells(&mut self, px: u32, py: u32, nx: u32) -> *mut u8 {
+        unsafe {
+            let py_abs = self.hsize + py;
+            self.string_cells(
+                px,
+                py_abs,
+                nx,
+                null_mut(),
+                grid_string_flags::empty(),
+                null_mut(),
+            )
+        }
+    }
 }
 
 // grid_clear, grid_clear_lines, grid_move_lines, grid_move_cells converted to methods.
 // grid_string_cells, grid_duplicate_lines, grid_reflow, grid_wrap_position, grid_unwrap_position converted to methods.
+// grid_view_* free functions converted to `view_*` methods (see impl grid above).
 
 /// Get ANSI foreground sequence.
 unsafe fn grid_string_cells_fg(gc: *const grid_cell, values: *mut c_int) -> usize {

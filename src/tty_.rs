@@ -1833,7 +1833,7 @@ pub unsafe fn tty_draw_line(
         let mut width = 0;
 
         for i in 0..sx {
-            grid_view_get_cell(gd, px + i, py, &raw mut gc);
+            (*gd).view_get_cell(px + i, py, &raw mut gc);
             let gcp = tty_check_codeset(tty, &gc);
             if len != 0
                 && (!tty_check_overlay(tty, atx + ux + width, aty)

@@ -406,7 +406,7 @@ unsafe fn screen_resize_y(s: *mut screen, sy: u32, eat_empty: i32, cy: *mut u32)
                     if available > needed {
                         available = needed;
                     }
-                    grid_view_delete_lines(gd, oldy - available, available, 8);
+                    (*gd).view_delete_lines(oldy - available, available, 8);
                 }
                 needed -= available;
             }
@@ -422,7 +422,7 @@ unsafe fn screen_resize_y(s: *mut screen, sy: u32, eat_empty: i32, cy: *mut u32)
                 if available > needed {
                     available = needed;
                 }
-                grid_view_delete_lines(gd, 0, available, 8);
+                (*gd).view_delete_lines(0, available, 8);
                 *cy -= available;
             }
         }
@@ -700,7 +700,7 @@ pub unsafe fn screen_alternate_on(s: *mut screen, gc: *mut grid_cell, cursor: i3
         }
         memcpy__(&raw mut (*s).saved_cell, gc);
 
-        grid_view_clear(&raw mut *(*s).grid, 0, 0, sx, sy, 8);
+        (*s).grid.view_clear(0, 0, sx, sy, 8);
 
         (*s).saved_flags = (*s).grid.flags;
         (*s).grid.flags &= !GRID_HISTORY;

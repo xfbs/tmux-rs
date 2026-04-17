@@ -1141,8 +1141,7 @@ pub unsafe fn format_cb_cursor_character(ft: &format_tree) -> format_table_type 
             return format_table_type::None;
         }
         let mut gc = MaybeUninit::<grid_cell>::uninit();
-        grid_view_get_cell(
-            &raw mut *(*wp).base.grid,
+        (*wp).base.grid.view_get_cell(
             (*wp).base.cx,
             (*wp).base.cy,
             gc.as_mut_ptr(),
