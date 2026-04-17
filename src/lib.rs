@@ -71,7 +71,6 @@ cfg_pub_mods! {
     mod format_draw_;
     mod grid_;
     mod grid_reader_;
-    mod grid_view;
     mod hyperlinks_;
     mod input;
     mod input_keys;
