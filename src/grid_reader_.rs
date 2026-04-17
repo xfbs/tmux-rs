@@ -108,7 +108,7 @@ impl<'a> grid_reader<'a> {
             if self.cx == 0
                 && self.cy > 0
                 && (wrap != 0
-                    || (*self.gd.get_line(self.cy - 1))
+                    || self.gd.get_line(self.cy - 1)
                         .flags
                         .intersects(grid_line_flag::WRAPPED))
             {
@@ -161,19 +161,19 @@ impl<'a> grid_reader<'a> {
     /// Move cursor to column 0 of the current line. If `wrap` is set and the
     /// previous line has the WRAPPED flag, follows wrapped lines upward to find
     /// the true start of the logical line.
-    pub unsafe fn cursor_start_of_line(&mut self, wrap: i32) {
-        unsafe {
-            if wrap != 0 {
-                while self.cy > 0
-                    && (*self.gd.get_line(self.cy - 1))
-                        .flags
-                        .intersects(grid_line_flag::WRAPPED)
-                {
-                    self.cy -= 1;
-                }
+    pub fn cursor_start_of_line(&mut self, wrap: i32) {
+        if wrap != 0 {
+            while self.cy > 0
+                && self
+                    .gd
+                    .get_line(self.cy - 1)
+                    .flags
+                    .intersects(grid_line_flag::WRAPPED)
+            {
+                self.cy -= 1;
             }
-            self.cx = 0;
         }
+        self.cx = 0;
     }
 
     /// Move cursor to the end of the current line. If `wrap` is set, follows
@@ -184,7 +184,7 @@ impl<'a> grid_reader<'a> {
             if wrap != 0 {
                 let yy = self.gd.hsize + self.gd.sy - 1;
                 while self.cy < yy
-                    && (*self.gd.get_line(self.cy))
+                    && self.gd.get_line(self.cy)
                         .flags
                         .intersects(grid_line_flag::WRAPPED)
                 {
@@ -212,7 +212,7 @@ impl<'a> grid_reader<'a> {
                 self.cursor_start_of_line(0);
                 self.cursor_down();
 
-                if (*self.gd.get_line(self.cy))
+                if self.gd.get_line(self.cy)
                     .flags
                     .intersects(grid_line_flag::WRAPPED)
                 {
@@ -248,7 +248,7 @@ impl<'a> grid_reader<'a> {
     pub unsafe fn cursor_next_word(&mut self, separators: *const u8) {
         unsafe {
             // Do not break up wrapped words.
-            let mut xx = if (*self.gd.get_line(self.cy))
+            let mut xx = if self.gd.get_line(self.cy)
                 .flags
                 .intersects(grid_line_flag::WRAPPED)
             {
@@ -300,7 +300,7 @@ impl<'a> grid_reader<'a> {
     pub unsafe fn cursor_next_word_end(&mut self, separators: *const u8) {
         unsafe {
             // Do not break up wrapped words.
-            let mut xx = if (*self.gd.get_line(self.cy))
+            let mut xx = if self.gd.get_line(self.cy)
                 .flags
                 .intersects(grid_line_flag::WRAPPED)
             {
@@ -396,7 +396,7 @@ impl<'a> grid_reader<'a> {
                 oldy = self.cy;
                 if self.cx == 0 {
                     if self.cy == 0
-                        || (!(*self.gd.get_line(self.cy - 1))
+                        || (!self.gd.get_line(self.cy - 1)
                             .flags
                             .intersects(grid_line_flag::WRAPPED))
                     {
@@ -450,7 +450,7 @@ impl<'a> grid_reader<'a> {
                 }
 
                 if py == yy
-                    || !(*self.gd.get_line(py))
+                    || !self.gd.get_line(py)
                         .flags
                         .intersects(grid_line_flag::WRAPPED)
                 {
@@ -495,7 +495,7 @@ impl<'a> grid_reader<'a> {
                 }
 
                 if py == 1
-                    || !(*self.gd.get_line(py - 2))
+                    || !self.gd.get_line(py - 2)
                         .flags
                         .intersects(grid_line_flag::WRAPPED)
                 {
@@ -529,7 +529,7 @@ impl<'a> grid_reader<'a> {
                         return;
                     }
                 }
-                if !(*self.gd.get_line(py))
+                if !self.gd.get_line(py)
                     .flags
                     .intersects(grid_line_flag::WRAPPED)
                 {

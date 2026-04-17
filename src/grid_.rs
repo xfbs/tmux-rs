@@ -419,9 +419,9 @@ unsafe fn grid_get_cell1(gl: &grid_line, px: c_uint, gc: *mut grid_cell) {
 }
 
 impl grid {
-    /// Get line data (mutable pointer).
-    pub unsafe fn get_line(&mut self, line: c_uint) -> *mut grid_line {
-        unsafe { self.linedata.as_mut_ptr().add(line as usize) }
+    /// Get line data (mutable reference).
+    pub fn get_line(&mut self, line: c_uint) -> &mut grid_line {
+        &mut self.linedata[line as usize]
     }
 
     /// Adjust number of lines.
@@ -430,13 +430,11 @@ impl grid {
     }
 
     /// Peek at grid line — returns null if py is out of range.
-    pub unsafe fn peek_line(&mut self, py: c_uint) -> *mut grid_line {
-        unsafe {
-            if grid_check_y(self, c!("grid_peek_line"), py) != 0 {
-                return null_mut();
-            }
-            self.linedata.as_mut_ptr().add(py as usize)
+    pub fn peek_line(&mut self, py: c_uint) -> *mut grid_line {
+        if grid_check_y(self, c!("grid_peek_line"), py) != 0 {
+            return null_mut();
         }
+        &raw mut self.linedata[py as usize]
     }
 
     /// Return the length of a line (position past last non-space cell).
@@ -1990,15 +1988,12 @@ mod tests {
     // ---------------------------------------------------------------
 
     #[test]
-    fn grid_get_line_returns_non_null() {
+    fn grid_get_line_returns_valid_ref() {
         let mut gd = grid_create(80, 24, 0);
-        unsafe {
-            let gl = gd.get_line(0);
-            assert!(!gl.is_null());
-            let gl_last = gd.get_line(23);
-            assert!(!gl_last.is_null());
-            drop(gd);
-        }
+        // Just check we can read fields without panicking on bounds.
+        let _cellused = gd.get_line(0).cellused;
+        let _cellused_last = gd.get_line(23).cellused;
+        drop(gd);
     }
 
     #[test]
