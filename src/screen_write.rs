@@ -627,7 +627,7 @@ pub unsafe fn screen_write_fast_copy(
     unsafe {
         let s = (*ctx).s;
         let gd: *mut grid = &raw mut *(*src).grid;
-        let mut gc: grid_cell = zeroed();
+        let mut gc: grid_cell;
 
         if nx == 0 || ny == 0 {
             return;
@@ -640,10 +640,10 @@ pub unsafe fn screen_write_fast_copy(
             }
             let mut cx = (*s).cx;
             for xx in px..(px + nx) {
-                if xx as usize >= (*(*gd).get_line(yy)).celldata.len() {
+                if xx as usize >= (*gd).get_line(yy).celldata.len() {
                     break;
                 }
-                (*gd).get_cell(xx, yy, &raw mut gc);
+                gc = (*gd).get_cell(xx, yy);
                 if xx + gc.data.width as u32 > px + nx {
                     break;
                 }
@@ -897,7 +897,7 @@ pub unsafe fn screen_write_box(
 pub unsafe fn screen_write_preview(ctx: *mut screen_write_ctx, src: *mut screen, nx: u32, ny: u32) {
     unsafe {
         let s = (*ctx).s;
-        let mut gc: grid_cell = zeroed();
+        let mut gc: grid_cell;
 
         let cx = (*s).cx;
         let cy = (*s).cy;
@@ -941,7 +941,7 @@ pub unsafe fn screen_write_preview(ctx: *mut screen_write_ctx, src: *mut screen,
         screen_write_fast_copy(ctx, src, px, (*(*src).grid).hsize + py, nx, ny);
 
         if (*src).mode.intersects(mode_flag::MODE_CURSOR) {
-            (*src).grid.view_get_cell((*src).cx, (*src).cy, &raw mut gc);
+            gc = (*src).grid.view_get_cell((*src).cx, (*src).cy);
             gc.attr |= grid_attr::GRID_ATTR_REVERSE;
             screen_write_set_cursor(
                 ctx,
@@ -1136,7 +1136,7 @@ pub unsafe fn screen_write_alignmenttest(ctx: *mut screen_write_ctx) {
 
         for yy in 0..screen_size_y(s) {
             for xx in 0..screen_size_x(s) {
-                (*s).grid.view_set_cell(xx, yy, &raw const gc);
+                (*s).grid.view_set_cell(xx, yy, &gc);
             }
         }
 
@@ -2043,7 +2043,7 @@ pub unsafe fn screen_write_collect_end(ctx: *mut screen_write_ctx) {
         if (*s).cx != 0 {
             let mut xx = (*s).cx;
             while xx > 0 {
-                (*s).grid.view_get_cell(xx, (*s).cy, &raw mut gc);
+                gc = (*s).grid.view_get_cell(xx, (*s).cy);
                 if !gc.flags.intersects(grid_flag::PADDING) {
                     break;
                 }
@@ -2074,7 +2074,7 @@ pub unsafe fn screen_write_collect_end(ctx: *mut screen_write_ctx) {
         screen_write_set_cursor(ctx, ((*s).cx + (*ci).used) as i32, -1);
 
         for xx in (*s).cx..screen_size_x(s) {
-            (*s).grid.view_get_cell(xx, (*s).cy, &raw mut gc);
+            gc = (*s).grid.view_get_cell(xx, (*s).cy);
             if !gc.flags.intersects(grid_flag::PADDING) {
                 break;
             }
@@ -2139,7 +2139,7 @@ pub unsafe fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *const grid_cell
         let gce: *mut grid_cell_entry;
 
         let mut tmp_gc: grid_cell = zeroed();
-        let mut now_gc: grid_cell = zeroed();
+        let mut now_gc: grid_cell;
         let mut ttyctx: tty_ctx = zeroed();
 
         let sx = screen_size_x(s);
@@ -2193,7 +2193,7 @@ pub unsafe fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *const grid_cell
         // Handle overwriting of UTF-8 characters.
         let gl: *mut grid_line = (*s).grid.get_line((*(*s).grid).hsize + (*s).cy);
         if (*gl).flags.intersects(grid_line_flag::EXTENDED) {
-            (*gd).view_get_cell((*s).cx, (*s).cy, &raw mut now_gc);
+            now_gc = (*gd).view_get_cell((*s).cx, (*s).cy);
             if screen_write_overwrite(ctx, &raw mut now_gc, width) != 0 {
                 skip = false;
             }
@@ -2232,13 +2232,13 @@ pub unsafe fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *const grid_cell
         if selected && !(*gc).flags.intersects(grid_flag::SELECTED) {
             memcpy__(&raw mut tmp_gc, gc);
             tmp_gc.flags |= grid_flag::SELECTED;
-            (*gd).view_set_cell((*s).cx, (*s).cy, &raw const tmp_gc);
+            (*gd).view_set_cell((*s).cx, (*s).cy, &tmp_gc);
         } else if !selected && ((*gc).flags.intersects(grid_flag::SELECTED)) {
             memcpy__(&raw mut tmp_gc, gc);
             tmp_gc.flags &= !grid_flag::SELECTED;
             (*gd).view_set_cell((*s).cx, (*s).cy, &tmp_gc);
         } else if !skip {
-            (*gd).view_set_cell((*s).cx, (*s).cy, gc);
+            (*gd).view_set_cell((*s).cx, (*s).cy, &*gc);
         }
         if selected {
             skip = false;
@@ -2282,7 +2282,7 @@ pub unsafe fn screen_write_combine(ctx: *mut screen_write_ctx, gc: *const grid_c
         let mut cx = (*s).cx;
         let cy = (*s).cy;
 
-        let mut last: grid_cell = zeroed();
+        let mut last: grid_cell;
         let mut ttyctx: tty_ctx = zeroed();
 
         let mut force_wide = 0;
@@ -2308,10 +2308,10 @@ pub unsafe fn screen_write_combine(ctx: *mut screen_write_ctx, gc: *const grid_c
 
         // Find the cell to combine with.
         let mut n = 1;
-        (*gd).view_get_cell(cx - n, cy, &raw mut last);
+        last = (*gd).view_get_cell(cx - n, cy);
         if cx != 1 && last.flags.intersects(grid_flag::PADDING) {
             n = 2;
-            (*gd).view_get_cell(cx - n, cy, &raw mut last);
+            last = (*gd).view_get_cell(cx - n, cy);
         }
         if n != last.data.width as u32 || last.flags.intersects(grid_flag::PADDING) {
             return zero_width;
@@ -2396,7 +2396,7 @@ pub unsafe fn screen_write_overwrite(
         let s = (*ctx).s;
         let gd: *mut grid = &raw mut *(*s).grid;
 
-        let mut tmp_gc: grid_cell = zeroed();
+        let mut tmp_gc: grid_cell;
         let mut done = 0;
 
         if (*gc).flags.intersects(grid_flag::PADDING) {
@@ -2408,17 +2408,17 @@ pub unsafe fn screen_write_overwrite(
                 xx -= 1;
                 xx > 0
             } {
-                (*gd).view_get_cell(xx, (*s).cy, &raw mut tmp_gc);
+                tmp_gc = (*gd).view_get_cell(xx, (*s).cy);
                 if !tmp_gc.flags.intersects(grid_flag::PADDING) {
                     break;
                 }
                 // log_debug("%s: padding at %u,%u", __func__, xx, (*s).cy);
-                (*gd).view_set_cell(xx, (*s).cy, &raw const GRID_DEFAULT_CELL);
+                (*gd).view_set_cell(xx, (*s).cy, &GRID_DEFAULT_CELL);
             }
 
             // Overwrite the character at the start of this padding.
             // log_debug("%s: character at %u,%u", __func__, xx, (*s).cy);
-            (*gd).view_set_cell(xx, (*s).cy, &raw const GRID_DEFAULT_CELL);
+            (*gd).view_set_cell(xx, (*s).cy, &GRID_DEFAULT_CELL);
             done = 1;
         }
 
@@ -2430,12 +2430,12 @@ pub unsafe fn screen_write_overwrite(
                 xx += 1;
                 xx < screen_size_x(s)
             } {
-                (*gd).view_get_cell(xx, (*s).cy, &raw mut tmp_gc);
+                tmp_gc = (*gd).view_get_cell(xx, (*s).cy);
                 if !tmp_gc.flags.intersects(grid_flag::PADDING) {
                     break;
                 }
                 // log_debug("%s: overwrite at %u,%u", __func__, xx, (*s).cy);
-                (*gd).view_set_cell(xx, (*s).cy, &raw const GRID_DEFAULT_CELL);
+                (*gd).view_set_cell(xx, (*s).cy, &GRID_DEFAULT_CELL);
                 done = 1;
             }
         }

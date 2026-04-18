@@ -673,7 +673,7 @@ unsafe fn sixel_to_screen(si: *mut sixel_image) -> *mut screen {
             );
             for y in 1..(sy - 1) {
                 for x in 1..(sx - 1) {
-                    (*s).grid.view_set_cell(x, y, &raw const gc);
+                    (*s).grid.view_set_cell(x, y, &gc);
                 }
             }
         }

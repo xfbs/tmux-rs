@@ -302,27 +302,8 @@ pub unsafe fn grid_compare(ga: *mut grid, gb: *mut grid) -> c_int {
             }
 
             for xx in 0..gla.celldata.len() as u32 {
-                let mut gca = grid_cell::new(
-                    utf8_data::new([0; 4], 0, 0, 0),
-                    grid_attr::empty(),
-                    grid_flag::empty(),
-                    0,
-                    0,
-                    0,
-                    0,
-                );
-                let mut gcb = grid_cell::new(
-                    utf8_data::new([0; 4], 0, 0, 0),
-                    grid_attr::empty(),
-                    grid_flag::empty(),
-                    0,
-                    0,
-                    0,
-                    0,
-                );
-
-                (*ga).get_cell(xx, yy, &mut gca);
-                (*gb).get_cell(xx, yy, &mut gcb);
+                let gca = (*ga).get_cell(xx, yy);
+                let gcb = (*gb).get_cell(xx, yy);
 
                 if !grid_cells_equal(&gca, &gcb) {
                     return 1;
@@ -438,66 +419,67 @@ impl grid {
     }
 
     /// Return the length of a line (position past last non-space cell).
-    pub unsafe fn line_length(&mut self, py: u32) -> u32 {
-        unsafe {
-            let mut gc = zeroed();
-            let mut px = (*self.get_line(py)).celldata.len() as u32;
-            if px > self.sx {
-                px = self.sx;
-            }
-            while px > 0 {
-                self.get_cell(px - 1, py, &mut gc);
-                if (gc.flags.intersects(grid_flag::PADDING))
-                    || gc.data.size != 1
-                    || gc.data.data[0] != b' '
-                {
-                    break;
-                }
-                px -= 1;
-            }
-            px
+    pub fn line_length(&mut self, py: u32) -> u32 {
+        let mut px = self.get_line(py).celldata.len() as u32;
+        if px > self.sx {
+            px = self.sx;
         }
+        while px > 0 {
+            let gc = self.get_cell(px - 1, py);
+            if (gc.flags.intersects(grid_flag::PADDING))
+                || gc.data.size != 1
+                || gc.data.data[0] != b' '
+            {
+                break;
+            }
+            px -= 1;
+        }
+        px
     }
 
-    /// Get cell for reading.
-    pub unsafe fn get_cell(&self, px: c_uint, py: c_uint, gc: *mut grid_cell) {
-        unsafe {
-            if grid_check_y(self, c!("grid_get_cell"), py) != 0
-                || px as usize >= self.linedata[py as usize].celldata.len()
-            {
-                std::ptr::copy(&raw const GRID_DEFAULT_CELL, gc, 1);
-            } else {
-                grid_get_cell1(&self.linedata[py as usize], px, gc);
+    /// Get cell at position `(px, py)`. Returns `GRID_DEFAULT_CELL` if the
+    /// position is out of range.
+    pub fn get_cell(&self, px: c_uint, py: c_uint) -> grid_cell {
+        if grid_check_y(self, c!("grid_get_cell"), py) != 0
+            || px as usize >= self.linedata[py as usize].celldata.len()
+        {
+            GRID_DEFAULT_CELL
+        } else {
+            let mut gc: grid_cell = GRID_DEFAULT_CELL;
+            unsafe {
+                grid_get_cell1(&self.linedata[py as usize], px, &raw mut gc);
             }
+            gc
         }
     }
 
     /// Set cell at position.
-    pub unsafe fn set_cell(&mut self, px: c_uint, py: c_uint, gc: *const grid_cell) {
+    pub fn set_cell(&mut self, px: c_uint, py: c_uint, gc: &grid_cell) {
+        if grid_check_y(self, c!("grid_set_cell"), py) != 0 {
+            return;
+        }
+
+        grid_expand_line(self, py, px + 1, 8);
+
+        let gl = &mut self.linedata[py as usize];
+        if px + 1 > gl.cellused {
+            gl.cellused = px + 1;
+        }
+
+        let gc_ptr: *const grid_cell = gc;
+        let gce = &mut gl.celldata[px as usize] as *mut grid_cell_entry;
         unsafe {
-            if grid_check_y(self, c!("grid_set_cell"), py) != 0 {
-                return;
-            }
-
-            grid_expand_line(self, py, px + 1, 8);
-
-            let gl = &mut self.linedata[py as usize];
-            if px + 1 > gl.cellused {
-                gl.cellused = px + 1;
-            }
-
-            let gce = &mut gl.celldata[px as usize] as *mut grid_cell_entry;
-            if grid_need_extended_cell(gce, gc) {
-                grid_extended_cell(gl, gce, gc);
+            if grid_need_extended_cell(gce, gc_ptr) {
+                grid_extended_cell(gl, gce, gc_ptr);
             } else {
-                grid_store_cell(gce, gc, (*gc).data.data[0]);
+                grid_store_cell(gce, gc_ptr, gc.data.data[0]);
             }
         }
     }
 
     /// Set padding at position.
-    pub unsafe fn set_padding(&mut self, px: c_uint, py: c_uint) {
-        unsafe { self.set_cell(px, py, &GRID_PADDING_CELL) }
+    pub fn set_padding(&mut self, px: c_uint, py: c_uint) {
+        self.set_cell(px, py, &GRID_PADDING_CELL)
     }
 
     /// Set cells at position.
@@ -784,7 +766,7 @@ impl grid {
     ) -> *mut u8 {
         static mut LASTGC1: grid_cell = unsafe { zeroed() };
         unsafe {
-            let mut gc: grid_cell = zeroed();
+            let mut gc: grid_cell;
             let mut data: *const u8;
             let mut code: [u8; 8192] = [0; 8192];
             let mut len: usize = 128;
@@ -811,7 +793,7 @@ impl grid {
                 if gl.is_null() || xx >= end {
                     break;
                 }
-                self.get_cell(xx, py, &mut gc);
+                gc = self.get_cell(xx, py);
                 if gc.flags.intersects(grid_flag::PADDING) {
                     continue;
                 }
@@ -1061,24 +1043,18 @@ impl grid {
     // ---------------------------------------------------------------
 
     /// Get a cell from the visible area at view coordinates (px, py).
-    pub unsafe fn view_get_cell(&self, px: u32, py: u32, gc: *mut grid_cell) {
-        unsafe {
-            self.get_cell(px, self.hsize + py, gc);
-        }
+    pub fn view_get_cell(&self, px: u32, py: u32) -> grid_cell {
+        self.get_cell(px, self.hsize + py)
     }
 
     /// Set a cell in the visible area at view coordinates (px, py).
-    pub unsafe fn view_set_cell(&mut self, px: u32, py: u32, gc: *const grid_cell) {
-        unsafe {
-            self.set_cell(px, self.hsize + py, gc);
-        }
+    pub fn view_set_cell(&mut self, px: u32, py: u32, gc: &grid_cell) {
+        self.set_cell(px, self.hsize + py, gc);
     }
 
     /// Mark a cell in the visible area as padding (following a wide char).
-    pub unsafe fn view_set_padding(&mut self, px: u32, py: u32) {
-        unsafe {
-            self.set_padding(px, self.hsize + py);
-        }
+    pub fn view_set_padding(&mut self, px: u32, py: u32) {
+        self.set_padding(px, self.hsize + py);
     }
 
     /// Set a run of cells in the visible area starting at (px, py).
@@ -1843,7 +1819,7 @@ unsafe fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::mem::zeroed;
+    
     use std::ptr::null_mut;
 
     /// Helper: create a grid_cell with a single ASCII character.
@@ -1894,10 +1870,10 @@ mod tests {
 
     #[test]
     fn grid_get_cell_on_fresh_grid_returns_default() {
-        let mut gd = grid_create(80, 24, 0);
+        let gd = grid_create(80, 24, 0);
         unsafe {
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             // Fresh grid returns GRID_DEFAULT_CELL (space character).
             assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
             drop(gd);
@@ -1911,8 +1887,8 @@ mod tests {
             let cell_in = make_cell(b'A', 8, 8);
             gd.set_cell(5, 3, &cell_in);
 
-            let mut cell_out: grid_cell = zeroed();
-            gd.get_cell(5, 3, &mut cell_out);
+            let cell_out: grid_cell;
+            cell_out = gd.get_cell(5, 3);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
             drop(gd);
@@ -1929,10 +1905,10 @@ mod tests {
             gd.set_cell(0, 0, &cell_a);
             gd.set_cell(1, 0, &cell_b);
 
-            let mut out_a: grid_cell = zeroed();
-            let mut out_b: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut out_a);
-            gd.get_cell(1, 0, &mut out_b);
+            let out_a: grid_cell;
+            let out_b: grid_cell;
+            out_a = gd.get_cell(0, 0);
+            out_b = gd.get_cell(1, 0);
 
             assert!(grid_cells_equal(&cell_a, &out_a));
             assert!(grid_cells_equal(&cell_b, &out_b));
@@ -2033,8 +2009,8 @@ mod tests {
             gd.empty_line(0, 8);
 
             // After emptying, get_cell should return default.
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
 
             let len = gd.line_length(0);
@@ -2061,21 +2037,21 @@ mod tests {
             gd.clear(2, 0, 4, 1, 8);
 
             // Cells outside cleared region should still be '#'.
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let mut gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &cell));
-            gd.get_cell(1, 0, &mut gc);
+            gc = gd.get_cell(1, 0);
             assert!(grid_cells_equal(&gc, &cell));
 
             // Cells inside cleared region should be cleared/default.
-            gd.get_cell(2, 0, &mut gc);
+            gc = gd.get_cell(2, 0);
             assert!(
                 grid_cells_equal(&gc, &GRID_CLEARED_CELL)
                     || grid_cells_equal(&gc, &GRID_DEFAULT_CELL)
             );
 
             // Cell after cleared region still '#'.
-            gd.get_cell(6, 0, &mut gc);
+            gc = gd.get_cell(6, 0);
             assert!(grid_cells_equal(&gc, &cell));
 
             drop(gd);
@@ -2143,12 +2119,12 @@ mod tests {
             gd.move_lines(5, 0, 1, 8);
 
             // Line 0 should now be empty.
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let mut gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
 
             // Line 5 should have the cell.
-            gd.get_cell(0, 5, &mut gc);
+            gc = gd.get_cell(0, 5);
             assert!(grid_cells_equal(&gc, &cell));
 
             drop(gd);
@@ -2289,8 +2265,8 @@ mod tests {
             // Moving line 2 to line 2 should be a no-op.
             gd.move_lines(2, 2, 1, 8);
 
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 2, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(0, 2);
             assert!(grid_cells_equal(&gc, &cell));
 
             drop(gd);
@@ -2384,8 +2360,8 @@ mod tests {
             let cell_in = make_rgb_fg_cell(b'R', 255, 0, 128);
             gd.set_cell(0, 0, &cell_in);
 
-            let mut cell_out: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut cell_out);
+            let cell_out: grid_cell;
+            cell_out = gd.get_cell(0, 0);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
             // Verify the RGB value survived the extended storage round-trip.
@@ -2401,8 +2377,8 @@ mod tests {
             let cell_in = make_rgb_bg_cell(b'B', 0, 128, 255);
             gd.set_cell(3, 1, &cell_in);
 
-            let mut cell_out: grid_cell = zeroed();
-            gd.get_cell(3, 1, &mut cell_out);
+            let cell_out: grid_cell;
+            cell_out = gd.get_cell(3, 1);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
             assert_eq!(cell_out.bg, colour_join_rgb(0, 128, 255));
@@ -2417,8 +2393,8 @@ mod tests {
             let cell_in = make_wide_cell();
             gd.set_cell(0, 0, &cell_in);
 
-            let mut cell_out: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut cell_out);
+            let cell_out: grid_cell;
+            cell_out = gd.get_cell(0, 0);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
             assert_eq!(cell_out.data.width, 2);
@@ -2435,8 +2411,8 @@ mod tests {
             let cell_in = make_us_cell(b'U', COLOUR_FLAG_256 | 42);
             gd.set_cell(2, 0, &cell_in);
 
-            let mut cell_out: grid_cell = zeroed();
-            gd.get_cell(2, 0, &mut cell_out);
+            let cell_out: grid_cell;
+            cell_out = gd.get_cell(2, 0);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
             assert_eq!(cell_out.us, COLOUR_FLAG_256 | 42);
@@ -2460,8 +2436,8 @@ mod tests {
             );
             gd.set_cell(0, 0, &cell_in);
 
-            let mut cell_out: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut cell_out);
+            let cell_out: grid_cell;
+            cell_out = gd.get_cell(0, 0);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
             assert!(cell_out.attr.contains(grid_attr::GRID_ATTR_BRIGHT));
@@ -2488,8 +2464,8 @@ mod tests {
 
             // Verify all round-trip correctly.
             for x in 0..10u32 {
-                let mut gc: grid_cell = zeroed();
-                gd.get_cell(x, 0, &mut gc);
+                let gc: grid_cell;
+                gc = gd.get_cell(x, 0);
                 if x % 2 == 0 {
                     assert!(grid_cells_equal(&gc, &simple), "mismatch at x={x}");
                 } else {
@@ -2511,8 +2487,8 @@ mod tests {
             gd.set_cell(0, 0, &simple);
             gd.set_cell(0, 0, &extended);
 
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &extended));
             drop(gd);
         }
@@ -2529,8 +2505,8 @@ mod tests {
             gd.set_cell(0, 0, &extended);
             gd.set_cell(0, 0, &simple);
 
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &simple));
             drop(gd);
         }
@@ -2544,8 +2520,8 @@ mod tests {
             gd.set_cell(0, 0, &wide);
             gd.set_padding(1, 0);
 
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(1, 0, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(1, 0);
             assert!(gc.flags.intersects(grid_flag::PADDING));
             drop(gd);
         }
@@ -2563,11 +2539,11 @@ mod tests {
 
             dst.duplicate_lines(0, &raw mut *src, 0, 5);
 
-            let mut gc: grid_cell = zeroed();
-            dst.get_cell(0, 0, &mut gc);
+            let mut gc: grid_cell;
+            gc = dst.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &extended));
 
-            dst.get_cell(5, 2, &mut gc);
+            gc = dst.get_cell(5, 2);
             assert!(grid_cells_equal(&gc, &wide));
 
             drop(src);
@@ -2624,9 +2600,9 @@ mod tests {
             gd.set_cell(5, 0, &cell);
 
             // Positions 0..5 should be cleared (default-ish) cells.
-            let mut gc: grid_cell = zeroed();
+            let mut gc: grid_cell;
             for x in 0..5u32 {
-                gd.get_cell(x, 0, &mut gc);
+                gc = gd.get_cell(x, 0);
                 // Cleared cells have the CLEARED flag OR are default.
                 assert!(
                     grid_cells_equal(&gc, &GRID_CLEARED_CELL)
@@ -2646,9 +2622,9 @@ mod tests {
             let data = b"Hello";
             gd.set_cells(0, 0, &gc, data.as_ptr(), data.len());
 
-            let mut out: grid_cell = zeroed();
+            let mut out: grid_cell;
             for (i, &ch) in data.iter().enumerate() {
-                gd.get_cell(i as u32, 0, &mut out);
+                out = gd.get_cell(i as u32, 0);
                 assert_eq!(out.data.data[0], ch, "mismatch at i={i}");
             }
             drop(gd);
@@ -2672,8 +2648,8 @@ mod tests {
             assert_eq!(gd.hscrolled, 1);
 
             // The old visible line 0 is now history line 0.
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &cell));
 
             // New visible line 0 (= line hsize) should be empty.
@@ -2700,10 +2676,10 @@ mod tests {
             assert_eq!(gd.hsize, 2);
 
             // History lines should contain '0' and '1'.
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let mut gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             assert_eq!(gc.data.data[0], b'0');
-            gd.get_cell(0, 1, &mut gc);
+            gc = gd.get_cell(0, 1);
             assert_eq!(gc.data.data[0], b'1');
 
             drop(gd);
@@ -2725,8 +2701,8 @@ mod tests {
             assert_eq!(gd.hsize, 1);
 
             // History line 0 should be line that had 'B'.
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             assert_eq!(gc.data.data[0], b'B');
 
             drop(gd);
@@ -2786,8 +2762,8 @@ mod tests {
             assert_eq!(gd.hsize, 1);
 
             // Remaining history line should be the oldest ('0').
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             assert_eq!(gc.data.data[0], b'0');
             drop(gd);
         }
@@ -2808,14 +2784,14 @@ mod tests {
 
             gd.clear_lines(1, 2, 8);
 
-            let mut gc: grid_cell = zeroed();
+            let mut gc: grid_cell;
             // Lines 1 and 2 should be empty.
             assert_eq!(gd.line_length(1), 0);
             assert_eq!(gd.line_length(2), 0);
             // Lines 0, 3, 4 should still have content.
-            gd.get_cell(0, 0, &mut gc);
+            gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &cell));
-            gd.get_cell(0, 3, &mut gc);
+            gc = gd.get_cell(0, 3);
             assert!(grid_cells_equal(&gc, &cell));
             drop(gd);
         }
@@ -2833,14 +2809,14 @@ mod tests {
             // Move 2 cells from position 0 to position 5.
             gd.move_cells(5, 0, 0, 2, 8);
 
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(5, 0, &mut gc);
+            let mut gc: grid_cell;
+            gc = gd.get_cell(5, 0);
             assert_eq!(gc.data.data[0], b'A');
-            gd.get_cell(6, 0, &mut gc);
+            gc = gd.get_cell(6, 0);
             assert_eq!(gc.data.data[0], b'B');
 
             // Original positions should be cleared.
-            gd.get_cell(0, 0, &mut gc);
+            gc = gd.get_cell(0, 0);
             assert!(
                 grid_cells_equal(&gc, &GRID_CLEARED_CELL)
                     || grid_cells_equal(&gc, &GRID_DEFAULT_CELL)
@@ -2876,8 +2852,8 @@ mod tests {
             );
 
             // Content should be preserved.
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             assert_eq!(gc.data.data[0], b'.');
             drop(gd);
         }
@@ -2930,10 +2906,10 @@ mod tests {
             // Reflow to width 10 — short unwrapped line should stay as-is.
             gd.reflow(10);
 
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let mut gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             assert_eq!(gc.data.data[0], b'S');
-            gd.get_cell(4, 0, &mut gc);
+            gc = gd.get_cell(4, 0);
             assert_eq!(gc.data.data[0], b'S');
             drop(gd);
         }
@@ -2954,8 +2930,8 @@ mod tests {
             gd.reflow(80);
             assert_eq!(gd.hsize, hsize_before);
 
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             assert_eq!(gc.data.data[0], b'I');
             drop(gd);
         }
@@ -3029,8 +3005,8 @@ mod tests {
             gd.scroll_history(8);
 
             // Extended cell should survive in history.
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 0, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &extended));
             assert_eq!(gc.fg, colour_join_rgb(0, 255, 0));
             drop(gd);
@@ -3049,8 +3025,8 @@ mod tests {
             let cell = make_cell(b'X', 8, 8);
             gd.set_cell(0, 0, &cell);
 
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(50, 0, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(50, 0);
             assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
             drop(gd);
         }
@@ -3091,8 +3067,8 @@ mod tests {
             gd.clear(2, 0, 3, 1, bg);
 
             // Cleared cells should have a non-default bg.
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(2, 0, &mut gc);
+            let gc: grid_cell;
+            gc = gd.get_cell(2, 0);
             assert!(gc.flags.intersects(grid_flag::CLEARED));
             drop(gd);
         }
@@ -3110,12 +3086,12 @@ mod tests {
 
             gd.move_lines(2, 0, 3, 8);
 
-            let mut gc: grid_cell = zeroed();
-            gd.get_cell(0, 2, &mut gc);
+            let mut gc: grid_cell;
+            gc = gd.get_cell(0, 2);
             assert_eq!(gc.data.data[0], b'A');
-            gd.get_cell(0, 3, &mut gc);
+            gc = gd.get_cell(0, 3);
             assert_eq!(gc.data.data[0], b'B');
-            gd.get_cell(0, 4, &mut gc);
+            gc = gd.get_cell(0, 4);
             assert_eq!(gc.data.data[0], b'C');
             drop(gd);
         }
@@ -3143,8 +3119,8 @@ mod tests {
     /// Helper: read back the character at view coordinates (px, py).
     unsafe fn read_view_char(gd: *mut grid, px: u32, py: u32) -> u8 {
         unsafe {
-            let mut gc: grid_cell = zeroed();
-            (*gd).view_get_cell(px, py, &raw mut gc);
+            let gc: grid_cell;
+            gc = (*gd).view_get_cell(px, py);
             gc.data.data[0]
         }
     }
@@ -3217,8 +3193,8 @@ mod tests {
             assert_eq!(read_view_char(gd_ptr, 0, 0), b'Y');
 
             // The old 'X' should still be in grid row 0 (history).
-            let mut gc_read: grid_cell = zeroed();
-            (*gd_ptr).get_cell(0, 0, &raw mut gc_read);
+            let gc_read: grid_cell;
+            gc_read = (*gd_ptr).get_cell(0, 0);
             assert_eq!(gc_read.data.data[0], b'X');
 
             drop(gd);

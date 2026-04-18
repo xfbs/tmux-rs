@@ -1757,7 +1757,7 @@ pub unsafe fn tty_draw_line(
 ) {
     unsafe {
         let gd: *mut grid = &raw mut *(*s).grid;
-        let mut gc: grid_cell = zeroed();
+        let mut gc: grid_cell;
         let mut last: grid_cell = zeroed();
         let c = (*tty).client;
 
@@ -1833,7 +1833,7 @@ pub unsafe fn tty_draw_line(
         let mut width = 0;
 
         for i in 0..sx {
-            (*gd).view_get_cell(px + i, py, &raw mut gc);
+            gc = (*gd).view_get_cell(px + i, py);
             let gcp = tty_check_codeset(tty, &gc);
             if len != 0
                 && (!tty_check_overlay(tty, atx + ux + width, aty)

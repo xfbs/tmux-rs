@@ -1140,17 +1140,12 @@ pub unsafe fn format_cb_cursor_character(ft: &format_tree) -> format_table_type 
         if wp.is_null() {
             return format_table_type::None;
         }
-        let mut gc = MaybeUninit::<grid_cell>::uninit();
-        (*wp).base.grid.view_get_cell(
-            (*wp).base.cx,
-            (*wp).base.cy,
-            gc.as_mut_ptr(),
-        );
-        if !(*gc.as_ptr()).flags.intersects(grid_flag::PADDING) {
+        let gc = (*wp).base.grid.view_get_cell((*wp).base.cx, (*wp).base.cy);
+        if !gc.flags.intersects(grid_flag::PADDING) {
             format!(
                 "{1:0$}",
-                (*gc.as_ptr()).data.size as usize,
-                _s((&raw const (*gc.as_ptr()).data.data).cast::<u8>())
+                gc.data.size as usize,
+                _s((&raw const gc.data.data).cast::<u8>())
             )
             .into()
         } else {
@@ -5387,19 +5382,18 @@ pub unsafe fn format_defaults_paste_buffer(ft: *mut format_tree, pb: *mut PasteB
 pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String {
     unsafe {
         let mut ud: Vec<utf8_data> = Vec::new();
-        let mut gc = MaybeUninit::<grid_cell>::uninit();
-        let gc = gc.as_mut_ptr();
+        let mut gc: grid_cell;
         let mut found = false;
 
         let ws: *const u8 = options_get_string_(GLOBAL_S_OPTIONS, "word-separators");
 
         loop {
-            (*gd).get_cell(x, y, gc);
-            if (*gc).flags.intersects(grid_flag::PADDING) {
+            gc = (*gd).get_cell(x, y);
+            if gc.flags.intersects(grid_flag::PADDING) {
                 break;
             }
-            if utf8_cstrhas(ws, &raw const (*gc).data)
-                || ((*gc).data.size == 1 && (*gc).data.data[0] == b' ')
+            if utf8_cstrhas(ws, &raw const gc.data)
+                || (gc.data.size == 1 && gc.data.data[0] == b' ')
             {
                 found = true;
                 break;
@@ -5440,17 +5434,17 @@ pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String 
             }
             found = true;
 
-            (*gd).get_cell(x, y, gc);
-            if (*gc).flags.intersects(grid_flag::PADDING) {
+            gc = (*gd).get_cell(x, y);
+            if gc.flags.intersects(grid_flag::PADDING) {
                 break;
             }
-            if utf8_cstrhas(ws, &raw mut (*gc).data)
-                || ((*gc).data.size == 1 && (*gc).data.data[0] == b' ')
+            if utf8_cstrhas(ws, &raw mut gc.data)
+                || (gc.data.size == 1 && gc.data.data[0] == b' ')
             {
                 break;
             }
 
-            ud.push((*gc).data);
+            ud.push(gc.data);
         }
 
         utf8_to_string(&ud)
@@ -5461,15 +5455,13 @@ pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String 
 pub unsafe fn format_grid_line(gd: *mut grid, y: u32) -> String {
     unsafe {
         let mut ud: Vec<utf8_data> = Vec::new();
-        let mut gc = MaybeUninit::<grid_cell>::uninit();
-        let gc = gc.as_mut_ptr();
         for x in 0..(*gd).line_length(y) {
-            (*gd).get_cell(x, y, gc);
-            if (*gc).flags.intersects(grid_flag::PADDING) {
+            let gc = (*gd).get_cell(x, y);
+            if gc.flags.intersects(grid_flag::PADDING) {
                 break;
             }
 
-            ud.push((*gc).data);
+            ud.push(gc.data);
         }
         utf8_to_string(&ud)
     }
@@ -5484,19 +5476,17 @@ pub unsafe fn format_grid_hyperlink(
 ) -> Option<String> {
     unsafe {
         let mut uri: *const u8 = null();
-        let mut gc = MaybeUninit::<grid_cell>::uninit();
-        let gc = gc.as_mut_ptr();
 
-        (*gd).get_cell(x, y, gc);
-        if (*gc).flags.intersects(grid_flag::PADDING) {
+        let gc = (*gd).get_cell(x, y);
+        if gc.flags.intersects(grid_flag::PADDING) {
             return None;
         }
-        if (*s).hyperlinks.is_none() || (*gc).link == 0 {
+        if (*s).hyperlinks.is_none() || gc.link == 0 {
             return None;
         }
         if !hyperlinks_get(
             (*s).hyperlinks.unwrap_or(null_mut()),
-            (*gc).link,
+            gc.link,
             &mut uri,
             null_mut(),
             null_mut(),

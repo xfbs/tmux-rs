@@ -57,36 +57,32 @@ impl<'a> grid_reader<'a> {
     }
 
     /// Return the length of the current line (number of non-default cells from the left).
-    pub unsafe fn line_length(&mut self) -> u32 {
-        unsafe { self.gd.line_length(self.cy) }
+    pub fn line_length(&mut self) -> u32 {
+        self.gd.line_length(self.cy)
     }
 
     /// Move cursor right by one character, skipping PADDING cells.
     /// If `wrap` is set and the cursor is at the end of the line, wraps to the
     /// start of the next line. If `all` is set, uses the full grid width instead
     /// of the line content length as the right boundary.
-    pub unsafe fn cursor_right(&mut self, wrap: u32, all: i32) {
-        unsafe {
-            let mut gc = MaybeUninit::<grid_cell>::uninit();
+    pub fn cursor_right(&mut self, wrap: u32, all: i32) {
+        let px = if all != 0 {
+            self.gd.sx
+        } else {
+            self.line_length()
+        };
 
-            let px = if all != 0 {
-                self.gd.sx
-            } else {
-                self.line_length()
-            };
-
-            if wrap != 0 && self.cx >= px && self.cy < self.gd.hsize + self.gd.sy - 1 {
-                self.cursor_start_of_line(0);
-                self.cursor_down();
-            } else if self.cx < px {
-                self.cx += 1;
-                while self.cx < px {
-                    self.gd.get_cell(self.cx, self.cy, gc.as_mut_ptr());
-                    if !(*gc.as_ptr()).flags.intersects(grid_flag::PADDING) {
-                        break;
-                    }
-                    self.cx += 1;
+        if wrap != 0 && self.cx >= px && self.cy < self.gd.hsize + self.gd.sy - 1 {
+            self.cursor_start_of_line(0);
+            self.cursor_down();
+        } else if self.cx < px {
+            self.cx += 1;
+            while self.cx < px {
+                let gc = self.gd.get_cell(self.cx, self.cy);
+                if !gc.flags.intersects(grid_flag::PADDING) {
+                    break;
                 }
+                self.cx += 1;
             }
         }
     }
@@ -94,67 +90,55 @@ impl<'a> grid_reader<'a> {
     /// Move cursor left by one character, skipping PADDING cells.
     /// If `wrap` is set, wraps from column 0 to the end of the previous line.
     /// Also wraps across wrapped lines (WRAPPED flag) regardless of the `wrap` parameter.
-    pub unsafe fn cursor_left(&mut self, wrap: i32) {
-        unsafe {
-            let mut gc = MaybeUninit::<grid_cell>::uninit();
-
-            while self.cx > 0 {
-                self.gd.get_cell(self.cx, self.cy, gc.as_mut_ptr());
-                if !(*gc.as_ptr()).flags.intersects(grid_flag::PADDING) {
-                    break;
-                }
-                self.cx -= 1;
+    pub fn cursor_left(&mut self, wrap: i32) {
+        while self.cx > 0 {
+            let gc = self.gd.get_cell(self.cx, self.cy);
+            if !gc.flags.intersects(grid_flag::PADDING) {
+                break;
             }
-            if self.cx == 0
-                && self.cy > 0
-                && (wrap != 0
-                    || self.gd.get_line(self.cy - 1)
-                        .flags
-                        .intersects(grid_line_flag::WRAPPED))
-            {
-                self.cursor_up();
-                self.cursor_end_of_line(0, 0);
-            } else if self.cx > 0 {
-                self.cx -= 1;
-            }
+            self.cx -= 1;
+        }
+        if self.cx == 0
+            && self.cy > 0
+            && (wrap != 0
+                || self
+                    .gd
+                    .get_line(self.cy - 1)
+                    .flags
+                    .intersects(grid_line_flag::WRAPPED))
+        {
+            self.cursor_up();
+            self.cursor_end_of_line(0, 0);
+        } else if self.cx > 0 {
+            self.cx -= 1;
         }
     }
 
     /// Move cursor down one row. Adjusts cx leftward if it lands on a PADDING cell.
-    pub unsafe fn cursor_down(&mut self) {
-        unsafe {
-            let mut gc = MaybeUninit::<grid_cell>::uninit();
-            let gc = gc.as_mut_ptr();
-
-            if self.cy < self.gd.hsize + self.gd.sy - 1 {
-                self.cy += 1;
+    pub fn cursor_down(&mut self) {
+        if self.cy < self.gd.hsize + self.gd.sy - 1 {
+            self.cy += 1;
+        }
+        while self.cx > 0 {
+            let gc = self.gd.get_cell(self.cx, self.cy);
+            if !gc.flags.intersects(grid_flag::PADDING) {
+                break;
             }
-            while self.cx > 0 {
-                self.gd.get_cell(self.cx, self.cy, gc);
-                if !(*gc).flags.intersects(grid_flag::PADDING) {
-                    break;
-                }
-                self.cx -= 1;
-            }
+            self.cx -= 1;
         }
     }
 
     /// Move cursor up one row. Adjusts cx leftward if it lands on a PADDING cell.
-    pub unsafe fn cursor_up(&mut self) {
-        unsafe {
-            let mut gc = MaybeUninit::<grid_cell>::uninit();
-            let gc = gc.as_mut_ptr();
-
-            if self.cy > 0 {
-                self.cy -= 1;
+    pub fn cursor_up(&mut self) {
+        if self.cy > 0 {
+            self.cy -= 1;
+        }
+        while self.cx > 0 {
+            let gc = self.gd.get_cell(self.cx, self.cy);
+            if !gc.flags.intersects(grid_flag::PADDING) {
+                break;
             }
-            while self.cx > 0 {
-                self.gd.get_cell(self.cx, self.cy, gc);
-                if !(*gc).flags.intersects(grid_flag::PADDING) {
-                    break;
-                }
-                self.cx -= 1;
-            }
+            self.cx -= 1;
         }
     }
 
@@ -179,23 +163,23 @@ impl<'a> grid_reader<'a> {
     /// Move cursor to the end of the current line. If `wrap` is set, follows
     /// wrapped lines downward to find the true end of the logical line.
     /// If `all` is set, moves to the full grid width rather than content length.
-    pub unsafe fn cursor_end_of_line(&mut self, wrap: i32, all: i32) {
-        unsafe {
-            if wrap != 0 {
-                let yy = self.gd.hsize + self.gd.sy - 1;
-                while self.cy < yy
-                    && self.gd.get_line(self.cy)
-                        .flags
-                        .intersects(grid_line_flag::WRAPPED)
-                {
-                    self.cy += 1;
-                }
+    pub fn cursor_end_of_line(&mut self, wrap: i32, all: i32) {
+        if wrap != 0 {
+            let yy = self.gd.hsize + self.gd.sy - 1;
+            while self.cy < yy
+                && self
+                    .gd
+                    .get_line(self.cy)
+                    .flags
+                    .intersects(grid_line_flag::WRAPPED)
+            {
+                self.cy += 1;
             }
-            if all != 0 {
-                self.cx = self.gd.sx;
-            } else {
-                self.cx = self.line_length();
-            }
+        }
+        if all != 0 {
+            self.cx = self.gd.sx;
+        } else {
+            self.cx = self.line_length();
         }
     }
 
@@ -229,16 +213,11 @@ impl<'a> grid_reader<'a> {
     /// character set. Returns false for PADDING cells. Used to classify characters
     /// as whitespace, separators, or word characters during word movement.
     pub unsafe fn in_set(&mut self, set: *const u8) -> bool {
-        unsafe {
-            let mut gc = MaybeUninit::<grid_cell>::uninit();
-            let gc = gc.as_mut_ptr();
-
-            self.gd.get_cell(self.cx, self.cy, gc);
-            if (*gc).flags.intersects(grid_flag::PADDING) {
-                return false;
-            }
-            utf8_cstrhas(set, &raw mut (*gc).data)
+        let mut gc = self.gd.get_cell(self.cx, self.cy);
+        if gc.flags.intersects(grid_flag::PADDING) {
+            return false;
         }
+        unsafe { utf8_cstrhas(set, &raw mut gc.data) }
     }
 
     /// Move cursor forward to the start of the next word (vi `w` behavior).
@@ -423,9 +402,6 @@ impl<'a> grid_reader<'a> {
     /// non-wrapped line boundaries.
     pub unsafe fn cursor_jump(&mut self, jc: *const utf8_data) -> i32 {
         unsafe {
-            let mut gc = MaybeUninit::<grid_cell>::uninit();
-            let gc = gc.as_mut_ptr();
-
             let mut px = self.cx;
             let yy = self.gd.hsize + self.gd.sy - 1;
 
@@ -433,13 +409,13 @@ impl<'a> grid_reader<'a> {
             while py <= yy {
                 let xx = self.gd.line_length(py);
                 while px < xx {
-                    self.gd.get_cell(px, py, gc);
-                    if !(*gc).flags.intersects(grid_flag::PADDING)
-                        && (*gc).data.size == (*jc).size
+                    let gc = self.gd.get_cell(px, py);
+                    if !gc.flags.intersects(grid_flag::PADDING)
+                        && gc.data.size == (*jc).size
                         && memcmp(
-                            (*gc).data.data.as_ptr().cast(),
+                            gc.data.data.as_ptr().cast(),
                             (*jc).data.as_ptr().cast(),
-                            (*gc).data.size as usize,
+                            gc.data.size as usize,
                         ) == 0
                     {
                         self.cx = px;
@@ -450,7 +426,9 @@ impl<'a> grid_reader<'a> {
                 }
 
                 if py == yy
-                    || !self.gd.get_line(py)
+                    || !self
+                        .gd
+                        .get_line(py)
                         .flags
                         .intersects(grid_line_flag::WRAPPED)
                 {
@@ -468,9 +446,6 @@ impl<'a> grid_reader<'a> {
     /// cross non-wrapped line boundaries.
     pub unsafe fn cursor_jump_back(&mut self, jc: *mut utf8_data) -> i32 {
         unsafe {
-            let mut gc = MaybeUninit::<grid_cell>::uninit();
-            let gc = gc.as_mut_ptr();
-
             let mut xx = self.cx + 1;
 
             let mut py = self.cy + 1;
@@ -478,13 +453,13 @@ impl<'a> grid_reader<'a> {
             while py > 0 {
                 px = xx;
                 while px > 0 {
-                    self.gd.get_cell(px - 1, py - 1, gc);
-                    if !(*gc).flags.intersects(grid_flag::PADDING)
-                        && (*gc).data.size == (*jc).size
+                    let gc = self.gd.get_cell(px - 1, py - 1);
+                    if !gc.flags.intersects(grid_flag::PADDING)
+                        && gc.data.size == (*jc).size
                         && memcmp(
-                            (*gc).data.data.as_ptr().cast(),
+                            gc.data.data.as_ptr().cast(),
                             (*jc).data.as_ptr().cast(),
-                            (*gc).data.size as usize,
+                            gc.data.size as usize,
                         ) == 0
                     {
                         self.cx = px - 1;
@@ -495,7 +470,9 @@ impl<'a> grid_reader<'a> {
                 }
 
                 if py == 1
-                    || !self.gd.get_line(py - 2)
+                    || !self
+                        .gd
+                        .get_line(py - 2)
                         .flags
                         .intersects(grid_line_flag::WRAPPED)
                 {
@@ -509,36 +486,33 @@ impl<'a> grid_reader<'a> {
     }
 
     /// Move the cursor to the first non-space character on the current logical line.
-    pub unsafe fn cursor_back_to_indentation(&mut self) {
-        unsafe {
-            let mut gc = MaybeUninit::<grid_cell>::uninit();
-            let gc = gc.as_mut_ptr();
+    pub fn cursor_back_to_indentation(&mut self) {
+        let yy = self.gd.hsize + self.gd.sy - 1;
+        let oldx = self.cx;
+        let oldy = self.cy;
+        self.cursor_start_of_line(1);
 
-            let yy = self.gd.hsize + self.gd.sy - 1;
-            let oldx = self.cx;
-            let oldy = self.cy;
-            self.cursor_start_of_line(1);
-
-            for py in self.cy..=yy {
-                let xx = self.gd.line_length(py);
-                for px in 0..xx {
-                    self.gd.get_cell(px, py, gc);
-                    if (*gc).data.size != 1 || (*gc).data.data[0] != b' ' {
-                        self.cx = px;
-                        self.cy = py;
-                        return;
-                    }
-                }
-                if !self.gd.get_line(py)
-                    .flags
-                    .intersects(grid_line_flag::WRAPPED)
-                {
-                    break;
+        for py in self.cy..=yy {
+            let xx = self.gd.line_length(py);
+            for px in 0..xx {
+                let gc = self.gd.get_cell(px, py);
+                if gc.data.size != 1 || gc.data.data[0] != b' ' {
+                    self.cx = px;
+                    self.cy = py;
+                    return;
                 }
             }
-            self.cx = oldx;
-            self.cy = oldy;
+            if !self
+                .gd
+                .get_line(py)
+                .flags
+                .intersects(grid_line_flag::WRAPPED)
+            {
+                break;
+            }
         }
+        self.cx = oldx;
+        self.cy = oldy;
     }
 }
 
@@ -576,7 +550,7 @@ mod tests {
     fn start_sets_cursor_position() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr = grid_reader::new(&mut *gd, 3, 0);
+            let gr = grid_reader::new(&mut *gd, 3, 0);
             assert_eq!(gr.cx, 3);
             assert_eq!(gr.cy, 0);
             drop(gd);
