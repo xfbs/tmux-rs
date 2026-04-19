@@ -85,7 +85,7 @@ use crate::{format_nul, xsnprintf_};
 // === Globals ===
 use crate::CURRENT_TIME;
 // === Macros from crate root ===
-use crate::{c, log_debug};
+use crate::c;
 // === Small helpers that are trivially replaceable ===
 use crate::_s;
 use crate::fatalx;
@@ -297,8 +297,8 @@ fn grid_clear_cell(gd: &mut grid, px: c_uint, py: c_uint, bg: c_uint) {
 fn grid_check_y(gd: &grid, from: *const u8, py: c_uint) -> c_int {
     if py >= gd.hsize + gd.sy {
         // SAFETY: `from` is a NUL-terminated ASCII tag passed in from a c!()
-        // literal; log_debug is the only safe consumer.
-        unsafe { log_debug!("{}: y out of range: {}", _s(from), py) };
+        // literal; `_s` is the only consumer.
+        unsafe { ::log::debug!("{}: y out of range: {}", _s(from), py) };
         return -1;
     }
     0

@@ -363,6 +363,11 @@ pub unsafe fn tmux_main(mut argc: i32, mut argv: *mut *mut u8, _env: *mut *mut u
         _ = std::fs::write("client-panic.txt", err_str);
     }));
 
+    // Install the `log` crate adapter so that library code (including
+    // future extracted crates like `tmux-grid`) can use `log::debug!` /
+    // `log::info!` and have it flow through our existing log pipeline.
+    crate::log::log_install_logger();
+
     unsafe {
         // setproctitle_init(argc, argv.cast(), env.cast());
         let mut path: *const u8 = null_mut();

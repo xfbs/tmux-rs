@@ -741,6 +741,7 @@ dependencies = [
  "lalrpop",
  "lalrpop-util",
  "libc",
+ "log",
  "memchr",
  "nix",
  "num_enum",
