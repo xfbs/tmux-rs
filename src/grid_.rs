@@ -78,13 +78,9 @@ use crate::{
 };
 // === External types (would stay in tmux-rs; needs a trait/callback) ===
 use crate::{hyperlinks, hyperlinks_get};
-// === Globals ===
+// === Globals === (remaining blocker: CURRENT_TIME feeds scroll_history/_region;
+// handle via trait-design task when extracting `tmux-grid`)
 use crate::CURRENT_TIME;
-// === Macros from crate root ===
-use crate::c;
-// === Small helpers that are trivially replaceable ===
-use crate::_s;
-use crate::fatalx;
 
 use crate::libc::strlen;
 
@@ -211,7 +207,7 @@ unsafe fn grid_extended_cell(
         if !(*gce).flags.contains(grid_flag::EXTENDED) {
             grid_get_extended_cell(gl, gce, flags);
         } else if (*gce).union_.offset as usize >= (*gl).extddata.len() {
-            fatalx("offset too big");
+            panic!("grid extended-cell offset out of range");
         }
         (*gl).flags |= grid_line_flag::EXTENDED;
 
@@ -288,12 +284,11 @@ fn grid_clear_cell(gd: &mut grid, px: c_uint, py: c_uint, bg: c_uint) {
     }
 }
 
-/// Check grid y position.
-fn grid_check_y(gd: &grid, from: *const u8, py: c_uint) -> c_int {
+/// Check grid y position. `from` is a human-readable tag identifying the
+/// caller, emitted as a debug log message when `py` falls out of range.
+fn grid_check_y(gd: &grid, from: &str, py: c_uint) -> c_int {
     if py >= gd.hsize + gd.sy {
-        // SAFETY: `from` is a NUL-terminated ASCII tag passed in from a c!()
-        // literal; `_s` is the only consumer.
-        unsafe { ::log::debug!("{}: y out of range: {}", _s(from), py) };
+        ::log::debug!("{from}: y out of range: {py}");
         return -1;
     }
     0
@@ -487,7 +482,7 @@ impl grid {
     /// `peek_line` is the right choice when `py` may be untrusted
     /// (reflow, search across history boundaries).
     pub fn peek_line(&self, py: c_uint) -> Option<&grid_line> {
-        if grid_check_y(self, c!("grid_peek_line"), py) != 0 {
+        if grid_check_y(self, "grid_peek_line", py) != 0 {
             return None;
         }
         Some(&self.linedata[py as usize])
@@ -518,7 +513,7 @@ impl grid {
     /// Get cell at position `(px, py)`. Returns `GRID_DEFAULT_CELL` if the
     /// position is out of range.
     pub fn get_cell(&self, px: c_uint, py: c_uint) -> grid_cell {
-        if grid_check_y(self, c!("grid_get_cell"), py) != 0
+        if grid_check_y(self, "grid_get_cell", py) != 0
             || px as usize >= self.linedata[py as usize].celldata.len()
         {
             GRID_DEFAULT_CELL
@@ -537,7 +532,7 @@ impl grid {
     /// side-table if the style doesn't fit the packed representation. Silently
     /// skips out-of-range `py` (logged at debug).
     pub fn set_cell(&mut self, px: c_uint, py: c_uint, gc: &grid_cell) {
-        if grid_check_y(self, c!("grid_set_cell"), py) != 0 {
+        if grid_check_y(self, "grid_set_cell", py) != 0 {
             return;
         }
 
@@ -572,7 +567,7 @@ impl grid {
     /// style promotion.
     pub fn set_cells(&mut self, px: u32, py: u32, gc: &grid_cell, s: &[u8]) {
         let slen = s.len();
-        if grid_check_y(self, c!("grid_set_cells"), py) != 0 {
+        if grid_check_y(self, "grid_set_cells", py) != 0 {
             return;
         }
 
@@ -716,10 +711,10 @@ impl grid {
             return;
         }
 
-        if grid_check_y(self, c!("grid_clear"), py) != 0 {
+        if grid_check_y(self, "grid_clear", py) != 0 {
             return;
         }
-        if grid_check_y(self, c!("grid_clear"), py + ny - 1) != 0 {
+        if grid_check_y(self, "grid_clear", py + ny - 1) != 0 {
             return;
         }
 
@@ -755,10 +750,10 @@ impl grid {
             return;
         }
 
-        if grid_check_y(self, c!("grid_clear_lines"), py) != 0 {
+        if grid_check_y(self, "grid_clear_lines", py) != 0 {
             return;
         }
-        if grid_check_y(self, c!("grid_clear_lines"), py + ny - 1) != 0 {
+        if grid_check_y(self, "grid_clear_lines", py + ny - 1) != 0 {
             return;
         }
 
@@ -780,16 +775,16 @@ impl grid {
             return;
         }
 
-        if grid_check_y(self, c!("grid_move_lines"), py) != 0 {
+        if grid_check_y(self, "grid_move_lines", py) != 0 {
             return;
         }
-        if grid_check_y(self, c!("grid_move_lines"), py + ny - 1) != 0 {
+        if grid_check_y(self, "grid_move_lines", py + ny - 1) != 0 {
             return;
         }
-        if grid_check_y(self, c!("grid_move_lines"), dy) != 0 {
+        if grid_check_y(self, "grid_move_lines", dy) != 0 {
             return;
         }
-        if grid_check_y(self, c!("grid_move_lines"), dy + ny - 1) != 0 {
+        if grid_check_y(self, "grid_move_lines", dy + ny - 1) != 0 {
             return;
         }
 
@@ -842,7 +837,7 @@ impl grid {
             return;
         }
 
-        if grid_check_y(self, c!("grid_move_cells"), py) != 0 {
+        if grid_check_y(self, "grid_move_cells", py) != 0 {
             return;
         }
         grid_expand_line(self, py, px + nx, 8);
