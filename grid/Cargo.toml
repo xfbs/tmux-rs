@@ -1,0 +1,12 @@
+[package]
+name         = "tmux-grid"
+version      = "0.0.1"
+edition      = "2024"
+license      = "ISC"
+description  = "Grid/screen backing store for tmux-rs: cells, lines, scrollback, reader."
+
+[dependencies]
+bitflags   = { version = "2.9.1" }
+libc       = { version = "0.2.174" }
+log        = { version = "0.4" }
+tmux-types = { path = "../types" }

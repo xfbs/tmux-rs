@@ -368,6 +368,11 @@ pub unsafe fn tmux_main(mut argc: i32, mut argv: *mut *mut u8, _env: *mut *mut u
     // `log::info!` and have it flow through our existing log pipeline.
     crate::log::log_install_logger();
 
+    // Hand `tmux-grid` the utf8 codec (intern table encode/decode +
+    // word-set helper). The grid crate doesn't own this infrastructure —
+    // it calls back into us via the `Utf8Codec` trait.
+    crate::utf8::install_grid_codec();
+
     unsafe {
         // setproctitle_init(argc, argv.cast(), env.cast());
         let mut path: *const u8 = null_mut();

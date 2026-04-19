@@ -37,10 +37,8 @@
 //! Cursor movement functions skip over PADDING cells to avoid landing in the
 //! middle of a wide character.
 
-// Explicit imports — dependency surface for planned `tmux-grid` crate extraction.
-use crate::{
-    WHITESPACE, grid, grid_flag, grid_line_flag, grid_reader, utf8_data, utf8_cstrhas,
-};
+use tmux_types::{grid_flag, grid_line_flag, utf8_data};
+use crate::{WHITESPACE, codec, grid, grid_reader};
 
 impl<'a> grid_reader<'a> {
     /// Create a grid reader at the given position over the given grid.
@@ -213,11 +211,11 @@ impl<'a> grid_reader<'a> {
     /// character set. Returns false for PADDING cells. Used to classify characters
     /// as whitespace, separators, or word characters during word movement.
     pub unsafe fn in_set(&self, set: *const u8) -> bool {
-        let mut gc = self.gd.get_cell(self.cx, self.cy);
+        let gc = self.gd.get_cell(self.cx, self.cy);
         if gc.flags.intersects(grid_flag::PADDING) {
             return false;
         }
-        unsafe { utf8_cstrhas(set, &raw mut gc.data) }
+        unsafe { codec().cstr_has(set, &raw const gc.data) }
     }
 
     /// Move cursor forward to the start of the next word (vi `w` behavior).
@@ -511,10 +509,24 @@ impl<'a> grid_reader<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{c, grid_attr, grid_cell, grid_create};
+    use crate::grid_create;
+    use crate::test_support::install_test_codec;
+    use tmux_types::{grid_attr, grid_cell};
 
-    /// Helper: create a grid and fill lines with ASCII text.
+    /// Tiny C-literal helper — `c!("foo")` yields a NUL-terminated
+    /// `*const u8`. Replaces the tmux-rs `c!` macro inside grid's
+    /// self-contained test suite.
+    macro_rules! c {
+        ($s:literal) => {
+            concat!($s, "\0").as_ptr()
+        };
+    }
+
+    /// Helper: create a grid and fill lines with ASCII text. Registers
+    /// the test codec so `in_set` / `cursor_next_word` / etc. can run
+    /// without the tmux-rs utf8 machinery.
     fn make_grid_with_text(lines: &[&str], width: u32) -> Box<grid> {
+        install_test_codec();
         let mut gd = grid_create(width, lines.len() as u32, 0);
         for (y, line) in lines.iter().enumerate() {
             for (x, &ch) in line.as_bytes().iter().enumerate() {

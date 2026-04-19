@@ -827,6 +827,42 @@ pub unsafe fn utf8_cstrhas(s: *const u8, ud: *const utf8_data) -> bool {
     }
 }
 
+/// `tmux-grid` codec adapter: glues the grid crate to tmux-rs's utf8
+/// intern table and word-set helper. Registered once at startup via
+/// [`install_grid_codec`]. Keeps the grid crate free of tmux-rs-
+/// specific symbols while still letting it reach the real intern table.
+struct TmuxUtf8Codec;
+
+impl tmux_grid::Utf8Codec for TmuxUtf8Codec {
+    unsafe fn from_data(
+        &self,
+        ud: *const utf8_data,
+        uc: *mut utf8_char,
+    ) -> tmux_grid::Utf8State {
+        match unsafe { utf8_from_data(ud, uc) } {
+            utf8_state::UTF8_MORE => tmux_grid::Utf8State::More,
+            utf8_state::UTF8_DONE => tmux_grid::Utf8State::Done,
+            utf8_state::UTF8_ERROR => tmux_grid::Utf8State::Error,
+        }
+    }
+
+    fn to_data(&self, uc: utf8_char) -> utf8_data {
+        utf8_to_data(uc)
+    }
+
+    unsafe fn cstr_has(&self, set: *const u8, ud: *const utf8_data) -> bool {
+        unsafe { utf8_cstrhas(set, ud) }
+    }
+}
+
+static TMUX_UTF8_CODEC: TmuxUtf8Codec = TmuxUtf8Codec;
+
+/// Register the tmux-rs utf8 codec with the `tmux-grid` crate. Called
+/// once from `tmux_main` alongside the log-crate adapter.
+pub fn install_grid_codec() {
+    tmux_grid::set_codec(&TMUX_UTF8_CODEC);
+}
+
 /// Fuzz-friendly wrapper: feeds arbitrary bytes through the UTF-8 decoder
 /// state machine (utf8_open/utf8_append). Pure computation, no side effects.
 #[cfg(fuzzing)]

@@ -69,8 +69,6 @@ cfg_pub_mods! {
     mod file;
     mod format;
     mod format_draw_;
-    mod grid_;
-    mod grid_reader_;
     mod hyperlinks_;
     mod input;
     mod input_keys;
@@ -164,7 +162,6 @@ use crate::{
     file::*,
     format::*,
     format_draw_::*,
-    grid_::*,
     hyperlinks_::*,
     input::*,
     input_keys::*,
@@ -640,7 +637,8 @@ enum tty_code_code {
     TTYC_XT,
 }
 
-const WHITESPACE: *const u8 = c!(" ");
+// WHITESPACE moved to tmux_grid (it's specifically a reader input for
+// word-boundary classification). Re-exported via the grid pub use below.
 
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq, num_enum::TryFromPrimitive)]
@@ -742,30 +740,15 @@ pub use tmux_types::{
     grid_extd_entry, grid_line,
 };
 
-/// Entire grid of cells.
-
-struct grid {
-    flags: i32,
-
-    sx: u32,
-    sy: u32,
-
-    hscrolled: u32,
-    hsize: u32,
-    hlimit: u32,
-
-    linedata: Vec<grid_line>,
-}
-
-/// Virtual cursor in a grid.
-///
-/// Borrows the grid for the lifetime `'a`, so the reader cannot outlive
-/// the grid it navigates. Construct with `grid_reader::new`.
-struct grid_reader<'a> {
-    gd: &'a mut grid,
-    cx: u32,
-    cy: u32,
-}
+// The `grid` struct itself (plus `grid_reader` and all their inherent
+// impls) lives in the `tmux-grid` crate — Rust requires inherent impls
+// to be in the defining crate. Re-exported here so existing
+// `use crate::{grid, grid_reader, ...}` call sites keep working.
+pub use tmux_grid::{
+    GRID_CLEARED_CELL, GRID_CLEARED_ENTRY, GRID_DEFAULT_CELL, GRID_PADDING_CELL, Hyperlink,
+    HyperlinkLookup, Utf8Codec, Utf8State, WHITESPACE, grid, grid_cells_equal,
+    grid_cells_look_equal, grid_compare, grid_create, grid_reader,
+};
 
 /// Style alignment.
 #[repr(i32)]

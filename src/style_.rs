@@ -557,7 +557,7 @@ pub unsafe fn style_copy(dst: *mut style, src: *const style) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid_::GRID_DEFAULT_CELL;
+    use crate::GRID_DEFAULT_CELL;
 
     /// Mutex to serialize tests that use style_tostring's static buffer.
     static STYLE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
