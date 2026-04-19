@@ -70,20 +70,31 @@
 // otherwise require wrapping every single op.
 #![allow(unsafe_op_in_unsafe_fn)]
 
+mod cell;
+mod flags;
+mod line;
 pub mod reader;
 #[cfg(test)]
 mod test_support;
 
+pub use cell::*;
+pub use flags::*;
+pub use line::*;
+
+/// Grid-level flag: this Grid retains scrollback history. Passed to
+/// [`grid_create`] when the caller wants scrollback; omitted for
+/// ephemeral screens (popups, menus, alternate screen). Bit `0x1` in
+/// `Grid.flags`.
+pub const GRID_HISTORY: i32 = 0x1;
+
 /// NUL-terminated byte set representing whitespace for the reader's
-/// word-boundary logic. Kept here (rather than in tmux-types) because
+/// word-boundary logic. Kept here rather than in tmux-types because
 /// it's specifically a reader input — `cursor_next_word` and friends
 /// call `codec().cstr_has(WHITESPACE, ...)` to classify cells.
 pub const WHITESPACE: *const u8 = b" \0".as_ptr();
 
 use tmux_types::{
-    COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, GRID_HISTORY, colour_split_rgb,
-    GridAttr, GridCell, GridCellEntry, GridCellEntryData, GridCellEntryUnion,
-    GridExtdEntry, GridFlag, GridLine, GridLineFlag, GridStringFlags,
+    COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, colour_split_rgb,
     Utf8Char, Utf8Data,
 };
 

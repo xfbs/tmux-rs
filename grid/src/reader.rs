@@ -37,8 +37,8 @@
 //! Cursor movement functions skip over PADDING cells to avoid landing in the
 //! middle of a wide character.
 
-use tmux_types::{GridFlag, GridLineFlag, Utf8Data};
-use crate::{WHITESPACE, codec, Grid, GridReader};
+use tmux_types::Utf8Data;
+use crate::{GridFlag, GridLineFlag, Grid, GridReader, WHITESPACE, codec};
 
 impl<'a> GridReader<'a> {
     /// Create a Grid reader at the given position over the given Grid.
@@ -511,7 +511,7 @@ mod tests {
     use super::*;
     use crate::grid_create;
     use crate::test_support::install_test_codec;
-    use tmux_types::{GridAttr, GridCell};
+    use crate::{GridAttr, GridCell};
 
     /// Tiny C-literal helper — `c!("foo")` yields a NUL-terminated
     /// `*const u8`. Replaces the tmux-rs `c!` macro inside Grid's

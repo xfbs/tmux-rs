@@ -13,7 +13,8 @@
 //! definitions live here so future consumers (`tmux-grid`) can depend on
 //! the types without pulling the whole tmux-rs crate.
 
-use crate::{GridFlag, Utf8Char, Utf8Data};
+use crate::{GridAttr, GridFlag};
+use tmux_types::{Utf8Char, Utf8Data};
 
 /// Primary in-memory representation of a styled terminal cell.
 ///
@@ -24,7 +25,7 @@ use crate::{GridFlag, Utf8Char, Utf8Data};
 #[derive(Copy, Clone)]
 pub struct GridCell {
     pub data: Utf8Data,
-    pub attr: crate::GridAttr,
+    pub attr: GridAttr,
     pub flags: GridFlag,
     pub fg: i32,
     pub bg: i32,
@@ -38,7 +39,7 @@ impl GridCell {
     /// original C struct literal form.
     pub const fn new(
         data: Utf8Data,
-        attr: crate::GridAttr,
+        attr: GridAttr,
         flags: GridFlag,
         fg: i32,
         bg: i32,

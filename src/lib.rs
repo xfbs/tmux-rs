@@ -695,11 +695,10 @@ const MOUSE_PARAM_POS_OFF: u32 = 0x21;
 // Re-export shared types from `tmux-types`. These items were previously
 // defined here; the `pub use` keeps every call site in the tmux-rs tree
 // working unchanged (`use crate::{GridAttr, ...}`), while future
-// extracted crates (tmux-grid) can import them directly from tmux-types
-// without a tmux-rs dependency.
+// extracted crates can import them directly from tmux-types without a
+// tmux-rs dependency.
 pub use tmux_types::{
-    COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, GRID_ATTR_ALL_UNDERSCORE,
-    colour_join_rgb, colour_split_rgb, GridAttr, GridFlag, GridLineFlag, GridStringFlags,
+    COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, colour_join_rgb, colour_split_rgb,
 };
 
 /// Cell positions.
@@ -730,24 +729,17 @@ const SIMPLE_BORDERS: [u8; 13] = [
 ];
 const PADDED_BORDERS: [u8; 13] = [b' '; 13];
 
-// GridCell / GridExtdEntry / GridCellEntry* / GridLine /
-// GRID_HISTORY all moved to the `tmux-types` crate and re-exported at
-// crate-root via the earlier `pub use tmux_types::{...}` block. The
-// `Grid` struct itself (and its many impls) stays in tmux-rs for now —
-// inherent impls must live in the crate that defines the type.
-pub use tmux_types::{
-    GRID_HISTORY, GridCell, GridCellEntry, GridCellEntryData, GridCellEntryUnion,
-    GridExtdEntry, GridLine,
-};
-
-// The `Grid` struct itself (plus `GridReader` and all their inherent
-// impls) lives in the `tmux-grid` crate — Rust requires inherent impls
-// to be in the defining crate. Re-exported here so existing
-// `use crate::{Grid, GridReader, ...}` call sites keep working.
+// All Grid* types — the Grid struct, GridReader, the per-cell and
+// per-line data types, the bitflag families, and the GRID_HISTORY
+// constant — live in the `tmux-grid` crate. Re-exported here so existing
+// `use crate::{Grid, GridCell, ...}` call sites throughout tmux-rs keep
+// resolving.
 pub use tmux_grid::{
-    GRID_CLEARED_CELL, GRID_CLEARED_ENTRY, GRID_DEFAULT_CELL, GRID_PADDING_CELL, Hyperlink,
-    HyperlinkLookup, Utf8Codec, Utf8State, WHITESPACE, Grid, grid_cells_equal,
-    grid_cells_look_equal, grid_compare, grid_create, GridReader,
+    GRID_ATTR_ALL_UNDERSCORE, GRID_CLEARED_CELL, GRID_CLEARED_ENTRY, GRID_DEFAULT_CELL,
+    GRID_HISTORY, GRID_PADDING_CELL, Grid, GridAttr, GridCell, GridCellEntry, GridCellEntryData,
+    GridCellEntryUnion, GridExtdEntry, GridFlag, GridLine, GridLineFlag, GridReader,
+    GridStringFlags, Hyperlink, HyperlinkLookup, Utf8Codec, Utf8State, WHITESPACE,
+    grid_cells_equal, grid_cells_look_equal, grid_compare, grid_create,
 };
 
 /// Style alignment.
