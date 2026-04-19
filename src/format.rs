@@ -5385,14 +5385,15 @@ pub unsafe fn format_grid_word(gd: *mut Grid, mut x: u32, mut y: u32) -> String 
         let mut gc: GridCell;
         let mut found = false;
 
-        let ws: *const u8 = options_get_string_(GLOBAL_S_OPTIONS, "word-separators");
+        let ws_ptr: *const u8 = options_get_string_(GLOBAL_S_OPTIONS, "word-separators");
+        let ws = std::ffi::CStr::from_ptr(ws_ptr.cast());
 
         loop {
             gc = (*gd).get_cell(x, y);
             if gc.flags.intersects(GridFlag::PADDING) {
                 break;
             }
-            if utf8_cstrhas(ws, &raw const gc.data)
+            if gc.data.in_cstr(ws)
                 || (gc.data.size == 1 && gc.data.data[0] == b' ')
             {
                 found = true;
@@ -5442,7 +5443,7 @@ pub unsafe fn format_grid_word(gd: *mut Grid, mut x: u32, mut y: u32) -> String 
             if gc.flags.intersects(GridFlag::PADDING) {
                 break;
             }
-            if utf8_cstrhas(ws, &raw mut gc.data)
+            if gc.data.in_cstr(ws)
                 || (gc.data.size == 1 && gc.data.data[0] == b' ')
             {
                 break;

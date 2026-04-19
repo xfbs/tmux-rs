@@ -3810,7 +3810,7 @@ pub unsafe fn window_copy_cellstring(
             return (&raw const gce.union_.data.data).cast::<u8>() as *mut u8;
         }
 
-        let ud = utf8_to_data(gl.extddata[gce.union_.offset as usize].data);
+        let ud = Utf8Data::from_char(gl.extddata[gce.union_.offset as usize].data);
         if ud.size == 0 {
             *size = 0;
             *allocated = 0;
@@ -5602,7 +5602,7 @@ pub unsafe fn window_copy_copy_line(
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let gd: *mut Grid = &raw mut *(*(*data).backing).grid;
         let mut gc: GridCell;
-        let mut ud: Utf8Data = zeroed();
+        let mut ud: Utf8Data;
         let mut wrapped = false;
 
         if sx > ex {
@@ -5635,7 +5635,7 @@ pub unsafe fn window_copy_copy_line(
                 if gc.flags.intersects(GridFlag::PADDING) {
                     continue;
                 }
-                utf8_copy(&raw mut ud, &raw mut gc.data);
+                ud = gc.data;
                 if ud.size == 1 && gc.attr.intersects(GridAttr::GRID_ATTR_CHARSET) {
                     let s = tty_acs_get(null_mut(), ud.data[0]);
                     if !s.is_null() && strlen(s) <= UTF8_SIZE {
@@ -5692,11 +5692,11 @@ pub unsafe fn window_copy_in_set(
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
-        let mut gc = (*(*data).backing).grid.get_cell(px, py);
+        let gc = (*(*data).backing).grid.get_cell(px, py);
         if gc.flags.intersects(GridFlag::PADDING) {
             return false;
         }
-        utf8_cstrhas(set, &raw mut gc.data)
+        gc.data.in_set(set)
     }
 }
 

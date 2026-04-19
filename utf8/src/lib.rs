@@ -685,6 +685,66 @@ impl Utf8Data {
         // SAFETY: caller upholds NUL-termination; `self` is a valid ref.
         unsafe { utf8_cstrhas(set, self as *const Utf8Data) }
     }
+
+    /// Safe variant of [`Utf8Data::in_set`] taking a `&CStr`. Preferred
+    /// entry point for code that already holds Rust-owned strings.
+    pub fn in_cstr(&self, set: &std::ffi::CStr) -> bool {
+        // SAFETY: `CStr::as_ptr` yields a valid NUL-terminated byte string.
+        unsafe { utf8_cstrhas(set.as_ptr().cast(), self as *const Utf8Data) }
+    }
+
+    /// Zeroed placeholder — equivalent to the C `{0}` initializer pattern.
+    /// Used as the starting state for streaming decode via [`Utf8Data::open`].
+    pub const fn empty() -> Self {
+        Utf8Data { data: [0; UTF8_SIZE], have: 0, size: 0, width: 0 }
+    }
+
+    /// Start a streaming decode: initialize `self` from a lead byte
+    /// `ch`. Returns `More` if `ch` was a valid lead for a 2–4 byte
+    /// sequence; `Error` otherwise.
+    pub fn open(&mut self, ch: u8) -> Utf8State {
+        // SAFETY: `self` is a valid mutable reference.
+        unsafe { utf8_open(self as *mut Utf8Data, ch) }
+    }
+
+    /// Append a continuation byte to an in-progress streaming decode.
+    /// Returns `More` if more bytes are expected, `Done` when the
+    /// sequence completes, `Error` on invalid continuation.
+    pub fn append(&mut self, ch: u8) -> Utf8State {
+        // SAFETY: `self` is a valid mutable reference.
+        unsafe { utf8_append(self as *mut Utf8Data, ch) }
+    }
+
+    /// Decode `self` (raw bytes) into a wide character. Returns `None`
+    /// if the byte sequence is not a valid codepoint under the current
+    /// locale.
+    pub fn to_wchar(&self) -> Option<wchar_t> {
+        let mut wc: wchar_t = 0;
+        // SAFETY: `self` is a valid reference; `wc` is a stack local.
+        let state = unsafe { utf8_towc(self as *const Utf8Data, &raw mut wc) };
+        match state {
+            Utf8State::Done => Some(wc),
+            _ => None,
+        }
+    }
+
+    /// Encode a wide character `wc` into a `Utf8Data`. Returns `None`
+    /// if the codepoint cannot be represented under the current locale.
+    pub fn from_wchar(wc: wchar_t) -> Option<Self> {
+        let mut ud = Utf8Data::empty();
+        // SAFETY: `ud` is on the stack, exclusive.
+        let state = unsafe { utf8_fromwc(wc, &raw mut ud) };
+        match state {
+            Utf8State::Done => Some(ud),
+            _ => None,
+        }
+    }
+}
+
+/// Safe variant of [`utf8_isvalid`] taking a `&CStr`.
+pub fn utf8_is_valid_cstr(s: &std::ffi::CStr) -> bool {
+    // SAFETY: `CStr::as_ptr` yields a valid NUL-terminated byte string.
+    unsafe { utf8_isvalid(s.as_ptr().cast()) }
 }
 #[cfg(test)]
 mod tests {

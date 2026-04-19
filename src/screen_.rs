@@ -644,7 +644,7 @@ pub unsafe fn screen_select_cell(s: *mut screen, dst: *mut GridCell, src: *const
 
         *dst = sel.cell;
 
-        utf8_copy(&mut (*dst).data, &(*src).data);
+        (*dst).data = (*src).data;
         (*dst).attr &= !GridAttr::GRID_ATTR_CHARSET;
         (*dst).attr |= (*src).attr & GridAttr::GRID_ATTR_CHARSET;
         (*dst).flags = (*src).flags;

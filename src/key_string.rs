@@ -278,8 +278,7 @@ pub unsafe fn key_string_lookup_string(mut string: *const u8) -> key_code {
         let mut key: key_code;
         let mut modifiers: key_code = 0;
         let mut u: u32 = 0;
-        let mut ud: Utf8Data = zeroed();
-        let mut uc: Utf8Char = 0;
+        let mut ud: Utf8Data = Utf8Data::empty();
 
         let mut m = [MaybeUninit::<u8>::uninit(); MB_LEN_MAX + 1];
 
@@ -306,16 +305,16 @@ pub unsafe fn key_string_lookup_string(mut string: *const u8) -> key_code {
             m[mlen as usize].write(b'\0');
 
             let udp: *mut Utf8Data = utf8_fromcstr(m.as_slice().as_ptr().cast());
-            if udp.is_null()
-                || (*udp).size == 0
-                || (*udp.add(1)).size != 0
-                || utf8_from_data(udp, &raw mut uc) != utf8_state::UTF8_DONE
-            {
+            if udp.is_null() || (*udp).size == 0 || (*udp.add(1)).size != 0 {
                 free_(udp);
                 return KEYC_UNKNOWN;
             }
+            let encoded = (*udp).encode();
             free_(udp);
-            return uc as u64;
+            match encoded {
+                Ok(uc_val) => return uc_val as u64,
+                Err(_) => return KEYC_UNKNOWN,
+            }
         }
 
         // Check for short Ctrl key.
@@ -341,21 +340,19 @@ pub unsafe fn key_string_lookup_string(mut string: *const u8) -> key_code {
             }
         } else {
             // Try as a UTF-8 key.
-            let mut more: utf8_state = utf8_open(&raw mut ud, *string);
-            if more == utf8_state::UTF8_MORE {
+            let mut more: Utf8State = ud.open(*string);
+            if more == Utf8State::More {
                 if strlen(string) != ud.size as usize {
                     return KEYC_UNKNOWN;
                 }
                 for i in 1..ud.size {
-                    more = utf8_append(&raw mut ud, *string.add(i as usize));
+                    more = ud.append(*string.add(i as usize));
                 }
-                if more != utf8_state::UTF8_DONE {
+                if more != Utf8State::Done {
                     return KEYC_UNKNOWN;
                 }
-                if utf8_from_data(&raw const ud, &raw mut uc) != utf8_state::UTF8_DONE {
-                    return KEYC_UNKNOWN;
-                }
-                return uc as u64 | modifiers;
+                let Ok(uc_val) = ud.encode() else { return KEYC_UNKNOWN };
+                return uc_val as u64 | modifiers;
             }
 
             // Otherwise look the key up in the table.
@@ -498,7 +495,7 @@ pub unsafe fn key_string_lookup_key(mut key: key_code, with_flags: i32) -> *cons
 
                 // Is this a Unicode key?
                 if KEYC_IS_UNICODE(key) {
-                    let ud = utf8_to_data(key as u32);
+                    let ud = Utf8Data::from_char(key as u32);
                     let off = strlen(&raw const OUT as *const u8);
                     memcpy(
                         &raw mut OUT[off] as *mut c_void,

@@ -908,10 +908,10 @@ pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
                 }
 
                 if i != (*c).prompt_index {
-                    utf8_copy(&raw mut gc.data, (*c).prompt_buffer.add(i));
+                    gc.data = *(*c).prompt_buffer.add(i);
                     screen_write_cell(&raw mut ctx, &raw const gc);
                 } else {
-                    utf8_copy(&raw mut cursorgc.data, (*c).prompt_buffer.add(i));
+                    cursorgc.data = *(*c).prompt_buffer.add(i);
                     screen_write_cell(&raw mut ctx, &raw const cursorgc);
                 }
                 i += 1;
@@ -1132,15 +1132,15 @@ unsafe fn status_prompt_paste(c: *mut client) -> i32 {
             ud = udp;
             let mut i: u32 = 0;
             while i as usize != bufsize {
-                let mut more = utf8_open(udp, *bufdata.add(i as usize));
-                if more == utf8_state::UTF8_MORE {
+                let mut more = (*udp).open(*bufdata.add(i as usize));
+                if more == Utf8State::More {
                     while {
                         i += 1;
-                        i as usize != bufsize && more == utf8_state::UTF8_MORE
+                        i as usize != bufsize && more == Utf8State::More
                     } {
-                        more = utf8_append(udp, *bufdata.add(i as usize));
+                        more = (*udp).append(*bufdata.add(i as usize));
                     }
-                    if more == utf8_state::UTF8_DONE {
+                    if more == Utf8State::Done {
                         udp = udp.add(1);
                         continue;
                     }
@@ -1149,7 +1149,7 @@ unsafe fn status_prompt_paste(c: *mut client) -> i32 {
                 if *bufdata.add(i as usize) <= 31 || *bufdata.add(i as usize) >= 127 {
                     break;
                 }
-                utf8_set(udp, *bufdata.add(i as usize));
+                *udp = Utf8Data::single(*bufdata.add(i as usize));
                 udp = udp.add(1);
                 i += 1;
             }
@@ -1275,7 +1275,7 @@ unsafe fn status_prompt_replace_complete(c: *mut client, s: Option<&str>) -> i32
             n * size_of::<Utf8Data>(),
         );
         for (idx, &byte) in s_str.as_bytes().iter().enumerate() {
-            utf8_set(first.add(idx), byte);
+            *first.add(idx) = Utf8Data::single(byte);
         }
         (*c).prompt_index = first.offset_from_unsigned((*c).prompt_buffer) + s_str.len();
 
@@ -1420,7 +1420,7 @@ pub unsafe fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
 
         let mut idx: usize;
 
-        let mut tmp: Utf8Data = zeroed();
+        let tmp: Utf8Data;
 
         let word_is_separators: i32;
 
@@ -1652,12 +1652,9 @@ pub unsafe fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
                             idx += 1;
                         }
                         if idx >= 2 {
-                            utf8_copy(&raw mut tmp, (*c).prompt_buffer.add(idx - 2));
-                            utf8_copy(
-                                (*c).prompt_buffer.add(idx - 2),
-                                (*c).prompt_buffer.add(idx - 1),
-                            );
-                            utf8_copy((*c).prompt_buffer.add(idx - 1), &raw const tmp);
+                            tmp = *(*c).prompt_buffer.add(idx - 2);
+                            *(*c).prompt_buffer.add(idx - 2) = *(*c).prompt_buffer.add(idx - 1);
+                            *(*c).prompt_buffer.add(idx - 1) = tmp;
                             (*c).prompt_index = idx;
                             break 'changed;
                         }
@@ -1728,9 +1725,9 @@ pub unsafe fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
                 return 0;
             } // append_key:
             if key <= 0x7f {
-                utf8_set(&raw mut tmp, key as u8);
+                tmp = Utf8Data::single(key as u8);
             } else if KEYC_IS_UNICODE(key) {
-                tmp = utf8_to_data(key as u32);
+                tmp = Utf8Data::from_char(key as u32);
             } else {
                 return 0;
             }
@@ -1738,7 +1735,7 @@ pub unsafe fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
             (*c).prompt_buffer = xreallocarray_((*c).prompt_buffer, size + 2).as_ptr();
 
             if (*c).prompt_index == size {
-                utf8_copy((*c).prompt_buffer.add((*c).prompt_index), &raw const tmp);
+                *(*c).prompt_buffer.add((*c).prompt_index) = tmp;
                 (*c).prompt_index += 1;
                 (*(*c).prompt_buffer.add((*c).prompt_index)).size = 0;
             } else {
@@ -1747,7 +1744,7 @@ pub unsafe fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
                     (*c).prompt_buffer.add((*c).prompt_index).cast(),
                     (size + 1 - (*c).prompt_index) * size_of::<Utf8Data>(),
                 );
-                utf8_copy((*c).prompt_buffer.add((*c).prompt_index), &raw const tmp);
+                *(*c).prompt_buffer.add((*c).prompt_index) = tmp;
                 (*c).prompt_index += 1;
             }
 

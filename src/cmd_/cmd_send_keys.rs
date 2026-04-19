@@ -103,7 +103,6 @@ pub unsafe fn cmd_send_keys_inject_string(
         let s = args_string(args, i as u32);
         let ud: *mut Utf8Data;
         let mut loop_: *mut Utf8Data;
-        let mut uc: Utf8Char = 0;
         let mut key: key_code;
         let mut endptr: *mut u8 = null_mut();
 
@@ -133,11 +132,13 @@ pub unsafe fn cmd_send_keys_inject_string(
                 if (*loop_).size == 1 && (*loop_).data[0] <= 0x7f {
                     key = (*loop_).data[0] as _;
                 } else {
-                    if utf8_from_data(loop_, &raw mut uc) != utf8_state::UTF8_DONE {
-                        loop_ = loop_.add(1);
-                        continue;
+                    match (*loop_).encode() {
+                        Ok(uc_val) => key = uc_val as _,
+                        Err(_) => {
+                            loop_ = loop_.add(1);
+                            continue;
+                        }
                     }
-                    key = uc as _;
                 }
                 after = cmd_send_keys_inject_key(item, after, args, key);
                 loop_ = loop_.add(1);

@@ -653,7 +653,7 @@ unsafe fn sixel_to_screen(si: *mut sixel_image) -> *mut screen {
 
         memcpy__(&raw mut gc, &raw const GRID_DEFAULT_CELL);
         gc.attr |= GridAttr::GRID_ATTR_CHARSET | GridAttr::GRID_ATTR_DIM;
-        utf8_set(&raw mut gc.data, b'~');
+        gc.data = Utf8Data::single(b'~');
 
         screen_write_start(&raw mut ctx, s);
         if sx == 1 || sy == 1 {

@@ -1306,10 +1306,10 @@ unsafe fn input_print(ictx: *mut input_ctx) -> i32 {
             (*ictx).cell.cell.attr &= !GridAttr::GRID_ATTR_CHARSET;
         }
 
-        utf8_set(&raw mut (*ictx).cell.cell.data, (*ictx).ch as u8);
+        (*ictx).cell.cell.data = Utf8Data::single((*ictx).ch as u8);
         screen_write_collect_add(sctx, &(*ictx).cell.cell);
 
-        utf8_copy(&raw mut (*ictx).last, &raw mut (*ictx).cell.cell.data);
+        (*ictx).last = (*ictx).cell.cell.data;
         (*ictx).flags |= input_flags::INPUT_LAST;
 
         (*ictx).cell.cell.attr &= !GridAttr::GRID_ATTR_CHARSET;
@@ -1731,7 +1731,7 @@ unsafe fn input_csi_dispatch(ictx: *mut input_ctx) -> i32 {
                     }
 
                     if (*ictx).flags.intersects(input_flags::INPUT_LAST) {
-                        utf8_copy(&raw mut (*ictx).cell.cell.data, &raw const (*ictx).last);
+                        (*ictx).cell.cell.data = (*ictx).last;
                         for _ in 0..n {
                             screen_write_collect_add(sctx, &raw const (*ictx).cell.cell);
                         }
@@ -2548,34 +2548,32 @@ unsafe fn input_exit_rename(ictx: *mut input_ctx) {
 unsafe fn input_top_bit_set(ictx: *mut input_ctx) -> i32 {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
-        let ud = &raw mut (*ictx).utf8data;
+        let ud = &mut (*ictx).utf8data;
 
         (*ictx).flags &= !input_flags::INPUT_LAST;
 
         if (*ictx).utf8started == 0 {
-            if utf8_open(ud, (*ictx).ch as u8) != utf8_state::UTF8_MORE {
+            if ud.open((*ictx).ch as u8) != Utf8State::More {
                 return 0;
             }
             (*ictx).utf8started = 1;
             return 0;
         }
 
-        match utf8_append(ud, (*ictx).ch as u8) {
-            utf8_state::UTF8_MORE => return 0,
-            utf8_state::UTF8_ERROR => {
+        match ud.append((*ictx).ch as u8) {
+            Utf8State::More => return 0,
+            Utf8State::Error => {
                 (*ictx).utf8started = 0;
                 return 0;
             }
-            utf8_state::UTF8_DONE => (),
+            Utf8State::Done => (),
         }
         (*ictx).utf8started = 0;
 
-        // log_debug!("input_top_bit_set {} '%*s' (width {})", (*ud).size, (int)(*ud).size, (*ud).data, (*ud).width);
-
-        utf8_copy(&raw mut (*ictx).cell.cell.data, ud);
+        (*ictx).cell.cell.data = (*ictx).utf8data;
         screen_write_collect_add(sctx, &raw mut (*ictx).cell.cell);
 
-        utf8_copy(&raw mut (*ictx).last, &raw mut (*ictx).cell.cell.data);
+        (*ictx).last = (*ictx).cell.cell.data;
         (*ictx).flags |= input_flags::INPUT_LAST;
 
         0

@@ -35,12 +35,13 @@ use crate::compat::vis;
 use crate::libc::memcpy;
 use crate::*;
 
-// Re-export the core utf8 surface from `tmux-utf8`. Callers that `use
-// crate::{Utf8Data, utf8_from_data, ...}` keep working unchanged.
+// Re-export the core utf8 surface from `tmux-utf8`. External call sites
+// now use the safe method API (`Utf8Data::single`, `.encode()`, etc.);
+// the freestanding underscore-prefix fns are kept only for use inside
+// this file's own vis/cstring helpers.
 pub(crate) use tmux_utf8::{
-    UTF8_SIZE, Utf8Char, Utf8Data, Utf8State, utf8_append, utf8_copy, utf8_cstrhas,
-    utf8_from_data, utf8_fromwc, utf8_in_table, utf8_isvalid, utf8_open, utf8_set, utf8_to_data,
-    utf8_towc,
+    UTF8_SIZE, Utf8Data, Utf8State, utf8_append, utf8_in_table, utf8_isvalid, utf8_open,
+    utf8_set,
 };
 
 // Legacy alias — a handful of existing call sites say `utf8_state::UTF8_DONE`

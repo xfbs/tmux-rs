@@ -15,7 +15,7 @@ use core::ffi::c_void;
 
 use libc::memcmp;
 
-use crate::{Utf8Data, utf8_in_table, utf8_state, utf8_towc, wchar_t};
+use crate::{Utf8Data, utf8_in_table, wchar_t};
 
 static UTF8_MODIFIER_TABLE: [wchar_t; 31] = [
     0x1F1E6, 0x1F1E7, 0x1F1E8, 0x1F1E9, 0x1F1EA, 0x1F1EB, 0x1F1EC, 0x1F1ED, 0x1F1EE, 0x1F1EF,
@@ -65,11 +65,10 @@ pub unsafe fn utf8_is_vs(ud: *const Utf8Data) -> bool {
 }
 
 pub unsafe fn utf8_is_modifier(ud: *const Utf8Data) -> bool {
-    let mut wc: wchar_t = 0;
-    unsafe {
-        if utf8_towc(ud, &raw mut wc) != utf8_state::UTF8_DONE {
-            return false;
-        }
+    // SAFETY: caller guarantees `ud` is valid for reads.
+    let ud_ref = unsafe { &*ud };
+    match ud_ref.to_wchar() {
+        Some(wc) => utf8_in_table(wc, &UTF8_MODIFIER_TABLE),
+        None => false,
     }
-    utf8_in_table(wc, &UTF8_MODIFIER_TABLE)
 }

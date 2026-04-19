@@ -824,7 +824,7 @@ unsafe fn format_leading_hashes(cp: *const u8, n: *mut u32, width: *mut u32) -> 
 /// Draw multiple characters.
 unsafe fn format_draw_many(ctx: *mut screen_write_ctx, sy: *mut style, ch: u8, n: u32) {
     unsafe {
-        utf8_set(&raw mut (*sy).gc.data, ch);
+        (*sy).gc.data = Utf8Data::single(ch);
         for _ in 0..n {
             screen_write_cell(ctx, &raw mut (*sy).gc);
         }
@@ -947,7 +947,7 @@ pub unsafe fn format_draw(
                     format_draw_many(&raw mut ctx[current as usize], &raw mut sy, b'#', n / 2);
                     width[current as usize] += n / 2;
                     if even {
-                        utf8_set(ud, b'[');
+                        *ud = Utf8Data::single(b'[');
                         screen_write_cell(&raw mut ctx[current as usize], &raw mut sy.gc);
                         width[current as usize] += 1;
                     }
@@ -957,28 +957,28 @@ pub unsafe fn format_draw(
                 // Is this not a style?
                 if *cp != b'#' || *cp.add(1) != b'[' || sy.ignore != 0 {
                     // See if this is a UTF-8 character.
-                    let mut more = utf8_open(ud, *cp);
-                    if more == utf8_state::UTF8_MORE {
+                    let mut more = (*ud).open(*cp);
+                    if more == Utf8State::More {
                         while ({
                             cp = cp.add(1);
                             *cp != b'\0'
-                        }) && more == utf8_state::UTF8_MORE
+                        }) && more == Utf8State::More
                         {
-                            more = utf8_append(ud, *cp);
+                            more = (*ud).append(*cp);
                         }
-                        if more != utf8_state::UTF8_DONE {
+                        if more != Utf8State::Done {
                             cp = cp.wrapping_sub((*ud).have as usize);
                         }
                     }
 
                     // Not a UTF-8 character - ASCII or not valid.
-                    if more != utf8_state::UTF8_DONE {
+                    if more != Utf8State::Done {
                         if *cp < 0x20 || *cp > 0x7e {
                             // Ignore nonprintable characters.
                             cp = cp.add(1);
                             continue;
                         }
-                        utf8_set(ud, *cp);
+                        *ud = Utf8Data::single(*cp);
                         cp = cp.add(1);
                     }
 
@@ -1377,17 +1377,17 @@ pub unsafe fn format_width(expanded: &str) -> u32 {
                     }
                     cp = end.add(1);
                 }
-            } else if let mut more = utf8_open(&raw mut ud, *cp)
-                && more == utf8_state::UTF8_MORE
+            } else if let mut more = ud.open(*cp)
+                && more == Utf8State::More
             {
                 while ({
                     cp = cp.add(1);
                     *cp != b'\0'
-                } && more == utf8_state::UTF8_MORE)
+                } && more == Utf8State::More)
                 {
-                    more = utf8_append(&raw mut ud, *cp);
+                    more = ud.append(*cp);
                 }
-                if more == utf8_state::UTF8_DONE {
+                if more == Utf8State::Done {
                     width += ud.width as u32;
                 } else {
                     cp = cp.wrapping_sub(ud.have as usize);
@@ -1449,17 +1449,17 @@ pub unsafe fn format_trim_left(expanded: *const u8, limit: u32) -> *mut u8 {
                     out = out.offset(end.add(1).offset_from(cp));
                     cp = end.add(1);
                 }
-            } else if let mut more = utf8_open(&raw mut ud, *cp)
-                && more == utf8_state::UTF8_MORE
+            } else if let mut more = ud.open(*cp)
+                && more == Utf8State::More
             {
                 while ({
                     cp = cp.add(1);
                     *cp != b'\0'
-                }) && more == utf8_state::UTF8_MORE
+                }) && more == Utf8State::More
                 {
-                    more = utf8_append(&raw mut ud, *cp);
+                    more = ud.append(*cp);
                 }
-                if more == utf8_state::UTF8_DONE {
+                if more == Utf8State::Done {
                     if width + ud.width as u32 <= limit {
                         libc::memcpy(out.cast(), ud.data.as_ptr().cast(), ud.size as usize);
                         out = out.add(ud.size as usize);
@@ -1537,17 +1537,17 @@ pub unsafe fn format_trim_right(expanded: *const u8, limit: u32) -> *mut u8 {
                     out = out.offset(end.add(1).offset_from(cp));
                     cp = end.add(1);
                 }
-            } else if let mut more = utf8_open(&raw mut ud, *cp)
-                && more == utf8_state::UTF8_MORE
+            } else if let mut more = ud.open(*cp)
+                && more == Utf8State::More
             {
                 while ({
                     cp = cp.add(1);
                     *(cp) != b'\0'
-                }) && more == utf8_state::UTF8_MORE
+                }) && more == Utf8State::More
                 {
-                    more = utf8_append(&raw mut ud, *cp);
+                    more = ud.append(*cp);
                 }
-                if more == utf8_state::UTF8_DONE {
+                if more == Utf8State::Done {
                     if width >= skip {
                         libc::memcpy(out.cast(), ud.data.as_ptr().cast(), ud.size as usize);
                         out = out.add(ud.size as usize);

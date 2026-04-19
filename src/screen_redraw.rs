@@ -42,7 +42,7 @@ pub unsafe fn screen_redraw_border_set(
         let mut idx: u32 = 0;
 
         if cell_type == cell_type::CELL_OUTSIDE && !w.fill_character.is_null() {
-            utf8_copy(&mut (*gc).data, w.fill_character);
+            (*gc).data = *w.fill_character;
             return;
         }
 
@@ -50,34 +50,33 @@ pub unsafe fn screen_redraw_border_set(
             pane_lines::PANE_LINES_NUMBER => {
                 if cell_type == cell_type::CELL_OUTSIDE {
                     (*gc).attr |= GridAttr::GRID_ATTR_CHARSET;
-                    utf8_set(
-                        &mut (*gc).data,
+                    (*gc).data = Utf8Data::single(
                         CELL_BORDERS[cell_type::CELL_OUTSIDE as usize],
                     );
                     return;
                 }
                 (*gc).attr &= !GridAttr::GRID_ATTR_CHARSET;
                 if !wp.is_null() && window_pane_index(wp, &raw mut idx) == 0 {
-                    utf8_set(&mut (*gc).data, b'0' + ((idx % 10) as u8));
+                    (*gc).data = Utf8Data::single(b'0' + ((idx % 10) as u8));
                 } else {
-                    utf8_set(&mut (*gc).data, b'*');
+                    (*gc).data = Utf8Data::single(b'*');
                 }
             }
             pane_lines::PANE_LINES_DOUBLE => {
                 (*gc).attr &= !GridAttr::GRID_ATTR_CHARSET;
-                utf8_copy(&mut (*gc).data, tty_acs_double_borders(cell_type));
+                (*gc).data = *tty_acs_double_borders(cell_type);
             }
             pane_lines::PANE_LINES_HEAVY => {
                 (*gc).attr &= !GridAttr::GRID_ATTR_CHARSET;
-                utf8_copy(&mut (*gc).data, tty_acs_heavy_borders(cell_type));
+                (*gc).data = *tty_acs_heavy_borders(cell_type);
             }
             pane_lines::PANE_LINES_SIMPLE => {
                 (*gc).attr &= !GridAttr::GRID_ATTR_CHARSET;
-                utf8_set(&mut (*gc).data, SIMPLE_BORDERS[cell_type as usize]);
+                (*gc).data = Utf8Data::single(SIMPLE_BORDERS[cell_type as usize]);
             }
             _ => {
                 (*gc).attr |= GridAttr::GRID_ATTR_CHARSET;
-                utf8_set(&mut (*gc).data, CELL_BORDERS[cell_type as usize]);
+                (*gc).data = Utf8Data::single(CELL_BORDERS[cell_type as usize]);
             }
         }
     }
@@ -865,7 +864,7 @@ pub unsafe fn screen_redraw_draw_borders_cell(ctx: *mut screen_redraw_ctx, i: u3
                 && screen_redraw_check_is(ctx, x, y, active)
             {
                 gc.attr |= GridAttr::GRID_ATTR_CHARSET;
-                utf8_set(&raw mut gc.data, BORDER_MARKERS[border as usize]);
+                gc.data = Utf8Data::single(BORDER_MARKERS[border as usize]);
             }
         }
 

@@ -366,7 +366,7 @@ pub unsafe fn screen_write_putc(ctx: *mut screen_write_ctx, gcp: *const GridCell
         let mut gc: GridCell = zeroed();
         memcpy__(&raw mut gc, gcp);
 
-        utf8_set(&raw mut gc.data, ch);
+        gc.data = Utf8Data::single(ch);
         screen_write_cell(ctx, &raw mut gc);
     }
 }
@@ -389,23 +389,23 @@ pub unsafe fn screen_write_strlen_(args: std::fmt::Arguments) -> usize {
         let mut ptr: *mut u8 = msg.as_mut_ptr();
 
         while *ptr != b'\0' {
-            if *ptr > 0x7f && utf8_open(&raw mut ud, *ptr) == utf8_state::UTF8_MORE {
+            if *ptr > 0x7f && ud.open(*ptr) == Utf8State::More {
                 ptr = ptr.add(1);
 
                 let left = strlen(ptr.cast());
                 if left < ud.size as usize - 1 {
                     break;
                 }
-                let mut more: utf8_state;
+                let mut more: Utf8State;
                 while {
-                    more = utf8_append(&raw mut ud, *ptr);
-                    more == utf8_state::UTF8_MORE
+                    more = ud.append(*ptr);
+                    more == Utf8State::More
                 } {
                     ptr = ptr.add(1);
                 }
                 ptr = ptr.add(1);
 
-                if more == utf8_state::UTF8_DONE {
+                if more == Utf8State::Done {
                     size += ud.width;
                 }
             } else {
@@ -493,7 +493,7 @@ pub unsafe fn screen_write_text_(
 
             // Print the line.
             for i in idx..end {
-                utf8_copy(&raw mut gc.data, text.add(i));
+                gc.data = *text.add(i);
                 screen_write_cell(ctx, &gc);
             }
 
@@ -557,7 +557,6 @@ pub(crate) unsafe fn screen_write_vnputs_(
 ) {
     unsafe {
         let mut gc: GridCell = zeroed();
-        let ud: *mut Utf8Data = &raw mut gc.data;
         let mut size: usize = 0;
 
         memcpy__(&raw mut gc, gcp);
@@ -566,33 +565,33 @@ pub(crate) unsafe fn screen_write_vnputs_(
 
         let mut ptr: *mut u8 = msg.as_mut_ptr();
         while *ptr != b'\0' {
-            if *ptr > 0x7f && utf8_open(ud, *ptr) == utf8_state::UTF8_MORE {
+            if *ptr > 0x7f && gc.data.open(*ptr) == Utf8State::More {
                 ptr = ptr.add(1);
 
                 let left = strlen(ptr.cast());
-                if left < (*ud).size as usize - 1 {
+                if left < gc.data.size as usize - 1 {
                     break;
                 }
-                let mut more: utf8_state;
+                let mut more: Utf8State;
                 while {
-                    more = utf8_append(ud, *ptr);
-                    more == utf8_state::UTF8_MORE
+                    more = gc.data.append(*ptr);
+                    more == Utf8State::More
                 } {
                     ptr = ptr.add(1);
                 }
                 ptr = ptr.add(1);
 
-                if more != utf8_state::UTF8_DONE {
+                if more != Utf8State::Done {
                     continue;
                 }
-                if maxlen > 0 && size + (*ud).width as usize > maxlen as usize {
+                if maxlen > 0 && size + gc.data.width as usize > maxlen as usize {
                     while size < maxlen as usize {
                         screen_write_putc(ctx, &raw const gc, b' ');
                         size += 1;
                     }
                     break;
                 }
-                size += (*ud).width as usize;
+                size += gc.data.width as usize;
                 screen_write_cell(ctx, &raw const gc);
             } else {
                 if maxlen > 0 && size + 1 > maxlen as usize {
@@ -662,27 +661,27 @@ unsafe fn screen_write_box_border_set(lines: box_lines, cell_type: cell_type, gc
             box_lines::BOX_LINES_NONE => (),
             box_lines::BOX_LINES_DOUBLE => {
                 (*gc).attr &= !GridAttr::GRID_ATTR_CHARSET;
-                utf8_copy(&raw mut (*gc).data, tty_acs_double_borders(cell_type));
+                (*gc).data = *tty_acs_double_borders(cell_type);
             }
             box_lines::BOX_LINES_HEAVY => {
                 (*gc).attr &= !GridAttr::GRID_ATTR_CHARSET;
-                utf8_copy(&raw mut (*gc).data, tty_acs_heavy_borders(cell_type));
+                (*gc).data = *tty_acs_heavy_borders(cell_type);
             }
             box_lines::BOX_LINES_ROUNDED => {
                 (*gc).attr &= !GridAttr::GRID_ATTR_CHARSET;
-                utf8_copy(&raw mut (*gc).data, tty_acs_rounded_borders(cell_type));
+                (*gc).data = *tty_acs_rounded_borders(cell_type);
             }
             box_lines::BOX_LINES_SIMPLE => {
                 (*gc).attr &= !GridAttr::GRID_ATTR_CHARSET;
-                utf8_set(&raw mut (*gc).data, SIMPLE_BORDERS[cell_type as usize]);
+                (*gc).data = Utf8Data::single(SIMPLE_BORDERS[cell_type as usize]);
             }
             box_lines::BOX_LINES_PADDED => {
                 (*gc).attr &= !GridAttr::GRID_ATTR_CHARSET;
-                utf8_set(&raw mut (*gc).data, PADDED_BORDERS[cell_type as usize]);
+                (*gc).data = Utf8Data::single(PADDED_BORDERS[cell_type as usize]);
             }
             box_lines::BOX_LINES_SINGLE | box_lines::BOX_LINES_DEFAULT => {
                 (*gc).attr |= GridAttr::GRID_ATTR_CHARSET;
-                utf8_set(&raw mut (*gc).data, CELL_BORDERS[cell_type as usize]);
+                (*gc).data = Utf8Data::single(CELL_BORDERS[cell_type as usize]);
             }
         }
     }
@@ -1125,7 +1124,7 @@ pub unsafe fn screen_write_alignmenttest(ctx: *mut screen_write_ctx) {
         let mut gc: GridCell = zeroed();
 
         memcpy__(&raw mut gc, &raw const GRID_DEFAULT_CELL);
-        utf8_set(&raw mut gc.data, b'E');
+        gc.data = Utf8Data::single(b'E');
 
         #[cfg(feature = "sixel")]
         {

@@ -1689,7 +1689,7 @@ pub unsafe fn tty_check_codeset(tty: *mut tty, gc: *const GridCell) -> *const Gr
             (*gc).data.size as usize,
         );
         if c != -1 {
-            utf8_set(&raw mut NEW.data, c as u8);
+            NEW.data = Utf8Data::single(c as u8);
             NEW.attr |= GridAttr::GRID_ATTR_CHARSET;
             return &raw const NEW;
         }

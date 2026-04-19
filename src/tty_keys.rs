@@ -976,9 +976,8 @@ unsafe fn tty_keys_next1(
 ) -> i32 {
     unsafe {
         let c = (*tty).client;
-        let mut ud: Utf8Data = zeroed();
-        let mut more: utf8_state;
-        let mut uc: Utf8Char = zeroed();
+        let mut ud: Utf8Data = Utf8Data::empty();
+        let mut more: Utf8State;
 
         // log_debug!("{}: next key is {} (%.*s) (expired=%d)", _s((*c).name), len, len as i32, buf, expired);
 
@@ -1001,8 +1000,8 @@ unsafe fn tty_keys_next1(
         }
 
         // Is this valid UTF-8?
-        more = utf8_open(&mut ud, *buf);
-        if more == utf8_state::UTF8_MORE {
+        more = ud.open(*buf);
+        if more == Utf8State::More {
             *size = ud.size as usize;
             if len < ud.size as usize {
                 if expired == 0 {
@@ -1011,18 +1010,15 @@ unsafe fn tty_keys_next1(
                 return -1;
             }
             for i in 1..ud.size {
-                more = utf8_append(&mut ud, *buf.add(i as usize));
+                more = ud.append(*buf.add(i as usize));
             }
-            if more != utf8_state::UTF8_DONE {
+            if more != Utf8State::Done {
                 return -1;
             }
 
-            if utf8_from_data(&raw const ud, &raw mut uc) != utf8_state::UTF8_DONE {
-                return -1;
-            }
-            *key = uc as u64;
+            let Ok(uc_val) = ud.encode() else { return -1 };
+            *key = uc_val as u64;
 
-            // log_debug!("{}: UTF-8 key %.*s %#llx".as_ptr(), (*c).name, ud.size as i32, ud.data, *key);
             return 0;
         }
 
@@ -1364,9 +1360,6 @@ unsafe fn tty_keys_extended_key(
         const SIZE_OF_TMP: usize = 64;
         let mut tmp: [u8; 64] = [0; 64];
 
-        let mut ud: Utf8Data = zeroed();
-        let mut uc: Utf8Char = zeroed();
-
         *size = 0;
 
         // First two bytes are always \x1b[.
@@ -1438,12 +1431,9 @@ unsafe fn tty_keys_extended_key(
 
         // Convert UTF-32 codepoint into internal representation.
         if nkey != keyc::KEYC_BSPACE as key_code && (nkey & !0x7f) != 0 {
-            if utf8_fromwc(nkey as wchar_t, &raw mut ud) == utf8_state::UTF8_DONE
-                && utf8_from_data(&raw const ud, &raw mut uc) == utf8_state::UTF8_DONE
-            {
-                nkey = uc as key_code;
-            } else {
-                return -1;
+            match Utf8Data::from_wchar(nkey as wchar_t).and_then(|d| d.encode().ok()) {
+                Some(enc) => nkey = enc as key_code,
+                None => return -1,
             }
         }
 
