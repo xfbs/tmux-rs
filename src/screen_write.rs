@@ -1629,7 +1629,7 @@ pub unsafe fn screen_write_linefeed(ctx: *mut screen_write_ctx, wrapped: bool, b
                     (*ctx_wp(ctx)).flags |= window_pane_flags::PANE_REDRAW;
                 }
             }
-            (*gd).view_scroll_region_up((*s).rupper, (*s).rlower, bg);
+            (*gd).view_scroll_region_up((*s).rupper, (*s).rlower, bg, CURRENT_TIME);
             screen_write_collect_scroll(ctx, bg);
             (*ctx).scrolled += 1;
         } else if (*s).cy < screen_size_y(s) - 1 {
@@ -1663,7 +1663,7 @@ pub unsafe fn screen_write_scrollup(ctx: *mut screen_write_ctx, mut lines: u32, 
         }
 
         for _ in 0..lines {
-            (*gd).view_scroll_region_up((*s).rupper, (*s).rlower, bg);
+            (*gd).view_scroll_region_up((*s).rupper, (*s).rlower, bg, CURRENT_TIME);
             screen_write_collect_scroll(ctx, bg);
         }
         (*ctx).scrolled += lines;
@@ -1736,7 +1736,7 @@ pub unsafe fn screen_write_clearendofscreen(ctx: *mut screen_write_ctx, bg: u32)
             && !ctx_wp(ctx).is_null()
             && options_get_number_((*ctx_wp(ctx)).options, "scroll-on-clear") != 0
         {
-            (*gd).view_clear_history(bg);
+            (*gd).view_clear_history(bg, CURRENT_TIME);
         } else {
             if (*s).cx < sx {
                 (*gd).view_clear((*s).cx, (*s).cy, sx - (*s).cx, 1, bg);
@@ -1805,7 +1805,7 @@ pub unsafe fn screen_write_clearscreen(ctx: *mut screen_write_ctx, bg: u32) {
             && !ctx_wp(ctx).is_null()
             && options_get_number_((*ctx_wp(ctx)).options, "scroll-on-clear") != 0
         {
-            (*s).grid.view_clear_history(bg);
+            (*s).grid.view_clear_history(bg, CURRENT_TIME);
         } else {
             (*s).grid.view_clear(0, 0, sx, sy, bg);
         }
@@ -2538,7 +2538,7 @@ pub(crate) unsafe fn screen_write_sixelimage(
                 (*ctx_wp(ctx)).flags |= window_pane_flags::PANE_REDRAW;
             }
             for _ in 0..lines {
-                (*gd).view_scroll_region_up(0, screen_size_y(s) - 1, bg);
+                (*gd).view_scroll_region_up(0, screen_size_y(s) - 1, bg, CURRENT_TIME);
                 screen_write_collect_scroll(ctx, bg);
             }
             (*ctx).scrolled += lines;

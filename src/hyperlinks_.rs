@@ -41,6 +41,27 @@ pub struct hyperlinks {
     pub references: u32,
 }
 
+/// Resolve cell-level `link` ids back to their URI + external id for the
+/// grid's OSC-8 emission path. The grid crate owns the
+/// [`HyperlinkLookup`](crate::HyperlinkLookup) trait; this impl is the
+/// tmux-rs side of the abstraction boundary, so the grid code can stay
+/// free of tmux-rs-specific types.
+impl HyperlinkLookup for hyperlinks {
+    fn hyperlink(&self, id: u32) -> Option<Hyperlink<'_>> {
+        let hlu = self.by_inner.get(&id)?;
+        // SAFETY: `uri` and `external_id` are NUL-terminated C strings
+        // owned by the Box whose lifetime is tied to `&self`. The
+        // returned byte slices borrow from the Box and are valid for
+        // the duration of this borrow.
+        unsafe {
+            Some(Hyperlink {
+                uri: std::ffi::CStr::from_ptr(hlu.uri.cast()).to_bytes(),
+                external_id: std::ffi::CStr::from_ptr(hlu.external_id.cast()).to_bytes(),
+            })
+        }
+    }
+}
+
 unsafe fn hyperlinks_remove_inner(hl: *mut hyperlinks, inner: u32) {
     unsafe {
         // Remove from primary store — get owned Box back

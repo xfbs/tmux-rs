@@ -189,11 +189,13 @@ unsafe fn cmd_capture_pane_history(
         }
 
         let mut buf = null_mut();
+        // Pull the pane's hyperlink registry reference (if any) for OSC-8
+        // emission. `string_cells` takes an `&dyn HyperlinkLookup` — our
+        // `hyperlinks` struct implements the trait in hyperlinks_.rs.
+        let hl_ref: Option<&dyn HyperlinkLookup> =
+            (*(*wp).screen).hyperlinks.map(|p| &*p as &dyn HyperlinkLookup);
         for i in top..=bottom {
-            // Pull the pane's hyperlink registry pointer if present, so
-            // OSC-8 hyperlink sequences get emitted when requested.
-            let hl = (*(*wp).screen).hyperlinks;
-            let line = (*gd).string_cells(0, i, sx, &mut lastgc, flags, hl);
+            let line = (*gd).string_cells(0, i, sx, &mut lastgc, flags, hl_ref);
             let linelen = line.len();
 
             buf = cmd_capture_pane_append(buf, len, line.as_ptr(), linelen);

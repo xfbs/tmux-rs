@@ -80,17 +80,42 @@ use crate::{
     grid,
     utf8_build_one, utf8_from_data, utf8_set, utf8_to_data,
 };
-// === External types (would stay in tmux-rs; needs a trait/callback) ===
-use crate::{hyperlinks, hyperlinks_get};
-// === Globals === (remaining blocker: CURRENT_TIME feeds scroll_history/_region;
-// handle via trait-design task when extracting `tmux-grid`)
-use crate::CURRENT_TIME;
-
-use crate::libc::strlen;
+// No direct crate-local type dependencies remaining besides the `grid`
+// struct itself and a handful of utf8 free functions. The hyperlink
+// registry is now reached via the [`HyperlinkLookup`] trait defined
+// below; tmux-rs provides the implementation on its `hyperlinks` type.
 
 use std::ffi::{c_int, c_uchar, c_uint};
 use std::mem::{MaybeUninit, zeroed};
-use std::ptr::{null, null_mut};
+use std::ptr::null_mut;
+
+/// An OSC-8 hyperlink resolved from a [`grid_cell::link`] id. Returned
+/// by [`HyperlinkLookup::hyperlink`] when the id is present in the
+/// caller's registry. Both fields are raw byte slices, not required to
+/// be UTF-8 (URIs are, in practice, but the grid treats them opaquely).
+pub struct Hyperlink<'a> {
+    /// Destination URL (the `uri=` part of the OSC-8 sequence).
+    pub uri: &'a [u8],
+    /// Optional external id (the `id=` parameter). Empty when the
+    /// hyperlink has no caller-supplied id.
+    pub external_id: &'a [u8],
+}
+
+/// Context trait: the grid crate doesn't own the hyperlinks registry,
+/// so it asks the caller to resolve link ids via this trait. tmux-rs
+/// provides the impl on its `hyperlinks` struct. Using a trait here
+/// (rather than a function pointer or closure) keeps the call site
+/// readable — `ctx.hyperlink(id)` — and allows for multiple impls
+/// (e.g. a no-op stub for tests, a mock for integration tests, the
+/// real registry in production).
+pub trait HyperlinkLookup {
+    /// Resolve a cell's `link` id. Return `None` if the id is not in
+    /// the registry or if hyperlinks are disabled for this context.
+    /// The returned [`Hyperlink`] borrows from the registry and must
+    /// outlive the call (normally trivial — the registry is
+    /// longer-lived than any single `string_cells` invocation).
+    fn hyperlink(&self, id: u32) -> Option<Hyperlink<'_>>;
+}
 
 /// Default grid cell data.
 pub static GRID_DEFAULT_CELL: grid_cell = grid_cell::new(
@@ -637,10 +662,14 @@ impl grid {
     }
 
     /// Scroll the visible screen up by one line. The top visible row is
-    /// promoted to history (compacted, timestamped with the current
-    /// event-loop tick), and a new blank row is appended at the bottom.
-    /// `bg` is the background color painted on the new row.
-    pub fn scroll_history(&mut self, bg: c_uint) {
+    /// promoted to history (compacted, timestamped with `now`), and a new
+    /// blank row is appended at the bottom. `bg` is the background color
+    /// painted on the new row.
+    ///
+    /// `now` is the wall-clock timestamp recorded on the newly-scrolled
+    /// history line. Callers typically pass `CURRENT_TIME` (updated once
+    /// per event-loop tick); tests pass `0`.
+    pub fn scroll_history(&mut self, bg: c_uint, now: libc::time_t) {
         let yy = self.hsize + self.sy;
         self.linedata.push(grid_line::new());
 
@@ -650,9 +679,7 @@ impl grid {
         let hsize = self.hsize as usize;
         let gl = &mut self.linedata[hsize];
         grid_compact_line(gl);
-        // SAFETY: CURRENT_TIME is a process-global time_t updated once per
-        // event-loop tick; a racy read of a POD is fine here.
-        gl.time = unsafe { CURRENT_TIME };
+        gl.time = now;
         self.hsize += 1;
     }
 
@@ -672,8 +699,9 @@ impl grid {
     /// anchored at the top of the screen so scroll-off content is still
     /// captured in scrollback. `upper` and `lower` are in absolute grid
     /// coordinates. `bg` is the background-color used to paint the new
-    /// bottom row.
-    pub fn scroll_history_region(&mut self, upper: c_uint, lower: c_uint, bg: c_uint) {
+    /// bottom row. `now` timestamps the new history line (see
+    /// [`scroll_history`](Self::scroll_history)).
+    pub fn scroll_history_region(&mut self, upper: c_uint, lower: c_uint, bg: c_uint, now: libc::time_t) {
         // Indices are relative to the visible screen; adjust for hsize.
         let hsize = self.hsize as usize;
         let upper_abs = hsize + upper as usize;
@@ -684,8 +712,7 @@ impl grid {
 
         // Insert it at the history position (hsize), pushing visible lines down.
         self.linedata.insert(hsize, upper_line);
-        // SAFETY: see scroll_history for CURRENT_TIME rationale.
-        self.linedata[hsize].time = unsafe { CURRENT_TIME };
+        self.linedata[hsize].time = now;
 
         // The region shifted up by one. Insert a new empty line at the lower position.
         self.linedata.insert(lower_abs + 1, grid_line::new());
@@ -896,7 +923,7 @@ impl grid {
         nx: c_uint,
         lastgc: &mut Option<grid_cell>,
         flags: grid_string_flags,
-        hl: Option<*mut hyperlinks>,
+        hl: Option<&dyn HyperlinkLookup>,
     ) -> Vec<u8> {
         // If the caller hasn't carried a style from a prior call, seed
         // with the default. Each iteration then updates `lastgc` to the
@@ -1170,8 +1197,9 @@ impl grid {
     }
 
     /// Move all visible content into history and clear the screen.
-    /// Only moves lines up to the last non-empty line.
-    pub fn view_clear_history(&mut self, bg: u32) {
+    /// Only moves lines up to the last non-empty line. `now` timestamps
+    /// the newly-scrolled history lines.
+    pub fn view_clear_history(&mut self, bg: u32, now: libc::time_t) {
         let mut last = 0u32;
 
         for yy in 0..self.sy {
@@ -1187,7 +1215,7 @@ impl grid {
 
         for _ in 0..self.sy {
             self.collect_history();
-            self.scroll_history(bg);
+            self.scroll_history(bg, now);
         }
         if last < self.sy {
             self.view_clear(0, 0, self.sx, self.sy - last, bg);
@@ -1202,16 +1230,20 @@ impl grid {
         self.clear(px, self.hsize + py, nx, ny, bg);
     }
 
-    /// Scroll a region upward: contents of `[rupper, rlower]` move up by one line.
-    pub fn view_scroll_region_up(&mut self, rupper: u32, rlower: u32, bg: u32) {
+    /// Scroll a region upward: contents of `[rupper, rlower]` move up by
+    /// one line. When the grid has history and the region covers the
+    /// whole visible screen, the scrolled-off line is promoted to
+    /// scrollback via [`scroll_history`](Self::scroll_history) and
+    /// timestamped with `now`.
+    pub fn view_scroll_region_up(&mut self, rupper: u32, rlower: u32, bg: u32, now: libc::time_t) {
         if self.flags & GRID_HISTORY != 0 {
             self.collect_history();
             if rupper == 0 && rlower == self.sy - 1 {
-                self.scroll_history(bg);
+                self.scroll_history(bg, now);
             } else {
                 let rupper_abs = self.hsize + rupper;
                 let rlower_abs = self.hsize + rlower;
-                self.scroll_history_region(rupper_abs, rlower_abs, bg);
+                self.scroll_history_region(rupper_abs, rlower_abs, bg, now);
             }
         } else {
             let rupper_abs = self.hsize + rupper;
@@ -1472,7 +1504,7 @@ fn grid_string_cells_code(
     gc: &grid_cell,
     buf: &mut Vec<u8>,
     flags: grid_string_flags,
-    hl: Option<*mut hyperlinks>,
+    hl: Option<&dyn HyperlinkLookup>,
 ) -> bool {
     let mut s: Vec<c_int> = Vec::with_capacity(16);
     let attr = gc.attr;
@@ -1574,45 +1606,18 @@ fn grid_string_cells_code(
         }
     }
 
-    // Add hyperlink if changed. The registry hands back NUL-terminated
-    // C strings (raw pointers); we convert to byte slices locally.
-    if let Some(hl) = hl
+    // Add hyperlink if changed.
+    if let Some(lookup) = hl
         && lastgc.link != gc.link
     {
-        let mut uri: *const u8 = null();
-        let mut id: *const u8 = null();
-        // SAFETY: `hl` is a live `*mut hyperlinks` owned by the caller's
-        // pane/screen; the out-pointers point into fields of the registry
-        // entry which remains valid at least until the caller drops the
-        // registry. We convert to &[u8] for the duration of the call.
-        let ok = unsafe {
-            hyperlinks_get(hl, gc.link, &raw mut uri, &raw mut id, null_mut())
-        };
-        if ok {
-            let uri_slice = unsafe { cstr_bytes(uri) };
-            let id_slice = unsafe { cstr_bytes(id) };
-            has_link = grid_string_cells_add_hyperlink(buf, id_slice, uri_slice, flags);
+        if let Some(link) = lookup.hyperlink(gc.link) {
+            has_link = grid_string_cells_add_hyperlink(buf, link.external_id, link.uri, flags);
         } else if has_link {
             grid_string_cells_add_hyperlink(buf, b"", b"", flags);
             has_link = false;
         }
     }
     has_link
-}
-
-/// Convert a NUL-terminated C string pointer to a byte slice (NUL excluded).
-/// Returns an empty slice on null input. Used to interoperate with the
-/// hyperlinks registry, which still stores `*const u8` internal strings.
-///
-/// # Safety
-/// `ptr` must be null or point to a NUL-terminated run of bytes valid for
-/// reading at least until the returned slice is dropped.
-unsafe fn cstr_bytes<'a>(ptr: *const u8) -> &'a [u8] {
-    if ptr.is_null() {
-        return b"";
-    }
-    // SAFETY: caller upholds the NUL-termination + validity invariant.
-    unsafe { std::slice::from_raw_parts(ptr, strlen(ptr)) }
 }
 
 /// Mark line as dead. Caller must ensure the line's Vec fields have already
@@ -1839,9 +1844,6 @@ unsafe fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, 
 mod tests {
     use super::*;
     use crate::{colour_join_rgb, grid_create};
-
-    use std::ffi::CStr;
-    use std::ptr::null_mut;
 
     /// Helper: create a grid_cell with a single ASCII character.
     fn make_cell(ch: u8, fg: i32, bg: i32) -> grid_cell {
@@ -2595,7 +2597,7 @@ mod tests {
             gd.set_cell(0, 0, &cell);
 
             assert_eq!(gd.hsize, 0);
-            gd.scroll_history(8);
+            gd.scroll_history(8, 0);
             assert_eq!(gd.hsize, 1);
             assert_eq!(gd.hscrolled, 1);
 
@@ -2622,8 +2624,8 @@ mod tests {
         }
 
         // Scroll twice.
-        gd.scroll_history(8);
-        gd.scroll_history(8);
+        gd.scroll_history(8, 0);
+        gd.scroll_history(8, 0);
         assert_eq!(gd.hsize, 2);
 
         // History lines should contain '0' and '1'.
@@ -2646,7 +2648,7 @@ mod tests {
         }
 
         // Scroll region [1..3] — line at upper=1 moves to history.
-        gd.scroll_history_region(1, 3, 8);
+        gd.scroll_history_region(1, 3, 8, 0);
         assert_eq!(gd.hsize, 1);
 
         // History line 0 should be line that had 'B'.
@@ -2663,8 +2665,8 @@ mod tests {
         let cell = make_cell(b'H', 8, 8);
         gd.set_cell(0, 0, &cell);
 
-        gd.scroll_history(8);
-        gd.scroll_history(8);
+        gd.scroll_history(8, 0);
+        gd.scroll_history(8, 0);
         assert_eq!(gd.hsize, 2);
 
         gd.clear_history();
@@ -2680,7 +2682,7 @@ mod tests {
         for _ in 0..10 {
             let cell = make_cell(b'.', 8, 8);
             gd.set_cell(0, gd.hsize, &cell);
-            gd.scroll_history(8);
+            gd.scroll_history(8, 0);
         }
         assert_eq!(gd.hsize, 10);
 
@@ -2697,8 +2699,8 @@ mod tests {
             let cell = make_cell(b'0' + y as u8, 8, 8);
             gd.set_cell(0, y, &cell);
         }
-        gd.scroll_history(8);
-        gd.scroll_history(8);
+        gd.scroll_history(8, 0);
+        gd.scroll_history(8, 0);
         assert_eq!(gd.hsize, 2);
 
         gd.remove_history(1);
@@ -2782,7 +2784,7 @@ mod tests {
             }
             // Mark line as wrapped (as tmux does for long lines).
             (*gd.get_line(0)).flags |= grid_line_flag::WRAPPED;
-            gd.scroll_history(8);
+            gd.scroll_history(8, 0);
             let hsize_before = gd.hsize;
 
             // Reflow to width 10 — the 20-char history line should split into 2.
@@ -2817,8 +2819,8 @@ mod tests {
             }
 
             // Scroll both into history.
-            gd.scroll_history(8);
-            gd.scroll_history(8);
+            gd.scroll_history(8, 0);
+            gd.scroll_history(8, 0);
             let hsize_before = gd.hsize;
 
             // Reflow to width 20 — the two wrapped lines should join.
@@ -2843,7 +2845,7 @@ mod tests {
                 gd.set_cell(x, 0, &cell);
             }
             // Don't set WRAPPED flag — this is a short line.
-            gd.scroll_history(8);
+            gd.scroll_history(8, 0);
 
             // Reflow to width 10 — short unwrapped line should stay as-is.
             gd.reflow(10);
@@ -2865,7 +2867,7 @@ mod tests {
             for x in 0..10u32 {
                 gd.set_cell(x, 0, &cell);
             }
-            gd.scroll_history(8);
+            gd.scroll_history(8, 0);
             let hsize_before = gd.hsize;
 
             // Reflow to same width — should be essentially a no-op.
@@ -2927,7 +2929,7 @@ mod tests {
             let extended = make_rgb_fg_cell(b'C', 0, 255, 0);
             gd.set_cell(0, 0, &extended);
 
-            gd.scroll_history(8);
+            gd.scroll_history(8, 0);
 
             // Extended cell should survive in history.
             let gc: grid_cell;
@@ -3056,7 +3058,7 @@ mod tests {
             assert_eq!((*gd_ptr).hsize + 3, 3);
 
             // Simulate history by scrolling a line into history.
-            (*gd_ptr).scroll_history(8);
+            (*gd_ptr).scroll_history(8, 0);
             assert_eq!(gd.hsize, 1);
             assert_eq!((*gd_ptr).hsize + 0, 1);
             assert_eq!((*gd_ptr).hsize + 3, 4);
@@ -3091,7 +3093,7 @@ mod tests {
             assert_eq!(read_view_char(gd_ptr, 0, 0), b'X');
 
             // Scroll into history — view row 0 is now a new empty line.
-            (*gd_ptr).scroll_history(8);
+            (*gd_ptr).scroll_history(8, 0);
 
             // 'X' is now in history (grid row 0), not visible view row 0.
             // View row 0 is now grid row 1 (the new line).
@@ -3170,7 +3172,7 @@ mod tests {
             }
 
             // Scroll it into history.
-            (*gd_ptr).scroll_history(8);
+            (*gd_ptr).scroll_history(8, 0);
 
             // Write "Line1" to new view row 0.
             for (i, ch) in b"Line1".iter().enumerate() {
@@ -3271,7 +3273,7 @@ mod tests {
             assert_eq!(gd.hsize, 0);
 
             // clear_history scrolls all visible lines into history.
-            (*gd_ptr).view_clear_history(8);
+            (*gd_ptr).view_clear_history(8, 0);
 
             // hsize should have increased (content moved to history).
             assert!(gd.hsize > 0);
