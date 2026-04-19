@@ -301,7 +301,7 @@ pub unsafe fn session_check_name(name: *const u8) -> Option<String> {
             cp = cp.add(1);
         }
         let new_name = utf8_stravis_(
-            copy,
+            CStr::from_ptr(copy.cast()).to_bytes(),
             vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB | vis_flags::VIS_NL,
         );
         free_(copy);

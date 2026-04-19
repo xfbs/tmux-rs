@@ -392,8 +392,7 @@ pub unsafe fn paste_make_sample(pb: *mut PasteBuffer) -> String {
 
         utf8_strvis_(
             &mut buf,
-            data.as_ptr(),
-            len,
+            &data[..len],
             vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB | vis_flags::VIS_NL,
         );
         if data.len() > width || buf.len() > width {

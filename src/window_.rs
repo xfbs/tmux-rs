@@ -756,7 +756,7 @@ pub unsafe fn window_remove_ref(w: *mut window, from: *const u8) {
 pub unsafe fn window_set_name(w: *mut window, new_name: *const u8) {
     unsafe {
         let visited = utf8_stravis_(
-            new_name,
+            CStr::from_ptr(new_name.cast()).to_bytes(),
             vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB | vis_flags::VIS_NL,
         );
         (*w).name = Some(String::from_utf8_lossy(&visited).into_owned());

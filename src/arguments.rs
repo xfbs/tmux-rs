@@ -509,8 +509,6 @@ pub unsafe fn args_escape(s: *const u8) -> *mut u8 {
         let dquoted: *const u8 = c!(" #';${}%");
         let squoted: *const u8 = c!(" \"");
 
-        let mut escaped: *mut u8 = null_mut();
-
         if *s == b'\0' {
             return format_nul!("''");
         }
@@ -523,8 +521,7 @@ pub unsafe fn args_escape(s: *const u8) -> *mut u8 {
         };
 
         if *s != b' ' && *s.add(1) == b'\0' && (quotes.is_some() || *s == b'~') {
-            escaped = format_nul!("\\{}", *s as char);
-            return escaped;
+            return format_nul!("\\{}", *s as char);
         }
 
         let mut flags =
@@ -532,24 +529,23 @@ pub unsafe fn args_escape(s: *const u8) -> *mut u8 {
         if quotes == Some('"') {
             flags |= vis_flags::VIS_DQ;
         }
-        utf8_stravis(&raw mut escaped, s, flags);
+        let escaped_v = utf8_stravis(s, flags);
+        let escaped = CString::new(escaped_v).unwrap_or_default();
+        let first = escaped.as_bytes().first().copied().unwrap_or(0);
 
-        let result = if quotes == Some('\'') {
-            format_nul!("'{}'", _s(escaped))
+        if quotes == Some('\'') {
+            format_nul!("'{}'", _s(escaped.as_ptr().cast::<u8>()))
         } else if quotes == Some('"') {
-            if *escaped == b'~' {
-                format_nul!("\"\\{}\"", _s(escaped))
+            if first == b'~' {
+                format_nul!("\"\\{}\"", _s(escaped.as_ptr().cast::<u8>()))
             } else {
-                format_nul!("\"{}\"", _s(escaped))
+                format_nul!("\"{}\"", _s(escaped.as_ptr().cast::<u8>()))
             }
-        } else if *escaped == b'~' {
-            format_nul!("\\{}", _s(escaped))
+        } else if first == b'~' {
+            format_nul!("\\{}", _s(escaped.as_ptr().cast::<u8>()))
         } else {
-            xstrdup(escaped).as_ptr()
-        };
-        free_(escaped);
-
-        result
+            xstrdup(escaped.as_ptr().cast()).as_ptr()
+        }
     }
 }
 

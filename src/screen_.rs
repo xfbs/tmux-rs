@@ -268,7 +268,7 @@ pub unsafe fn screen_set_title(s: *mut screen, title: *const u8) -> c_int {
 pub unsafe fn screen_set_path(s: *mut screen, path: *const u8) {
     unsafe {
         let vis = utf8_stravis_(
-            path,
+            CStr::from_ptr(path.cast()).to_bytes(),
             vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB | vis_flags::VIS_NL,
         );
         (*s).path = Some(CString::new(vis).unwrap_or_default());

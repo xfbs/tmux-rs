@@ -92,23 +92,19 @@ pub unsafe fn hyperlinks_put(
     mut internal_id_in: *const u8,
 ) -> u32 {
     unsafe {
-        let mut uri = null_mut();
-        let mut internal_id = null_mut();
-
         if internal_id_in.is_null() {
             internal_id_in = c!("");
         }
 
-        utf8_stravis(
-            &raw mut uri,
-            uri_in,
-            vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE,
-        );
-        utf8_stravis(
-            &raw mut internal_id,
-            internal_id_in,
-            vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE,
-        );
+        let uri_v = utf8_stravis(uri_in, vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE);
+        let internal_id_v =
+            utf8_stravis(internal_id_in, vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE);
+        let uri_cs = CString::new(uri_v).unwrap_or_default();
+        let internal_id_cs = CString::new(internal_id_v).unwrap_or_default();
+        // Hand out xstrdup'd copies so the existing `hyperlinks_uri`
+        // storage (raw `*mut u8`, freed via `free_`) keeps working.
+        let uri = xstrdup(uri_cs.as_ptr().cast()).as_ptr();
+        let internal_id = xstrdup(internal_id_cs.as_ptr().cast()).as_ptr();
 
         // Check if this (internal_id, uri) pair already exists
         if *internal_id_in != b'\0' {

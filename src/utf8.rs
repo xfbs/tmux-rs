@@ -31,7 +31,6 @@
 //!   strings; still useful inside tmux-rs while the rest of the codebase
 //!   migrates to safer idioms.
 
-use crate::compat::vis;
 use crate::libc::memcpy;
 use crate::*;
 
@@ -44,14 +43,9 @@ pub(crate) use tmux_utf8::{
     utf8_set,
 };
 
-// Legacy alias — a handful of existing call sites say `utf8_state::UTF8_DONE`
-// instead of `Utf8State::Done`. Keep the alias so the CamelCase crate
-// transition doesn't force a mass rewrite. The `UTF8_*` variants also
-// exist as associated consts on `Utf8State` itself (see `tmux-utf8`).
-#[allow(non_camel_case_types)]
-pub(crate) type utf8_state = Utf8State;
-// Shorthand constants for the state values used locally in vis/cstring
-// helpers. Path-through-enum (`Utf8State::UTF8_MORE`) also works.
+// Shorthand constants for the state values used inside the remaining
+// sentinel-walking helpers below. Path-through-enum
+// (`Utf8State::UTF8_MORE`) also works.
 pub(crate) const UTF8_MORE: Utf8State = Utf8State::More;
 pub(crate) const UTF8_DONE: Utf8State = Utf8State::Done;
 
@@ -65,126 +59,78 @@ pub(crate) const UTF8_DONE: Utf8State = Utf8State::Done;
 // wrapper.
 // ---------------------------------------------------------------
 
-pub unsafe fn utf8_strvis(
-    mut dst: *mut u8,
-    mut src: *const u8,
-    len: usize,
-    flag: vis_flags,
-) -> i32 {
-    unsafe {
-        let mut ud: Utf8Data = zeroed();
-        let start = dst;
-        let end = src.add(len);
-        let mut more: utf8_state;
+// `utf8_strvis` (buf-writing variant) has been removed. It was the
+// only caller writing into a pre-allocated C-style buffer and returning
+// a length; the remaining vis helpers (`utf8_stravis` / `utf8_stravisx` /
+// `utf8_stravis_`) cover every shape we actually use.
 
-        while src < end {
-            more = utf8_open(&raw mut ud, *src);
-            if more == utf8_state::Done.into() || more == UTF8_MORE {
-                // placeholder
+/// Walk `src` as UTF-8 and append each character to `dst`, escaping
+/// non-printable bytes per the vis(3) flags. Complete multi-byte
+/// sequences pass through unchanged; malformed bytes are individually
+/// vis-escaped. The `VIS_DQ` flag additionally backslash-escapes `$`
+/// before an identifier-start character so the output is safe inside
+/// double-quoted shell strings.
+pub fn utf8_strvis_(dst: &mut Vec<u8>, src: &[u8], flag: vis_flags) {
+    let mut ud: Utf8Data = Utf8Data::empty();
+    let mut i = 0;
+    while i < src.len() {
+        let byte = src[i];
+        let mut more = ud.open(byte);
+        if more == Utf8State::More {
+            let mut j = i + 1;
+            while j < src.len() && more == Utf8State::More {
+                more = ud.append(src[j]);
+                j += 1;
             }
-            if more == UTF8_MORE {
-                src = src.add(1);
-                while src < end && more == UTF8_MORE {
-                    more = utf8_append(&raw mut ud, *src);
-                    src = src.add(1);
-                }
-                if more == UTF8_DONE {
-                    for i in 0..ud.size {
-                        *dst = ud.data[i as usize];
-                        dst = dst.add(1);
-                    }
-                    continue;
-                }
-                src = src.sub(ud.have as usize);
+            if more == Utf8State::Done {
+                dst.extend(ud.initialized_slice());
+                i = j;
+                continue;
             }
-            if flag.intersects(vis_flags::VIS_DQ) && *src == b'$' && src < end.sub(1) {
-                if (*src.add(1)).is_ascii_alphabetic() || *src.add(1) == b'_' || *src.add(1) == b'{'
-                {
-                    *dst = b'\\';
-                    dst = dst.add(1);
-                }
-                *dst = b'$';
-                dst = dst.add(1);
-            } else if src < end.sub(1) {
-                dst = vis(dst, *src as i32, flag, *src.add(1) as i32);
-            } else if src < end {
-                dst = vis(dst, *src as i32, flag, b'\0' as i32);
-            }
-            src = src.add(1);
+            // Decode failed — fall through and vis-escape the lead byte.
         }
-        *dst = b'\0';
-        (dst.addr() - start.addr()) as i32
-    }
-}
-
-pub unsafe fn utf8_strvis_(dst: &mut Vec<u8>, mut src: *const u8, len: usize, flag: vis_flags) {
-    unsafe {
-        let mut ud: Utf8Data = zeroed();
-        let end = src.add(len);
-        let mut more: utf8_state;
-
-        while src < end {
-            more = utf8_open(&raw mut ud, *src);
-            if more == UTF8_MORE {
-                src = src.add(1);
-                while src < end && more == UTF8_MORE {
-                    more = utf8_append(&raw mut ud, *src);
-                    src = src.add(1);
-                }
-                if more == UTF8_DONE {
-                    dst.extend(ud.initialized_slice());
-                    continue;
-                }
-                src = src.sub(ud.have as usize);
+        let next = if i + 1 < src.len() { src[i + 1] as i32 } else { b'\0' as i32 };
+        if flag.intersects(vis_flags::VIS_DQ) && byte == b'$' && i + 1 < src.len() {
+            let nb = src[i + 1];
+            if nb.is_ascii_alphabetic() || nb == b'_' || nb == b'{' {
+                dst.push(b'\\');
             }
-            if flag.intersects(vis_flags::VIS_DQ) && *src == b'$' && src < end.sub(1) {
-                if (*src.add(1)).is_ascii_alphabetic() || *src.add(1) == b'_' || *src.add(1) == b'{'
-                {
-                    dst.push(b'\\');
-                }
-                dst.push(b'$');
-            } else if src < end.sub(1) {
-                vis__(dst, *src as i32, flag, *src.add(1) as i32);
-            } else if src < end {
-                vis__(dst, *src as i32, flag, b'\0' as i32);
-            }
-            src = src.add(1);
+            dst.push(b'$');
+        } else {
+            vis__(dst, byte as i32, flag, next);
         }
+        i += 1;
     }
 }
 
-pub unsafe fn utf8_stravis(dst: *mut *mut u8, src: *const u8, flag: vis_flags) -> i32 {
-    unsafe {
-        let buf = xreallocarray(null_mut(), 4, strlen(src) + 1);
-        let len = utf8_strvis(buf.as_ptr().cast(), src, strlen(src), flag);
-
-        *dst = xrealloc(buf.as_ptr(), len as usize + 1).as_ptr().cast();
-        len
-    }
+/// Unsafe wrapper over [`utf8_stravis_`] for callers that hold a raw
+/// NUL-terminated `*const u8`. Returns an owned `Vec<u8>`.
+///
+/// # Safety
+/// `src` must be a valid NUL-terminated byte string.
+pub unsafe fn utf8_stravis(src: *const u8, flag: vis_flags) -> Vec<u8> {
+    let bytes = unsafe { CStr::from_ptr(src.cast()).to_bytes() };
+    utf8_stravis_(bytes, flag)
 }
 
-pub unsafe fn utf8_stravis_(src: *const u8, flag: vis_flags) -> Vec<u8> {
-    unsafe {
-        let mut buf: Vec<u8> = Vec::with_capacity(4 * (strlen(src) + 1));
-        utf8_strvis_(&mut buf, src, strlen(src), flag);
-        buf.shrink_to_fit();
-        buf
-    }
+/// Owning counterpart of [`utf8_strvis_`]: allocate a `Vec<u8>`, run
+/// the vis-escape pass on `src`, and return the result.
+pub fn utf8_stravis_(src: &[u8], flag: vis_flags) -> Vec<u8> {
+    let mut buf: Vec<u8> = Vec::with_capacity(4 * (src.len() + 1));
+    utf8_strvis_(&mut buf, src, flag);
+    buf.shrink_to_fit();
+    buf
 }
 
-pub unsafe fn utf8_stravisx(
-    dst: *mut *mut u8,
-    src: *const u8,
-    srclen: usize,
-    flag: vis_flags,
-) -> i32 {
-    unsafe {
-        let buf = xreallocarray(null_mut(), 4, srclen + 1);
-        let len = utf8_strvis(buf.as_ptr().cast(), src, srclen, flag);
-
-        *dst = xrealloc(buf.as_ptr(), len as usize + 1).as_ptr().cast();
-        len
-    }
+/// Explicit-length variant of [`utf8_stravis`] — useful when `src`
+/// isn't NUL-terminated (e.g. lives inside an `evbuffer`). Returns an
+/// owned `Vec<u8>`.
+///
+/// # Safety
+/// `src` must be valid for `srclen` bytes.
+pub unsafe fn utf8_stravisx(src: *const u8, srclen: usize, flag: vis_flags) -> Vec<u8> {
+    let bytes = unsafe { std::slice::from_raw_parts(src, srclen) };
+    utf8_stravis_(bytes, flag)
 }
 
 pub unsafe fn utf8_sanitize(mut src: *const u8) -> *mut u8 {

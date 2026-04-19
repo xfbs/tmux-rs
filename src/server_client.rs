@@ -3527,17 +3527,19 @@ pub unsafe fn server_client_print(c: *mut client, parse: i32, evb: *mut evbuffer
     unsafe {
         let data = EVBUFFER_DATA(evb);
         let mut size = EVBUFFER_LENGTH(evb);
-        let mut msg = null_mut();
+        let msg: *mut u8;
 
         'out: {
             if parse == 0 {
-                utf8_stravisx(
-                    &raw mut msg,
+                let v = utf8_stravisx(
                     data.cast(),
                     size,
                     vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_NOSLASH,
                 );
-                // log_debug("%s: %s", __func__, msg);
+                let cs = CString::new(v).unwrap_or_default();
+                // Hand out an xmalloc'd copy so the `free_(msg)` at the
+                // end of the `parse == 0` path still balances.
+                msg = xstrdup(cs.as_ptr().cast()).as_ptr();
             } else {
                 msg = EVBUFFER_DATA(evb).cast();
                 if *msg.add(size - 1) != b'\0' {

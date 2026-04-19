@@ -237,7 +237,6 @@ pub unsafe fn window_buffer_draw(
         };
 
         let mut psize: usize = 0;
-        let mut buf: *mut u8 = null_mut();
         let mut end = paste_buffer_data_(pb, &mut psize);
         let pdata = end;
         for i in 0..sy {
@@ -245,23 +244,20 @@ pub unsafe fn window_buffer_draw(
             while end != pdata.add(psize) && *end != b'\n' {
                 end = end.add(1);
             }
-            buf = xreallocarray(buf.cast(), 4, end.offset_from(start) as usize + 1)
-                .as_ptr()
-                .cast();
-            utf8_strvis(
-                buf,
+            let vis = utf8_stravisx(
                 start,
                 end.offset_from(start) as usize,
                 vis_flags::VIS_OCTAL | vis_flags::VIS_CSTYLE | vis_flags::VIS_TAB,
             );
-            if *buf != b'\0' {
+            if !vis.is_empty() {
                 screen_write_cursormove(ctx, cx as i32, (cy + i) as i32, 0);
+                let cs = CString::new(vis).unwrap_or_default();
                 screen_write_nputs!(
                     ctx,
                     sx as isize,
                     &raw const GRID_DEFAULT_CELL,
                     "{}",
-                    _s(buf),
+                    _s(cs.as_ptr().cast::<u8>()),
                 );
             }
 
@@ -270,7 +266,6 @@ pub unsafe fn window_buffer_draw(
             }
             end = end.add(1);
         }
-        free_(buf);
     }
 }
 
