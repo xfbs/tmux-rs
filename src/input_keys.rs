@@ -324,7 +324,7 @@ static STANDARD_MAP: [SyncCharPtr; 2] = [
 pub unsafe fn input_key_vt10x(bev: *mut evbuffer, mut key: key_code) -> i32 {
     let __func__ = c!("input_key_vt10x");
     unsafe {
-        let mut ud: utf8_data = zeroed(); // TODO use uninit
+        let mut ud: Utf8Data = zeroed(); // TODO use uninit
 
         log_debug!("{}: key in {}", _s(__func__), key);
 
@@ -413,7 +413,7 @@ pub unsafe fn input_key(s: *mut screen, bev: *mut evbuffer, mut key: key_code) -
     let __func__ = c!("input_key");
     unsafe {
         let mut ike: *mut input_key_entry = null_mut();
-        let mut ud: utf8_data = zeroed();
+        let mut ud: Utf8Data = zeroed();
 
         // Mouse keys need a pane.
         if KEYC_IS_MOUSE(key) {

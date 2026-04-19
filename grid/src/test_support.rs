@@ -4,14 +4,14 @@
 //! -p tmux-grid` run).
 //!
 //! Use [`install_test_codec`] from each test that might reach the codec
-//! (any grid operation that round-trips cells through the extended-cell
+//! (any Grid operation that round-trips cells through the extended-cell
 //! side-table, or any reader call that uses `cstr_has`). Calling it more
 //! than once is safe — the underlying `set_codec` is idempotent.
 
 #![cfg(test)]
 
 use crate::{Utf8Codec, Utf8State, set_codec};
-use tmux_types::{UTF8_SIZE, utf8_char, utf8_data};
+use tmux_types::{UTF8_SIZE, Utf8Char, Utf8Data};
 
 /// Trivial codec: rejects >3-byte inputs (no intern table), performs the
 /// same bit-packing as tmux-rs's real codec for <=3-byte inputs, and
@@ -19,7 +19,7 @@ use tmux_types::{UTF8_SIZE, utf8_char, utf8_data};
 pub struct TestCodec;
 
 impl Utf8Codec for TestCodec {
-    unsafe fn from_data(&self, ud: *const utf8_data, uc: *mut utf8_char) -> Utf8State {
+    unsafe fn from_data(&self, ud: *const Utf8Data, uc: *mut Utf8Char) -> Utf8State {
         let size = unsafe { (*ud).size };
         let width = unsafe { (*ud).width };
         if size as usize > UTF8_SIZE || size > 3 {
@@ -39,7 +39,7 @@ impl Utf8Codec for TestCodec {
         Utf8State::Done
     }
 
-    fn to_data(&self, uc: utf8_char) -> utf8_data {
+    fn to_data(&self, uc: Utf8Char) -> Utf8Data {
         let size = ((uc >> 24) & 0x1f) as u8;
         let width = ((uc >> 29) - 1) as u8;
         let mut data = [0u8; UTF8_SIZE];
@@ -48,10 +48,10 @@ impl Utf8Codec for TestCodec {
             data[1] = ((uc >> 8) & 0xff) as u8;
             data[2] = ((uc >> 16) & 0xff) as u8;
         }
-        utf8_data { data, have: size, size, width }
+        Utf8Data { data, have: size, size, width }
     }
 
-    unsafe fn cstr_has(&self, set: *const u8, ud: *const utf8_data) -> bool {
+    unsafe fn cstr_has(&self, set: *const u8, ud: *const Utf8Data) -> bool {
         // Linear scan of the NUL-terminated `set` for the first byte of
         // `ud`. Matches tmux-rs's `utf8_cstrhas` semantics for the ASCII
         // cases the test suite exercises.

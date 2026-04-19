@@ -715,7 +715,7 @@ pub unsafe fn tty_putc(tty: *mut tty, ch: u8) {
             return;
         }
 
-        if (*tty).cell.attr.intersects(grid_attr::GRID_ATTR_CHARSET) {
+        if (*tty).cell.attr.intersects(GridAttr::GRID_ATTR_CHARSET) {
             let acs = tty_acs_get(tty, ch);
             if !acs.is_null() {
                 tty_add(tty, acs, strlen(acs));
@@ -1205,7 +1205,7 @@ pub unsafe fn tty_large_region(_tty: *mut tty, ctx: *const tty_ctx) -> bool {
 }
 
 /// Return if BCE is needed but the terminal doesn't have it - it'll need to be emulated.
-pub unsafe fn tty_fake_bce(tty: *const tty, gc: *const grid_cell, bg: u32) -> bool {
+pub unsafe fn tty_fake_bce(tty: *const tty, gc: *const GridCell, bg: u32) -> bool {
     unsafe {
         if tty_term_flag((*tty).term, tty_code_code::TTYC_BCE) != 0 {
             false
@@ -1317,7 +1317,7 @@ pub unsafe fn tty_clamp_line(
 /// Clear a line.
 pub unsafe fn tty_clear_line(
     tty: *mut tty,
-    defaults: *const grid_cell,
+    defaults: *const GridCell,
     py: u32,
     px: u32,
     nx: u32,
@@ -1494,7 +1494,7 @@ pub unsafe fn tty_clamp_area(
 /// Clear an area, adjusting to visible part of pane.
 pub unsafe fn tty_clear_area(
     tty: *mut tty,
-    defaults: *const grid_cell,
+    defaults: *const GridCell,
     py: u32,
     ny: u32,
     px: u32,
@@ -1668,8 +1668,8 @@ pub unsafe fn tty_draw_pane(tty: *mut tty, ctx: *const tty_ctx, py: u32) {
     }
 }
 
-pub unsafe fn tty_check_codeset(tty: *mut tty, gc: *const grid_cell) -> *const grid_cell {
-    static mut NEW: grid_cell = unsafe { zeroed() };
+pub unsafe fn tty_check_codeset(tty: *mut tty, gc: *const GridCell) -> *const GridCell {
+    static mut NEW: GridCell = unsafe { zeroed() };
     unsafe {
         // Characters less than 0x7f are always fine, no matter what.
         if (*gc).data.size == 1 && (*gc).data.data[0] < 0x7f {
@@ -1690,7 +1690,7 @@ pub unsafe fn tty_check_codeset(tty: *mut tty, gc: *const grid_cell) -> *const g
         );
         if c != -1 {
             utf8_set(&raw mut NEW.data, c as u8);
-            NEW.attr |= grid_attr::GRID_ATTR_CHARSET;
+            NEW.attr |= GridAttr::GRID_ATTR_CHARSET;
             return &raw const NEW;
         }
 
@@ -1753,13 +1753,13 @@ pub unsafe fn tty_draw_line(
     mut nx: u32,
     atx: u32,
     aty: u32,
-    defaults: *const grid_cell,
+    defaults: *const GridCell,
     palette: *const colour_palette,
 ) {
     unsafe {
-        let gd: *mut grid = &raw mut *(*s).grid;
-        let mut gc: grid_cell;
-        let mut last: grid_cell = zeroed();
+        let gd: *mut Grid = &raw mut *(*s).grid;
+        let mut gc: GridCell;
+        let mut last: GridCell = zeroed();
         let c = (*tty).client;
 
         let mut r: overlay_ranges = zeroed();
@@ -1807,7 +1807,7 @@ pub unsafe fn tty_draw_line(
             (*gd).get_line((*gd).hsize + py - 1)
         };
         if gl.is_null()
-            || !(*gl).flags.intersects(grid_line_flag::WRAPPED)
+            || !(*gl).flags.intersects(GridLineFlag::WRAPPED)
             || atx != 0
             || (*tty).cx < (*tty).sx
             || nx < (*tty).sx
@@ -1838,7 +1838,7 @@ pub unsafe fn tty_draw_line(
             let gcp = tty_check_codeset(tty, &gc);
             if len != 0
                 && (!tty_check_overlay(tty, atx + ux + width, aty)
-                    || (*gcp).attr.intersects(grid_attr::GRID_ATTR_CHARSET)
+                    || (*gcp).attr.intersects(GridAttr::GRID_ATTR_CHARSET)
                     || (*gcp).flags != last.flags
                     || (*gcp).attr != last.attr
                     || (*gcp).fg != last.fg
@@ -1849,7 +1849,7 @@ pub unsafe fn tty_draw_line(
                     || (SIZEOF_BUF) - len < (*gcp).data.size as usize)
             {
                 tty_attributes(tty, &last, defaults, palette, (*s).hyperlinks.unwrap_or(null_mut()));
-                if last.flags.intersects(grid_flag::CLEARED) {
+                if last.flags.intersects(GridFlag::CLEARED) {
                     // log_debug("%s: %zu cleared", __func__, len);
                     tty_clear_line(tty, defaults, aty, atx + ux, width, last.bg as u32);
                 } else {
@@ -1865,7 +1865,7 @@ pub unsafe fn tty_draw_line(
                 wrapped = false;
             }
 
-            if (*gcp).flags.intersects(grid_flag::SELECTED) {
+            if (*gcp).flags.intersects(GridFlag::SELECTED) {
                 screen_select_cell(s, &raw mut last, gcp);
             } else {
                 memcpy__(&raw mut last, gcp);
@@ -1878,11 +1878,11 @@ pub unsafe fn tty_draw_line(
             }
             hidden = (*gcp).data.width as u32 - hidden;
             if hidden != 0 && hidden == (*gcp).data.width as u32 {
-                if !(*gcp).flags.intersects(grid_flag::PADDING) {
+                if !(*gcp).flags.intersects(GridFlag::PADDING) {
                     ux += (*gcp).data.width as u32;
                 }
             } else if hidden != 0 || ux + (*gcp).data.width as u32 > nx {
-                if !(*gcp).flags.intersects(grid_flag::PADDING) {
+                if !(*gcp).flags.intersects(GridFlag::PADDING) {
                     tty_attributes(tty, &raw mut last, defaults, palette, (*s).hyperlinks.unwrap_or(null_mut()));
                     for j in 0..OVERLAY_MAX_RANGES {
                         if r.nx[j] == 0 {
@@ -1901,14 +1901,14 @@ pub unsafe fn tty_draw_line(
                         }
                     }
                 }
-            } else if (*gcp).attr.intersects(grid_attr::GRID_ATTR_CHARSET) {
+            } else if (*gcp).attr.intersects(GridAttr::GRID_ATTR_CHARSET) {
                 tty_attributes(tty, &raw mut last, defaults, palette, (*s).hyperlinks.unwrap_or(null_mut()));
                 tty_cursor(tty, atx + ux, aty);
                 for j in 0..(*gcp).data.size {
                     tty_putc(tty, (*gcp).data.data[j as usize]);
                 }
                 ux += (*gcp).data.width as u32;
-            } else if !(*gcp).flags.intersects(grid_flag::PADDING) {
+            } else if !(*gcp).flags.intersects(GridFlag::PADDING) {
                 libc::memcpy(
                     (&raw mut buf as *mut i8).add(len).cast(),
                     (&raw const (*gcp).data.data).cast(),
@@ -1918,9 +1918,9 @@ pub unsafe fn tty_draw_line(
                 width += (*gcp).data.width as u32;
             }
         }
-        if len != 0 && ((!last.flags.intersects(grid_flag::CLEARED)) || last.bg != 8) {
+        if len != 0 && ((!last.flags.intersects(GridFlag::CLEARED)) || last.bg != 8) {
             tty_attributes(tty, &raw mut last, defaults, palette, (*s).hyperlinks.unwrap_or(null_mut()));
-            if last.flags.intersects(grid_flag::CLEARED) {
+            if last.flags.intersects(GridFlag::CLEARED) {
                 // log_debug("%s: %zu cleared (end)", __func__, len);
                 tty_clear_line(tty, defaults, aty, atx + ux, width, last.bg as u32);
             } else {
@@ -2854,8 +2854,8 @@ pub unsafe fn tty_cmd_syncstart(tty: *mut tty, ctx: *const tty_ctx) {
 
 pub unsafe fn tty_cell(
     tty: *mut tty,
-    gc: *const grid_cell,
-    defaults: *const grid_cell,
+    gc: *const GridCell,
+    defaults: *const GridCell,
     palette: *const colour_palette,
     hl: *mut hyperlinks,
 ) {
@@ -2869,7 +2869,7 @@ pub unsafe fn tty_cell(
         }
 
         // If this is a padding character, do nothing.
-        if (*gc).flags.intersects(grid_flag::PADDING) {
+        if (*gc).flags.intersects(GridFlag::PADDING) {
             return;
         }
 
@@ -2905,7 +2905,7 @@ pub unsafe fn tty_reset(tty: *mut tty) {
             if (*gc).link != 0 {
                 tty_putcode_ss(tty, tty_code_code::TTYC_HLS, c!(""), c!(""));
             }
-            if (*gc).attr.intersects(grid_attr::GRID_ATTR_CHARSET) && tty_acs_needed(tty) {
+            if (*gc).attr.intersects(GridAttr::GRID_ATTR_CHARSET) && tty_acs_needed(tty) {
                 tty_putcode(tty, tty_code_code::TTYC_RMACS);
             }
             tty_putcode(tty, tty_code_code::TTYC_SGR0);
@@ -3232,7 +3232,7 @@ pub unsafe fn tty_cursor(tty: *mut tty, mut cx: u32, cy: u32) {
     }
 }
 
-pub unsafe fn tty_hyperlink(tty: *mut tty, gc: *const grid_cell, hl: *mut hyperlinks) {
+pub unsafe fn tty_hyperlink(tty: *mut tty, gc: *const GridCell, hl: *mut hyperlinks) {
     unsafe {
         if (*gc).link == (*tty).cell.link {
             return;
@@ -3256,18 +3256,18 @@ pub unsafe fn tty_hyperlink(tty: *mut tty, gc: *const grid_cell, hl: *mut hyperl
 
 pub unsafe fn tty_attributes(
     tty: *mut tty,
-    gc: *const grid_cell,
-    defaults: *const grid_cell,
+    gc: *const GridCell,
+    defaults: *const GridCell,
     palette: *const colour_palette,
     hl: *mut hyperlinks,
 ) {
     unsafe {
         let tc = &raw mut (*tty).cell;
-        let mut gc2: grid_cell = zeroed();
+        let mut gc2: GridCell = zeroed();
 
         // Copy cell and update default colours.
         memcpy__(&raw mut gc2, gc);
-        if !(*gc).flags.intersects(grid_flag::NOPALETTE) {
+        if !(*gc).flags.intersects(GridFlag::NOPALETTE) {
             if gc2.fg == 8 {
                 gc2.fg = (*defaults).fg;
             }
@@ -3290,12 +3290,12 @@ pub unsafe fn tty_attributes(
         // non-default background. This is a bit of a hack but it doesn't do
         // any serious harm and makes a couple of applications happier.
         if !tty_term_has((*tty).term, tty_code_code::TTYC_SETAB) {
-            if gc2.attr.intersects(grid_attr::GRID_ATTR_REVERSE) {
+            if gc2.attr.intersects(GridAttr::GRID_ATTR_REVERSE) {
                 if gc2.fg != 7 && !COLOUR_DEFAULT(gc2.fg) {
-                    gc2.attr &= !grid_attr::GRID_ATTR_REVERSE;
+                    gc2.attr &= !GridAttr::GRID_ATTR_REVERSE;
                 }
             } else if gc2.bg != 0 && !COLOUR_DEFAULT(gc2.bg) {
-                gc2.attr |= grid_attr::GRID_ATTR_REVERSE;
+                gc2.attr |= GridAttr::GRID_ATTR_REVERSE;
             }
         }
 
@@ -3319,50 +3319,50 @@ pub unsafe fn tty_attributes(
         (*tc).attr = gc2.attr;
 
         // Set the attributes.
-        if changed.intersects(grid_attr::GRID_ATTR_BRIGHT) {
+        if changed.intersects(GridAttr::GRID_ATTR_BRIGHT) {
             tty_putcode(tty, tty_code_code::TTYC_BOLD);
         }
-        if changed.intersects(grid_attr::GRID_ATTR_DIM) {
+        if changed.intersects(GridAttr::GRID_ATTR_DIM) {
             tty_putcode(tty, tty_code_code::TTYC_DIM);
         }
-        if changed.intersects(grid_attr::GRID_ATTR_ITALICS) {
+        if changed.intersects(GridAttr::GRID_ATTR_ITALICS) {
             tty_set_italics(tty);
         }
         if changed.intersects(GRID_ATTR_ALL_UNDERSCORE) {
-            if (changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE))
+            if (changed.intersects(GridAttr::GRID_ATTR_UNDERSCORE))
                 || !tty_term_has((*tty).term, tty_code_code::TTYC_SMULX)
             {
                 tty_putcode(tty, tty_code_code::TTYC_SMUL);
-            } else if changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_2) {
+            } else if changed.intersects(GridAttr::GRID_ATTR_UNDERSCORE_2) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SMULX, 2);
-            } else if changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_3) {
+            } else if changed.intersects(GridAttr::GRID_ATTR_UNDERSCORE_3) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SMULX, 3);
-            } else if changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_4) {
+            } else if changed.intersects(GridAttr::GRID_ATTR_UNDERSCORE_4) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SMULX, 4);
-            } else if changed.intersects(grid_attr::GRID_ATTR_UNDERSCORE_5) {
+            } else if changed.intersects(GridAttr::GRID_ATTR_UNDERSCORE_5) {
                 tty_putcode_i(tty, tty_code_code::TTYC_SMULX, 5);
             }
         }
-        if changed.intersects(grid_attr::GRID_ATTR_BLINK) {
+        if changed.intersects(GridAttr::GRID_ATTR_BLINK) {
             tty_putcode(tty, tty_code_code::TTYC_BLINK);
         }
-        if changed.intersects(grid_attr::GRID_ATTR_REVERSE) {
+        if changed.intersects(GridAttr::GRID_ATTR_REVERSE) {
             if tty_term_has((*tty).term, tty_code_code::TTYC_REV) {
                 tty_putcode(tty, tty_code_code::TTYC_REV);
             } else if tty_term_has((*tty).term, tty_code_code::TTYC_SMSO) {
                 tty_putcode(tty, tty_code_code::TTYC_SMSO);
             }
         }
-        if changed.intersects(grid_attr::GRID_ATTR_HIDDEN) {
+        if changed.intersects(GridAttr::GRID_ATTR_HIDDEN) {
             tty_putcode(tty, tty_code_code::TTYC_INVIS);
         }
-        if changed.intersects(grid_attr::GRID_ATTR_STRIKETHROUGH) {
+        if changed.intersects(GridAttr::GRID_ATTR_STRIKETHROUGH) {
             tty_putcode(tty, tty_code_code::TTYC_SMXX);
         }
-        if changed.intersects(grid_attr::GRID_ATTR_OVERLINE) {
+        if changed.intersects(GridAttr::GRID_ATTR_OVERLINE) {
             tty_putcode(tty, tty_code_code::TTYC_SMOL);
         }
-        if changed.intersects(grid_attr::GRID_ATTR_CHARSET) && tty_acs_needed(tty) {
+        if changed.intersects(GridAttr::GRID_ATTR_CHARSET) && tty_acs_needed(tty) {
             tty_putcode(tty, tty_code_code::TTYC_SMACS);
         }
 
@@ -3373,7 +3373,7 @@ pub unsafe fn tty_attributes(
     }
 }
 
-pub unsafe fn tty_colours(tty: *mut tty, gc: *const grid_cell) {
+pub unsafe fn tty_colours(tty: *mut tty, gc: *const GridCell) {
     unsafe {
         let tc = &raw mut (*tty).cell;
 
@@ -3426,17 +3426,17 @@ pub unsafe fn tty_colours(tty: *mut tty, gc: *const grid_cell) {
     }
 }
 
-pub unsafe fn tty_check_fg(tty: *const tty, palette: *const colour_palette, gc: *mut grid_cell) {
+pub unsafe fn tty_check_fg(tty: *const tty, palette: *const colour_palette, gc: *mut GridCell) {
     unsafe {
         let mut c: i32;
 
         // Perform substitution if this pane has a palette. If the bright
         // attribute is set and Nobr is not present, use the bright entry in
         // the palette by changing to the aixterm colour
-        if !(*gc).flags.intersects(grid_flag::NOPALETTE) {
+        if !(*gc).flags.intersects(GridFlag::NOPALETTE) {
             c = (*gc).fg;
             if c < 8
-                && (*gc).attr.intersects(grid_attr::GRID_ATTR_BRIGHT)
+                && (*gc).attr.intersects(GridAttr::GRID_ATTR_BRIGHT)
                 && !tty_term_has((*tty).term, tty_code_code::TTYC_NOBR)
             {
                 c += 90;
@@ -3482,17 +3482,17 @@ pub unsafe fn tty_check_fg(tty: *const tty, palette: *const colour_palette, gc: 
         // Is this an aixterm colour?
         if (*gc).fg >= 90 && (*gc).fg <= 97 && colours < 16 {
             (*gc).fg -= 90;
-            (*gc).attr |= grid_attr::GRID_ATTR_BRIGHT;
+            (*gc).attr |= GridAttr::GRID_ATTR_BRIGHT;
         }
     }
 }
 
-pub unsafe fn tty_check_bg(tty: *const tty, palette: *const colour_palette, gc: *mut grid_cell) {
+pub unsafe fn tty_check_bg(tty: *const tty, palette: *const colour_palette, gc: *mut GridCell) {
     unsafe {
         let c: i32;
 
         // Perform substitution if this pane has a palette.
-        if !(*gc).flags.intersects(grid_flag::NOPALETTE) {
+        if !(*gc).flags.intersects(GridFlag::NOPALETTE) {
             c = colour_palette_get(ptr_to_ref(palette), (*gc).bg);
             if c != -1 {
                 (*gc).bg = c;
@@ -3540,12 +3540,12 @@ pub unsafe fn tty_check_bg(tty: *const tty, palette: *const colour_palette, gc: 
     }
 }
 
-pub unsafe fn tty_check_us(tty: *const tty, palette: *const colour_palette, gc: *mut grid_cell) {
+pub unsafe fn tty_check_us(tty: *const tty, palette: *const colour_palette, gc: *mut GridCell) {
     unsafe {
         let mut c;
 
         // Perform substitution if this pane has a palette.
-        if !(*gc).flags.intersects(grid_flag::NOPALETTE) {
+        if !(*gc).flags.intersects(GridFlag::NOPALETTE) {
             c = colour_palette_get(ptr_to_ref(palette), (*gc).us);
             if c != -1 {
                 (*gc).us = c;
@@ -3564,7 +3564,7 @@ pub unsafe fn tty_check_us(tty: *const tty, palette: *const colour_palette, gc: 
     }
 }
 
-pub unsafe fn tty_colours_fg(tty: *mut tty, gc: *const grid_cell) {
+pub unsafe fn tty_colours_fg(tty: *mut tty, gc: *const GridCell) {
     unsafe {
         let tc = &raw mut (*tty).cell;
         let sizeof_s: usize = 32;
@@ -3606,7 +3606,7 @@ pub unsafe fn tty_colours_fg(tty: *mut tty, gc: *const grid_cell) {
     }
 }
 
-pub unsafe fn tty_colours_bg(tty: *mut tty, gc: *const grid_cell) {
+pub unsafe fn tty_colours_bg(tty: *mut tty, gc: *const GridCell) {
     unsafe {
         let tc = &raw mut (*tty).cell;
         let sizeof_s: usize = 32;
@@ -3642,7 +3642,7 @@ pub unsafe fn tty_colours_bg(tty: *mut tty, gc: *const grid_cell) {
     }
 }
 
-pub unsafe fn tty_colours_us(tty: *mut tty, gc: *const grid_cell) {
+pub unsafe fn tty_colours_us(tty: *mut tty, gc: *const GridCell) {
     unsafe {
         let tc = &raw mut (*tty).cell;
         let mut c: u32;
@@ -3727,7 +3727,7 @@ pub unsafe fn tty_try_colour(tty: *mut tty, colour: i32, type_: *const u8) -> i3
     }
 }
 
-pub unsafe fn tty_window_default_style(gc: *mut grid_cell, wp: *mut window_pane) {
+pub unsafe fn tty_window_default_style(gc: *mut GridCell, wp: *mut window_pane) {
     unsafe {
         memcpy__(gc, &raw const GRID_DEFAULT_CELL);
         (*gc).fg = (*wp).palette.fg;
@@ -3735,7 +3735,7 @@ pub unsafe fn tty_window_default_style(gc: *mut grid_cell, wp: *mut window_pane)
     }
 }
 
-pub unsafe fn tty_default_colours(gc: *mut grid_cell, wp: *mut window_pane) {
+pub unsafe fn tty_default_colours(gc: *mut GridCell, wp: *mut window_pane) {
     unsafe {
         let oo = (*wp).options;
 
@@ -3784,13 +3784,13 @@ pub unsafe fn tty_default_colours(gc: *mut grid_cell, wp: *mut window_pane) {
 
 pub unsafe fn tty_default_attributes(
     tty: *mut tty,
-    defaults: *const grid_cell,
+    defaults: *const GridCell,
     palette: *const colour_palette,
     bg: u32,
     hl: *mut hyperlinks,
 ) {
     unsafe {
-        let mut gc: grid_cell = zeroed();
+        let mut gc: GridCell = zeroed();
         memcpy__(&raw mut gc, &raw const GRID_DEFAULT_CELL);
         gc.bg = bg as i32;
         tty_attributes(tty, &gc, defaults, palette, hl);

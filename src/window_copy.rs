@@ -130,7 +130,7 @@ const WINDOW_COPY_DRAG_REPEAT_TIME: libc::suseconds_t = 50000;
 // a series of lines containing the output from an output-writing tmux command
 // (such as any of the "show-*" or "list-*" commands).
 //
-// In either case, the full content of the copy-mode grid is pointed at by the
+// In either case, the full content of the copy-mode Grid is pointed at by the
 // "backing" field, and is copied into "screen" as needed (that is, when
 // scrolling occurs). When copy-mode is backed by a pane, backing points
 // directly at that pane's screen structure (&wp->base); when backed by a list
@@ -208,7 +208,7 @@ pub struct window_copy_mode_data {
     timeout: i32,
 
     jumptype: window_copy,
-    jumpchar: *mut utf8_data,
+    jumpchar: *mut Utf8Data,
 
     dragtimer: Option<TimerHandle>,
 }
@@ -282,7 +282,7 @@ pub unsafe fn window_copy_clone_screen(
         // log_debug( "%s: target screen is %ux%u, source %ux%u", __func__, screen_size_x(src), sy, screen_size_x(hint), screen_hsize(src) + screen_size_y(src),);
         screen_init(dst, screen_size_x(src), sy, screen_hlimit(src));
 
-        // Ensure history is on for the backing grid so lines are not deleted
+        // Ensure history is on for the backing Grid so lines are not deleted
         // during resizing.
         (*(*dst).grid).flags |= GRID_HISTORY;
         (*(*dst).grid).duplicate_lines(0, &raw mut *(*src).grid, 0, sy);
@@ -504,7 +504,7 @@ pub unsafe fn window_copy_vadd(wp: *mut window_pane, parse: i32, args: std::fmt:
         let mut backing_ctx: screen_write_ctx = zeroed();
         let mut ctx: screen_write_ctx = zeroed();
 
-        let mut gc: grid_cell = zeroed();
+        let mut gc: GridCell = zeroed();
         let sx = screen_size_x(backing);
 
         if parse != 0 {
@@ -725,7 +725,7 @@ pub unsafe fn window_copy_get_word(wp: *mut window_pane, x: u32, y: u32) -> Stri
     unsafe {
         let wme: *mut window_mode_entry = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
-        let gd: *mut grid = &raw mut *(*data).screen.grid;
+        let gd: *mut Grid = &raw mut *(*data).screen.grid;
 
         format_grid_word(gd, x, (*gd).hsize + y)
     }
@@ -735,7 +735,7 @@ pub unsafe fn window_copy_get_line(wp: *mut window_pane, y: u32) -> String {
     unsafe {
         let wme: *mut window_mode_entry = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
-        let gd: *mut grid = &raw mut *(*data).screen.grid;
+        let gd: *mut Grid = &raw mut *(*data).screen.grid;
 
         format_grid_line(gd, (*gd).hsize + y)
     }
@@ -746,7 +746,7 @@ pub unsafe fn window_copy_cursor_hyperlink_cb(ft: &format_tree) -> format_table_
         let wp = format_get_pane(ft);
         let wme = (*wp).modes.first().copied().unwrap_or(null_mut());
         let data: *mut window_copy_mode_data = (*wme).data.cast();
-        let gd: *mut grid = &raw mut *(*data).screen.grid;
+        let gd: *mut Grid = &raw mut *(*data).screen.grid;
 
         format_grid_hyperlink(
             gd,
@@ -872,7 +872,7 @@ pub unsafe fn window_copy_resize(wme: NonNull<window_mode_entry>, sx: u32, sy: u
         let wme = wme.as_ptr();
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
-        let gd: *mut grid = &raw mut *(*(*data).backing).grid;
+        let gd: *mut Grid = &raw mut *(*(*data).backing).grid;
         let mut wx = 0;
         let mut wy = 0;
         // int reflow;
@@ -1664,7 +1664,7 @@ pub unsafe fn window_copy_cmd_previous_matching_bracket(
 
         let mut found: u8 = b'\0';
         let mut cp: *mut u8;
-        let mut gc: grid_cell;
+        let mut gc: GridCell;
 
         'outer: while np != 0 {
             // Get cursor position and line length.
@@ -1680,7 +1680,7 @@ pub unsafe fn window_copy_cmd_previous_matching_bracket(
             let mut tried = false;
             'retry: loop {
                 gc = (*s).grid.get_cell(px, py);
-                if gc.data.size != 1 || gc.flags.intersects(grid_flag::PADDING) {
+                if gc.data.size != 1 || gc.flags.intersects(GridFlag::PADDING) {
                     cp = null_mut();
                 } else {
                     found = gc.data.data[0];
@@ -1727,7 +1727,7 @@ pub unsafe fn window_copy_cmd_previous_matching_bracket(
                     }
 
                     gc = (*s).grid.get_cell(px, py);
-                    if gc.data.size == 1 && !gc.flags.intersects(grid_flag::PADDING) {
+                    if gc.data.size == 1 && !gc.flags.intersects(GridFlag::PADDING) {
                         if gc.data.data[0] == found {
                             n += 1;
                         } else if gc.data.data[0] == start {
@@ -1764,7 +1764,7 @@ pub unsafe fn window_copy_cmd_next_matching_bracket(
         let close: [u8; 4] = [b'}', b']', b')', b'\0'];
 
         let mut found = b'\0';
-        let mut gc: grid_cell;
+        let mut gc: GridCell;
         let mut cp;
 
         'outer: while np != 0 {
@@ -1782,7 +1782,7 @@ pub unsafe fn window_copy_cmd_next_matching_bracket(
             let mut tried = false;
             'retry: loop {
                 gc = (*s).grid.get_cell(px, py);
-                if gc.data.size != 1 || gc.flags.intersects(grid_flag::PADDING) {
+                if gc.data.size != 1 || gc.flags.intersects(GridFlag::PADDING) {
                     cp = null_mut();
                 } else {
                     found = gc.data.data[0];
@@ -1802,7 +1802,7 @@ pub unsafe fn window_copy_cmd_next_matching_bracket(
                         py = screen_hsize(s) + (*data).cy - (*data).oy;
                         gc = (*s).grid.get_cell(px, py);
                         if gc.data.size == 1
-                            && !gc.flags.intersects(grid_flag::PADDING)
+                            && !gc.flags.intersects(GridFlag::PADDING)
                             && !libc::strchr((&raw const close).cast(), gc.data.data[0] as i32)
                                 .is_null()
                         {
@@ -1831,7 +1831,7 @@ pub unsafe fn window_copy_cmd_next_matching_bracket(
                             continue 'outer;
                         }
                         let gl = (*s).grid.get_line(py);
-                        if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
+                        if !(*gl).flags.intersects(GridLineFlag::WRAPPED) {
                             np -= 1;
                             continue 'outer;
                         }
@@ -1866,7 +1866,7 @@ pub unsafe fn window_copy_cmd_next_matching_bracket(
                     }
 
                     gc = (*s).grid.get_cell(px, py);
-                    if gc.data.size == 1 && !gc.flags.intersects(grid_flag::PADDING) {
+                    if gc.data.size == 1 && !gc.flags.intersects(GridFlag::PADDING) {
                         if gc.data.data[0] == found {
                             n += 1;
                         } else if gc.data.data[0] == end {
@@ -2274,7 +2274,7 @@ pub unsafe fn window_copy_cmd_select_word(
         let mut nexty = py;
         if (*(*(*data).backing).grid.get_line(nexty))
             .flags
-            .intersects(grid_line_flag::WRAPPED)
+            .intersects(GridLineFlag::WRAPPED)
             && nextx > screen_size_x((*data).backing) - 1
         {
             nextx = 0;
@@ -3496,7 +3496,7 @@ pub unsafe fn window_copy_scroll_to(
 ) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
-        let gd: *mut grid = &raw mut *(*(*data).backing).grid;
+        let gd: *mut Grid = &raw mut *(*(*data).backing).grid;
 
         (*data).cx = px;
 
@@ -3529,17 +3529,17 @@ pub unsafe fn window_copy_scroll_to(
 }
 
 pub unsafe fn window_copy_search_compare(
-    gd: *mut grid,
+    gd: *mut Grid,
     px: u32,
     py: u32,
-    sgd: *mut grid,
+    sgd: *mut Grid,
     spx: u32,
     cis: i32,
 ) -> bool {
     unsafe {
-        let gc: grid_cell = (*gd).get_cell(px, py);
+        let gc: GridCell = (*gd).get_cell(px, py);
         let ud = &raw const gc.data;
-        let sgc: grid_cell = (*sgd).get_cell(spx, 0);
+        let sgc: GridCell = (*sgd).get_cell(spx, 0);
         let sud = &raw const sgc.data;
 
         if (*ud).size != (*sud).size || (*ud).width != (*sud).width {
@@ -3559,8 +3559,8 @@ pub unsafe fn window_copy_search_compare(
 }
 
 pub unsafe fn window_copy_search_lr(
-    gd: *mut grid,
-    sgd: *mut grid,
+    gd: *mut Grid,
+    sgd: *mut Grid,
     ppx: *mut u32,
     py: u32,
     first: u32,
@@ -3568,7 +3568,7 @@ pub unsafe fn window_copy_search_lr(
     cis: i32,
 ) -> bool {
     unsafe {
-        let mut gl: *mut grid_line;
+        let mut gl: *mut GridLine;
 
         let endline = (*gd).hsize + (*gd).sy - 1;
         for ax in first..last {
@@ -3580,13 +3580,13 @@ pub unsafe fn window_copy_search_lr(
                 // Wrap line.
                 while px >= (*gd).sx && pywrap < endline {
                     gl = (*gd).get_line(pywrap);
-                    if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
+                    if !(*gl).flags.intersects(GridLineFlag::WRAPPED) {
                         break;
                     }
                     px -= (*gd).sx;
                     pywrap += 1;
                 }
-                // We have run off the end of the grid.
+                // We have run off the end of the Grid.
                 if px >= (*gd).sx {
                     break;
                 }
@@ -3605,8 +3605,8 @@ pub unsafe fn window_copy_search_lr(
 }
 
 pub unsafe fn window_copy_search_rl(
-    gd: *mut grid,
-    sgd: *mut grid,
+    gd: *mut Grid,
+    sgd: *mut Grid,
     ppx: *mut u32,
     py: u32,
     first: u32,
@@ -3614,7 +3614,7 @@ pub unsafe fn window_copy_search_rl(
     cis: i32,
 ) -> bool {
     unsafe {
-        let mut gl: *mut grid_line;
+        let mut gl: *mut GridLine;
         let endline = (*gd).hsize + (*gd).sy - 1;
 
         let mut ax = last;
@@ -3627,13 +3627,13 @@ pub unsafe fn window_copy_search_rl(
                 // Wrap line.
                 while px >= (*gd).sx && pywrap < endline {
                     gl = (*gd).get_line(pywrap);
-                    if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
+                    if !(*gl).flags.intersects(GridLineFlag::WRAPPED) {
                         break;
                     }
                     px -= (*gd).sx;
                     pywrap += 1;
                 }
-                // We have run off the end of the grid.
+                // We have run off the end of the Grid.
                 if px >= (*gd).sx {
                     break;
                 }
@@ -3653,7 +3653,7 @@ pub unsafe fn window_copy_search_rl(
 }
 
 pub unsafe fn window_copy_search_lr_regex(
-    gd: *mut grid,
+    gd: *mut Grid,
     ppx: *mut u32,
     psx: *mut u32,
     py: u32,
@@ -3668,7 +3668,7 @@ pub unsafe fn window_copy_search_lr_regex(
         // char *buf;
         // regmatch_t regmatch;
         let mut regmatch: libc::regmatch_t = zeroed();
-        // struct grid_line *gl;
+        // struct GridLine *gl;
 
         // This can happen during search if the last match was the last
         // character on a line.
@@ -3690,7 +3690,7 @@ pub unsafe fn window_copy_search_lr_regex(
         let mut pywrap = py;
         while !buf.is_null() && pywrap <= endline && len < WINDOW_COPY_SEARCH_MAX_LINE {
             let gl = (*gd).get_line(pywrap);
-            if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
+            if !(*gl).flags.intersects(GridLineFlag::WRAPPED) {
                 break;
             }
             pywrap += 1;
@@ -3739,7 +3739,7 @@ pub unsafe fn window_copy_search_lr_regex(
 }
 
 pub unsafe fn window_copy_search_rl_regex(
-    gd: *mut grid,
+    gd: *mut Grid,
     ppx: *mut u32,
     psx: *mut u32,
     py: u32,
@@ -3765,7 +3765,7 @@ pub unsafe fn window_copy_search_rl_regex(
         let mut pywrap = py;
         while !buf.is_null() && pywrap <= endline && len < WINDOW_COPY_SEARCH_MAX_LINE {
             let gl = (*gd).get_line(pywrap);
-            if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
+            if !(*gl).flags.intersects(GridLineFlag::WRAPPED) {
                 break;
             }
             pywrap += 1;
@@ -3786,7 +3786,7 @@ pub unsafe fn window_copy_search_rl_regex(
 }
 
 pub unsafe fn window_copy_cellstring(
-    gl: &grid_line,
+    gl: &GridLine,
     px: u32,
     size: *mut usize,
     allocated: *mut i32,
@@ -3799,12 +3799,12 @@ pub unsafe fn window_copy_cellstring(
         }
 
         let gce = &gl.celldata[px as usize];
-        if gce.flags.intersects(grid_flag::PADDING) {
+        if gce.flags.intersects(GridFlag::PADDING) {
             *size = 0;
             *allocated = 0;
             return null_mut();
         }
-        if !gce.flags.intersects(grid_flag::EXTENDED) {
+        if !gce.flags.intersects(GridFlag::EXTENDED) {
             *size = 1;
             *allocated = 0;
             return (&raw const gce.union_.data.data).cast::<u8>() as *mut u8;
@@ -3827,7 +3827,7 @@ pub unsafe fn window_copy_cellstring(
 
 /// Find last match in given range.
 pub unsafe fn window_copy_last_regex(
-    gd: *mut grid,
+    gd: *mut Grid,
     py: u32,
     first: u32,
     last: u32,
@@ -3901,7 +3901,7 @@ pub unsafe fn window_copy_last_regex(
 
 /// Stringify line and append to input buffer. Caller frees.
 pub unsafe fn window_copy_stringify(
-    gd: *mut grid,
+    gd: *mut Grid,
     py: u32,
     first: u32,
     last: u32,
@@ -3949,9 +3949,9 @@ pub unsafe fn window_copy_stringify(
     }
 }
 
-/// Map start of C string containing UTF-8 data to grid cell position.
+/// Map start of C string containing UTF-8 data to Grid cell position.
 pub unsafe fn window_copy_cstrtocellpos(
-    gd: *mut grid,
+    gd: *mut Grid,
     ncells: u32,
     ppx: *mut u32,
     ppy: *mut u32,
@@ -4104,7 +4104,7 @@ pub unsafe fn window_copy_is_lowercase(mut ptr: *const u8) -> bool {
 // find the longest overlapping match from previous wrapped lines.
 
 pub unsafe fn window_copy_search_back_overlap(
-    gd: *mut grid,
+    gd: *mut Grid,
     preg: *mut libc::regex_t,
     ppx: *mut u32,
     psx: *mut u32,
@@ -4131,7 +4131,7 @@ pub unsafe fn window_copy_search_back_overlap(
             && py - 1 > endline
             && (*(*gd).get_line(py - 2))
                 .flags
-                .intersects(grid_line_flag::WRAPPED)
+                .intersects(GridLineFlag::WRAPPED)
             && endx == oldendx
             && endy == oldendy
         {
@@ -4163,12 +4163,12 @@ pub unsafe fn window_copy_search_back_overlap(
 
 // Search for text stored in sgd starting from position fx,fy up to endline. If
 // found, jump to it. If cis then ignore case. The direction is 0 for searching
-// up, down otherwise. If wrap then go to begin/end of grid and try again if
+// up, down otherwise. If wrap then go to begin/end of Grid and try again if
 // not found.
 pub unsafe fn window_copy_search_jump(
     wme: *mut window_mode_entry,
-    gd: *mut grid,
-    sgd: *mut grid,
+    gd: *mut Grid,
+    sgd: *mut Grid,
     mut fx: u32,
     fy: u32,
     endline: u32,
@@ -4302,7 +4302,7 @@ pub unsafe fn window_copy_move_after_search_mark(
                 if (*data).searchmark.add(at as usize) != (*data).searchmark.add(start as usize) {
                     break;
                 }
-                // Stop if not wrapping and at the end of the grid.
+                // Stop if not wrapping and at the end of the Grid.
                 if wrapflag == 0
                     && *fx == screen_size_x(s) - 1
                     && *fy == screen_hsize(s) + screen_size_y(s) - 1
@@ -4330,7 +4330,7 @@ pub unsafe fn window_copy_search(
         let s: *mut screen = (*data).backing;
         let mut ss = MaybeUninit::<screen>::uninit();
         let mut ctx: screen_write_ctx = zeroed();
-        let gd: *mut grid = &raw mut *(*s).grid;
+        let gd: *mut Grid = &raw mut *(*s).grid;
         // Build a CString of the search string for the C interop calls below
         // (strcspn, strlen via screen_write_strlen, etc).
         let str_owned: String = (*data).searchstr.clone().unwrap_or_default();
@@ -4472,14 +4472,14 @@ pub unsafe fn window_copy_visible_lines(
     end: *mut u32,
 ) {
     unsafe {
-        let gd: *mut grid = &raw mut *(*(*data).backing).grid;
+        let gd: *mut Grid = &raw mut *(*(*data).backing).grid;
 
         *start = (*gd).hsize - (*data).oy;
 
         while *start > 0 {
             let wrapped = (*gd)
                 .peek_line((*start) - 1)
-                .is_some_and(|gl| gl.flags.intersects(grid_line_flag::WRAPPED));
+                .is_some_and(|gl| gl.flags.intersects(GridLineFlag::WRAPPED));
             if !wrapped {
                 break;
             }
@@ -4496,7 +4496,7 @@ pub unsafe fn window_copy_search_mark_at(
 ) -> Result<u32, ()> {
     unsafe {
         let s: *mut screen = (*data).backing;
-        let gd: *mut grid = &raw mut *(*s).grid;
+        let gd: *mut Grid = &raw mut *(*s).grid;
 
         if py < (*gd).hsize - (*data).oy {
             return Err(());
@@ -4519,7 +4519,7 @@ pub unsafe fn window_copy_search_marks(
         let s: *mut screen = (*data).backing;
         let mut ss = MaybeUninit::<screen>::uninit();
         let mut ctx: screen_write_ctx = zeroed();
-        let gd: *mut grid = &raw mut *(*s).grid;
+        let gd: *mut Grid = &raw mut *(*s).grid;
         let mut found: bool;
         let mut stopped: i32 = 0;
 
@@ -4738,7 +4738,7 @@ pub unsafe fn window_copy_match_start_end(
     end: *mut u32,
 ) {
     unsafe {
-        let gd: *mut grid = &raw mut *(*(*data).backing).grid;
+        let gd: *mut Grid = &raw mut *(*(*data).backing).grid;
         let last = ((*gd).sy * (*gd).sx) - 1;
         let mark = *(*data).searchmark.add(at as usize);
 
@@ -4761,7 +4761,7 @@ pub unsafe fn window_copy_match_start_end(
 
 pub unsafe fn window_copy_match_at_cursor(data: *mut window_copy_mode_data) -> Option<String> {
     unsafe {
-        let gd: *mut grid = &raw mut *(*(*data).backing).grid;
+        let gd: *mut Grid = &raw mut *(*(*data).backing).grid;
         let mut start: u32 = 0;
         let mut end: u32 = 0;
         let sx = screen_size_x((*data).backing);
@@ -4805,10 +4805,10 @@ pub unsafe fn window_copy_update_style(
     wme: *mut window_mode_entry,
     fx: u32,
     fy: u32,
-    gc: *mut grid_cell,
-    mgc: *const grid_cell,
-    cgc: *const grid_cell,
-    mkgc: *const grid_cell,
+    gc: *mut GridCell,
+    mgc: *const GridCell,
+    cgc: *const GridCell,
+    mkgc: *const GridCell,
 ) {
     unsafe {
         let wp: *mut window_pane = pane_ptr_from_id((*wme).wp);
@@ -4890,13 +4890,13 @@ pub unsafe fn window_copy_write_one(
     py: u32,
     fy: u32,
     nx: u32,
-    mgc: *const grid_cell,
-    cgc: *const grid_cell,
-    mkgc: *const grid_cell,
+    mgc: *const GridCell,
+    cgc: *const GridCell,
+    mkgc: *const GridCell,
 ) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
-        let gd: *mut grid = &raw mut *(*(*data).backing).grid;
+        let gd: *mut Grid = &raw mut *(*(*data).backing).grid;
 
         screen_write_cursormove(ctx, 0, py as i32, 0);
         for fx in 0..nx {
@@ -4919,11 +4919,11 @@ pub unsafe fn window_copy_write_line(
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
         let oo: *mut options = (*window_pane_window(wp)).options;
-        let gl: *mut grid_line;
-        let mut gc: grid_cell = zeroed();
-        let mut mgc: grid_cell = zeroed();
-        let mut cgc: grid_cell = zeroed();
-        let mut mkgc: grid_cell = zeroed();
+        let gl: *mut GridLine;
+        let mut gc: GridCell = zeroed();
+        let mut mgc: GridCell = zeroed();
+        let mut cgc: GridCell = zeroed();
+        let mut mkgc: GridCell = zeroed();
         let mut hdr: [u8; 512] = zeroed();
         let mut tmp: [u8; 512] = zeroed();
         let t: *mut u8;
@@ -4931,18 +4931,18 @@ pub unsafe fn window_copy_write_line(
         let hsize = screen_hsize((*data).backing);
 
         style_apply(&raw mut gc, oo, c!("mode-style"), null_mut());
-        gc.flags |= grid_flag::NOPALETTE;
+        gc.flags |= GridFlag::NOPALETTE;
         style_apply(&raw mut mgc, oo, c!("copy-mode-match-style"), null_mut());
-        mgc.flags |= grid_flag::NOPALETTE;
+        mgc.flags |= GridFlag::NOPALETTE;
         style_apply(
             &raw mut cgc,
             oo,
             c!("copy-mode-current-match-style"),
             null_mut(),
         );
-        cgc.flags |= grid_flag::NOPALETTE;
+        cgc.flags |= GridFlag::NOPALETTE;
         style_apply(&raw mut mkgc, oo, c!("copy-mode-mark-style"), null_mut());
-        mkgc.flags |= grid_flag::NOPALETTE;
+        mkgc.flags |= GridFlag::NOPALETTE;
 
         if py == 0 && (*s).rupper < (*s).rlower && !(*data).hide_position {
             gl = (*(*data).backing).grid.get_line(hsize - (*data).oy);
@@ -5043,7 +5043,7 @@ pub unsafe fn window_copy_write_lines(
 pub unsafe fn window_copy_redraw_selection(wme: *mut window_mode_entry, old_y: u32) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
-        let gd: *mut grid = &raw mut *(*(*data).backing).grid;
+        let gd: *mut Grid = &raw mut *(*(*data).backing).grid;
 
         let new_y = (*data).cy;
         let (start, mut end) = if old_y <= new_y {
@@ -5056,7 +5056,7 @@ pub unsafe fn window_copy_redraw_selection(wme: *mut window_mode_entry, old_y: u
         // might be selected, so add this line to the redraw area.
         if (*data).selflag == selflag::SEL_WORD && end < (*gd).sy + (*data).oy - 1 {
             end += 1;
-        } /* Last grid line in data coordinates. */
+        } /* Last Grid line in data coordinates. */
         window_copy_redraw_lines(wme, start, end - start + 1);
     }
 }
@@ -5281,7 +5281,7 @@ pub unsafe fn window_copy_set_selection(
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = &raw mut (*data).screen;
         let oo: *mut options = (*window_pane_window(wp)).options;
-        let mut gc: grid_cell = zeroed();
+        let mut gc: GridCell = zeroed();
 
         window_copy_synchronize_cursor(wme, no_reset);
 
@@ -5305,7 +5305,7 @@ pub unsafe fn window_copy_set_selection(
 
         // Set colours and selection.
         style_apply(&raw mut gc, oo, c!("mode-style"), null_mut());
-        gc.flags |= grid_flag::NOPALETTE;
+        gc.flags |= GridFlag::NOPALETTE;
         screen_set_selection(
             s,
             sx,
@@ -5459,7 +5459,7 @@ pub unsafe fn window_copy_get_selection(wme: *mut window_mode_entry, len: *mut u
         if (keys == Ok(modekey::MODEKEY_EMACS) || lastex <= ey_last)
             && (!(*(*(*data).backing).grid.get_line(ey))
                 .flags
-                .intersects(grid_line_flag::WRAPPED)
+                .intersects(GridLineFlag::WRAPPED)
                 || lastex != ey_last)
         {
             off -= 1;
@@ -5600,9 +5600,9 @@ pub unsafe fn window_copy_copy_line(
 ) {
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
-        let gd: *mut grid = &raw mut *(*(*data).backing).grid;
-        let mut gc: grid_cell;
-        let mut ud: utf8_data = zeroed();
+        let gd: *mut Grid = &raw mut *(*(*data).backing).grid;
+        let mut gc: GridCell;
+        let mut ud: Utf8Data = zeroed();
         let mut wrapped = false;
 
         if sx > ex {
@@ -5611,7 +5611,7 @@ pub unsafe fn window_copy_copy_line(
 
         // Work out if the line was wrapped at the screen edge and all of it is on screen.
         let gl = (*gd).get_line(sy);
-        if (*gl).flags.intersects(grid_line_flag::WRAPPED) && (*gl).celldata.len() as u32 <= (*gd).sx {
+        if (*gl).flags.intersects(GridLineFlag::WRAPPED) && (*gl).celldata.len() as u32 <= (*gd).sx {
             wrapped = true;
         }
 
@@ -5632,11 +5632,11 @@ pub unsafe fn window_copy_copy_line(
         if sx < ex {
             for i in sx..ex {
                 gc = (*gd).get_cell(i, sy);
-                if gc.flags.intersects(grid_flag::PADDING) {
+                if gc.flags.intersects(GridFlag::PADDING) {
                     continue;
                 }
                 utf8_copy(&raw mut ud, &raw mut gc.data);
-                if ud.size == 1 && gc.attr.intersects(grid_attr::GRID_ATTR_CHARSET) {
+                if ud.size == 1 && gc.attr.intersects(GridAttr::GRID_ATTR_CHARSET) {
                     let s = tty_acs_get(null_mut(), ud.data[0]);
                     if !s.is_null() && strlen(s) <= UTF8_SIZE {
                         ud.size = strlen(s) as u8;
@@ -5693,7 +5693,7 @@ pub unsafe fn window_copy_in_set(
         let data: *mut window_copy_mode_data = (*wme).data.cast();
 
         let mut gc = (*(*data).backing).grid.get_cell(px, py);
-        if gc.flags.intersects(grid_flag::PADDING) {
+        if gc.flags.intersects(GridFlag::PADDING) {
             return false;
         }
         utf8_cstrhas(set, &raw mut gc.data)
@@ -5718,7 +5718,7 @@ pub unsafe fn window_copy_cursor_start_of_line(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_start_of_line(1);
         (px, py) = gr.cursor();
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
@@ -5735,7 +5735,7 @@ pub unsafe fn window_copy_cursor_back_to_indentation(wme: *mut window_mode_entry
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_back_to_indentation();
         (px, py) = gr.cursor();
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
@@ -5752,7 +5752,7 @@ pub unsafe fn window_copy_cursor_end_of_line(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         if (*data).screen.sel.is_some() && (*data).rectflag {
             gr.cursor_end_of_line(1, 1);
         } else {
@@ -5835,7 +5835,7 @@ pub unsafe fn window_copy_cursor_left(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_left(1);
         (px, py) = gr.cursor();
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
@@ -5852,7 +5852,7 @@ pub unsafe fn window_copy_cursor_right(wme: *mut window_mode_entry, all: i32) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_right(1, all);
         (px, py) = gr.cursor();
         window_copy_acquire_cursor_down(
@@ -6024,7 +6024,7 @@ pub unsafe fn window_copy_cursor_jump(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         if gr.cursor_jump(&*(*data).jumpchar) {
             (px, py) = gr.cursor();
             window_copy_acquire_cursor_down(
@@ -6051,7 +6051,7 @@ pub unsafe fn window_copy_cursor_jump_back(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_left(0);
         if gr.cursor_jump_back(&*(*data).jumpchar) {
             (px, py) = gr.cursor();
@@ -6070,7 +6070,7 @@ pub unsafe fn window_copy_cursor_jump_to(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         if gr.cursor_jump(&*(*data).jumpchar) {
             gr.cursor_left(1);
             (px, py) = gr.cursor();
@@ -6098,7 +6098,7 @@ pub unsafe fn window_copy_cursor_jump_to_back(wme: *mut window_mode_entry) {
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_left(0);
         gr.cursor_left(0);
         if gr.cursor_jump_back(&*(*data).jumpchar) {
@@ -6119,7 +6119,7 @@ pub unsafe fn window_copy_cursor_next_word(wme: *mut window_mode_entry, separato
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_next_word(separators);
         (px, py) = gr.cursor();
         window_copy_acquire_cursor_down(
@@ -6152,7 +6152,7 @@ pub unsafe fn window_copy_cursor_next_word_end_pos(
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         if modekey::try_from(options_get_number_(oo, "mode-keys") as i32) == Ok(modekey::MODEKEY_VI)
         {
             if !gr.in_set(WHITESPACE) {
@@ -6186,7 +6186,7 @@ pub unsafe fn window_copy_cursor_next_word_end(
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         if modekey::try_from(options_get_number_(oo, "mode-keys") as i32) == Ok(modekey::MODEKEY_VI)
         {
             if !gr.in_set(WHITESPACE) {
@@ -6226,7 +6226,7 @@ pub unsafe fn window_copy_cursor_previous_word_pos(
         let hsize = screen_hsize(back_s);
         let mut py = hsize + (*data).cy - (*data).oy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_previous_word(
             separators,
             // already=
@@ -6258,7 +6258,7 @@ pub unsafe fn window_copy_cursor_previous_word(
         let mut py = hsize + (*data).cy - (*data).oy;
         let oldy = (*data).cy;
 
-        let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
+        let mut gr = GridReader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_previous_word(separators, already, stop_at_eol);
         (px, py) = gr.cursor();
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
@@ -6273,13 +6273,13 @@ pub unsafe fn window_copy_cursor_prompt(
     unsafe {
         let data: *mut window_copy_mode_data = (*wme).data.cast();
         let s: *mut screen = (*data).backing;
-        let gd: *mut grid = &raw mut *(*s).grid;
+        let gd: *mut Grid = &raw mut *(*s).grid;
         let mut line = (*gd).hsize - (*data).oy + (*data).cy;
 
         let line_flag = if !args.is_null() && streq_(args, "-o") {
-            grid_line_flag::START_OUTPUT
+            GridLineFlag::START_OUTPUT
         } else {
-            grid_line_flag::START_PROMPT
+            GridLineFlag::START_PROMPT
         };
 
         let end_line: u32;

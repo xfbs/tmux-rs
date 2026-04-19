@@ -834,7 +834,7 @@ unsafe fn format_draw_many(ctx: *mut screen_write_ctx, sy: *mut style, ch: u8, n
 /// Draw a format to a screen.
 pub unsafe fn format_draw(
     octx: *mut screen_write_ctx,
-    base: *const grid_cell,
+    base: *const GridCell,
     available: c_uint,
     expanded: &str,
     srs: *mut style_ranges,
@@ -897,12 +897,12 @@ pub unsafe fn format_draw(
         let mut fill = -1;
         let mut list_align = style_align::STYLE_ALIGN_DEFAULT;
 
-        let mut gc: grid_cell = zeroed();
-        let mut current_default: grid_cell = zeroed();
+        let mut gc: GridCell = zeroed();
+        let mut current_default: GridCell = zeroed();
         let mut sy: style = zeroed();
         let mut saved_sy: style = zeroed();
 
-        let ud: *mut utf8_data = &raw mut sy.gc.data;
+        let ud: *mut Utf8Data = &raw mut sy.gc.data;
 
         let mut fr: *mut format_range = null_mut();
         let mut frs: format_ranges = Vec::new();
@@ -1363,7 +1363,7 @@ pub unsafe fn format_width(expanded: &str) -> u32 {
         let mut leading_width: u32 = 0;
         let mut width: u32 = 0;
 
-        let mut ud: utf8_data = zeroed();
+        let mut ud: Utf8Data = zeroed();
 
         while *cp != b'\0' {
             if *cp == b'#' {
@@ -1415,7 +1415,7 @@ pub unsafe fn format_trim_left(expanded: *const u8, limit: u32) -> *mut u8 {
         let mut width: u32 = 0;
         let mut leading_width: u32 = 0;
 
-        let mut ud: utf8_data = zeroed();
+        let mut ud: Utf8Data = zeroed();
 
         let mut out: *mut u8 = xcalloc(2, strlen(expanded) + 1).as_ptr().cast();
         let copy = out;
@@ -1487,7 +1487,7 @@ pub unsafe fn format_trim_left(expanded: *const u8, limit: u32) -> *mut u8 {
 /// Trim on the right, taking #[] into account.
 pub unsafe fn format_trim_right(expanded: *const u8, limit: u32) -> *mut u8 {
     unsafe {
-        let mut ud: utf8_data = std::mem::zeroed();
+        let mut ud: Utf8Data = std::mem::zeroed();
 
         let mut width: u32 = 0;
         let mut n: u32 = 0;

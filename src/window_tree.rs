@@ -552,7 +552,7 @@ unsafe fn window_tree_draw_label(
     py: u32,
     sx: u32,
     sy: u32,
-    gc: *mut grid_cell,
+    gc: *mut GridCell,
     label: *const u8,
 ) {
     unsafe {
@@ -602,7 +602,7 @@ unsafe fn window_tree_draw_session(
         let remaining: u32;
         let mut i: u32;
 
-        let mut gc: grid_cell = zeroed();
+        let mut gc: GridCell = zeroed();
         let mut label: *mut u8;
 
         let total = winlink_count(&raw mut (*s).windows);
@@ -756,8 +756,8 @@ unsafe fn window_tree_draw_window(
         let cy = (*(*ctx).s).cy;
         // u_int loop_, total, visible, each, width, offset;
         // u_int current, start, end, remaining, i, pane_idx;
-        // struct grid_cell gc;
-        let mut gc: grid_cell = zeroed();
+        // struct GridCell gc;
+        let mut gc: GridCell = zeroed();
         // int colour, active_colour, left, right;
         // char *label;
 

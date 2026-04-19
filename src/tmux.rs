@@ -369,7 +369,7 @@ pub unsafe fn tmux_main(mut argc: i32, mut argv: *mut *mut u8, _env: *mut *mut u
     crate::log::log_install_logger();
 
     // Hand `tmux-grid` the utf8 codec (intern table encode/decode +
-    // word-set helper). The grid crate doesn't own this infrastructure —
+    // word-set helper). The Grid crate doesn't own this infrastructure —
     // it calls back into us via the `Utf8Codec` trait.
     crate::utf8::install_grid_codec();
 

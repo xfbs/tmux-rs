@@ -29,10 +29,10 @@ unsafe extern "C" {
     fn utf8proc_wctomb(_: *mut char, _: wchar_t) -> i32;
 }
 
-// `utf8_char`, `utf8_data`, and `UTF8_SIZE` moved to the `tmux-types`
-// crate. Re-exported here so existing `use crate::{utf8_data, ...}` call
+// `Utf8Char`, `Utf8Data`, and `UTF8_SIZE` moved to the `tmux-types`
+// crate. Re-exported here so existing `use crate::{Utf8Data, ...}` call
 // sites throughout tmux-rs keep resolving.
-pub(crate) use tmux_types::{UTF8_SIZE, utf8_char, utf8_data};
+pub(crate) use tmux_types::{UTF8_SIZE, Utf8Char, Utf8Data};
 
 #[repr(i32)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -121,17 +121,17 @@ thread_local! {
 
 static mut UTF8_NEXT_INDEX: u32 = 0;
 
-fn utf8_get_size(uc: utf8_char) -> u8 {
+fn utf8_get_size(uc: Utf8Char) -> u8 {
     (((uc) >> 24) & 0x1f) as u8
 }
-fn utf8_get_width(uc: utf8_char) -> u8 {
+fn utf8_get_width(uc: Utf8Char) -> u8 {
     (((uc) >> 29) - 1) as u8
 }
-fn utf8_set_size(size: u8) -> utf8_char {
-    (size as utf8_char) << 24
+fn utf8_set_size(size: u8) -> Utf8Char {
+    (size as Utf8Char) << 24
 }
-fn utf8_set_width(width: u8) -> utf8_char {
-    (width as utf8_char + 1) << 29
+fn utf8_set_width(width: u8) -> Utf8Char {
+    (width as Utf8Char + 1) << 29
 }
 
 pub fn utf8_item_by_data(item: &utf8_item_data) -> Option<utf8_item_index> {
@@ -187,7 +187,7 @@ pub fn utf8_in_table(find: wchar_t, table: &[wchar_t]) -> bool {
     table.binary_search(&find).is_ok()
 }
 
-pub unsafe fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char) -> utf8_state {
+pub unsafe fn utf8_from_data(ud: *const Utf8Data, uc: *mut Utf8Char) -> utf8_state {
     unsafe {
         let mut index: u32 = 0;
         'fail: {
@@ -234,8 +234,8 @@ pub unsafe fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char) -> utf8_s
     }
 }
 
-pub fn utf8_to_data(uc: utf8_char) -> utf8_data {
-    let mut ud = utf8_data {
+pub fn utf8_to_data(uc: Utf8Char) -> Utf8Data {
+    let mut ud = Utf8Data {
         data: [0; UTF8_SIZE],
         size: utf8_get_size(uc),
         have: utf8_get_size(uc),
@@ -266,12 +266,16 @@ pub fn utf8_to_data(uc: utf8_char) -> utf8_data {
     ud
 }
 
+/// Build a packed Utf8Char for a single ASCII byte. The grid crate
+/// inlines the same bit-pack operation directly — this copy is kept
+/// solely for the unit tests that validate the packing format.
+#[allow(dead_code)]
 pub fn utf8_build_one(ch: c_uchar) -> u32 {
     utf8_set_size(1) | utf8_set_width(1) | ch as u32
 }
 
-pub unsafe fn utf8_set(ud: *mut utf8_data, ch: c_uchar) {
-    static EMPTY: utf8_data = utf8_data {
+pub unsafe fn utf8_set(ud: *mut Utf8Data, ch: c_uchar) {
+    static EMPTY: Utf8Data = Utf8Data {
         data: unsafe { zeroed() },
         have: 1,
         size: 1,
@@ -284,7 +288,7 @@ pub unsafe fn utf8_set(ud: *mut utf8_data, ch: c_uchar) {
     }
 }
 
-pub unsafe fn utf8_copy(to: *mut utf8_data, from: *const utf8_data) {
+pub unsafe fn utf8_copy(to: *mut Utf8Data, from: *const Utf8Data) {
     unsafe {
         memcpy__(to, from);
 
@@ -294,7 +298,7 @@ pub unsafe fn utf8_copy(to: *mut utf8_data, from: *const utf8_data) {
     }
 }
 
-pub unsafe fn utf8_width(ud: *mut utf8_data, width: *mut i32) -> utf8_state {
+pub unsafe fn utf8_width(ud: *mut Utf8Data, width: *mut i32) -> utf8_state {
     unsafe {
         let mut wc: wchar_t = 0;
 
@@ -326,7 +330,7 @@ pub unsafe fn utf8_width(ud: *mut utf8_data, width: *mut i32) -> utf8_state {
     }
 }
 
-pub unsafe fn utf8_towc(ud: *const utf8_data, wc: *mut wchar_t) -> utf8_state {
+pub unsafe fn utf8_towc(ud: *const Utf8Data, wc: *mut wchar_t) -> utf8_state {
     unsafe {
         #[cfg(feature = "utf8proc")]
         let value = utf8proc_mbtowc(wc, (*ud).data.as_ptr().cast(), (*ud).size as usize);
@@ -357,7 +361,7 @@ pub unsafe fn utf8_towc(ud: *const utf8_data, wc: *mut wchar_t) -> utf8_state {
     utf8_state::UTF8_DONE
 }
 
-pub unsafe fn utf8_fromwc(wc: wchar_t, ud: *mut utf8_data) -> utf8_state {
+pub unsafe fn utf8_fromwc(wc: wchar_t, ud: *mut Utf8Data) -> utf8_state {
     unsafe {
         let mut width: i32 = 0;
 
@@ -384,9 +388,9 @@ pub unsafe fn utf8_fromwc(wc: wchar_t, ud: *mut utf8_data) -> utf8_state {
     utf8_state::UTF8_ERROR
 }
 
-pub unsafe fn utf8_open(ud: *mut utf8_data, ch: c_uchar) -> utf8_state {
+pub unsafe fn utf8_open(ud: *mut Utf8Data, ch: c_uchar) -> utf8_state {
     unsafe {
-        memset(ud.cast(), 0, size_of::<utf8_data>());
+        memset(ud.cast(), 0, size_of::<Utf8Data>());
 
         (*ud).size = match ch {
             0xc2..=0xdf => 2,
@@ -401,7 +405,7 @@ pub unsafe fn utf8_open(ud: *mut utf8_data, ch: c_uchar) -> utf8_state {
     utf8_state::UTF8_MORE
 }
 
-pub unsafe fn utf8_append(ud: *mut utf8_data, ch: c_uchar) -> utf8_state {
+pub unsafe fn utf8_append(ud: *mut Utf8Data, ch: c_uchar) -> utf8_state {
     unsafe {
         let mut width: i32 = 0;
 
@@ -440,7 +444,7 @@ pub unsafe fn utf8_strvis(
     flag: vis_flags,
 ) -> i32 {
     unsafe {
-        let mut ud: utf8_data = zeroed();
+        let mut ud: Utf8Data = zeroed();
         let start = dst;
         let end = src.add(len);
         let mut more: utf8_state;
@@ -486,7 +490,7 @@ pub unsafe fn utf8_strvis(
 
 pub unsafe fn utf8_strvis_(dst: &mut Vec<u8>, mut src: *const u8, len: usize, flag: vis_flags) {
     unsafe {
-        let mut ud: utf8_data = zeroed();
+        let mut ud: Utf8Data = zeroed();
         let end = src.add(len);
         let mut more: utf8_state;
 
@@ -558,7 +562,7 @@ pub unsafe fn utf8_stravisx(
 
 pub unsafe fn utf8_isvalid(mut s: *const u8) -> bool {
     unsafe {
-        let mut ud: utf8_data = zeroed();
+        let mut ud: Utf8Data = zeroed();
 
         let end = s.add(strlen(s));
         while s < end {
@@ -589,7 +593,7 @@ pub unsafe fn utf8_sanitize(mut src: *const u8) -> *mut u8 {
     unsafe {
         let mut dst: *mut u8 = null_mut();
         let mut n: usize = 0;
-        let mut ud: utf8_data = zeroed();
+        let mut ud: Utf8Data = zeroed();
 
         while *src != b'\0' {
             dst = xreallocarray_(dst, n + 1).as_ptr();
@@ -626,7 +630,7 @@ pub unsafe fn utf8_sanitize(mut src: *const u8) -> *mut u8 {
     }
 }
 
-pub unsafe fn utf8_strlen(s: *const utf8_data) -> usize {
+pub unsafe fn utf8_strlen(s: *const Utf8Data) -> usize {
     let mut i = 0;
 
     unsafe {
@@ -638,7 +642,7 @@ pub unsafe fn utf8_strlen(s: *const utf8_data) -> usize {
     i
 }
 
-pub unsafe fn utf8_strwidth(s: *const utf8_data, n: isize) -> u32 {
+pub unsafe fn utf8_strwidth(s: *const Utf8Data, n: isize) -> u32 {
     unsafe {
         let mut width: u32 = 0;
 
@@ -655,9 +659,9 @@ pub unsafe fn utf8_strwidth(s: *const utf8_data, n: isize) -> u32 {
     }
 }
 
-pub unsafe fn utf8_fromcstr(mut src: *const u8) -> *mut utf8_data {
+pub unsafe fn utf8_fromcstr(mut src: *const u8) -> *mut Utf8Data {
     unsafe {
-        let mut dst: *mut utf8_data = null_mut();
+        let mut dst: *mut Utf8Data = null_mut();
         let mut n = 0;
 
         while *src != b'\0' {
@@ -687,7 +691,7 @@ pub unsafe fn utf8_fromcstr(mut src: *const u8) -> *mut utf8_data {
     }
 }
 
-pub unsafe fn utf8_tocstr(mut src: *const utf8_data) -> *mut u8 {
+pub unsafe fn utf8_tocstr(mut src: *const Utf8Data) -> *mut u8 {
     unsafe {
         let mut dst = null_mut::<u8>();
         let mut n: usize = 0;
@@ -710,7 +714,7 @@ pub unsafe fn utf8_tocstr(mut src: *const utf8_data) -> *mut u8 {
 
 // unlike utf8_tocstr, this can handle the empty vec case
 // but perhaps an explicit check may speed up this common case
-pub fn utf8_to_string(src: &[utf8_data]) -> String {
+pub fn utf8_to_string(src: &[Utf8Data]) -> String {
     let mut dst: Vec<u8> = Vec::new();
 
     for src in src {
@@ -730,7 +734,7 @@ pub fn utf8_to_string(src: &[utf8_data]) -> String {
 
 pub unsafe fn utf8_cstrwidth(mut s: *const u8) -> u32 {
     unsafe {
-        let mut tmp: utf8_data = zeroed();
+        let mut tmp: Utf8Data = zeroed();
 
         let mut width: u32 = 0;
         while *s != b'\0' {
@@ -798,7 +802,7 @@ pub unsafe fn utf8_rpadcstr(s: *const u8, width: u32) -> *mut u8 {
     }
 }
 
-pub unsafe fn utf8_cstrhas(s: *const u8, ud: *const utf8_data) -> bool {
+pub unsafe fn utf8_cstrhas(s: *const u8, ud: *const Utf8Data) -> bool {
     let mut found = false;
 
     unsafe {
@@ -827,17 +831,17 @@ pub unsafe fn utf8_cstrhas(s: *const u8, ud: *const utf8_data) -> bool {
     }
 }
 
-/// `tmux-grid` codec adapter: glues the grid crate to tmux-rs's utf8
+/// `tmux-grid` codec adapter: glues the Grid crate to tmux-rs's utf8
 /// intern table and word-set helper. Registered once at startup via
-/// [`install_grid_codec`]. Keeps the grid crate free of tmux-rs-
+/// [`install_grid_codec`]. Keeps the Grid crate free of tmux-rs-
 /// specific symbols while still letting it reach the real intern table.
 struct TmuxUtf8Codec;
 
 impl tmux_grid::Utf8Codec for TmuxUtf8Codec {
     unsafe fn from_data(
         &self,
-        ud: *const utf8_data,
-        uc: *mut utf8_char,
+        ud: *const Utf8Data,
+        uc: *mut Utf8Char,
     ) -> tmux_grid::Utf8State {
         match unsafe { utf8_from_data(ud, uc) } {
             utf8_state::UTF8_MORE => tmux_grid::Utf8State::More,
@@ -846,11 +850,11 @@ impl tmux_grid::Utf8Codec for TmuxUtf8Codec {
         }
     }
 
-    fn to_data(&self, uc: utf8_char) -> utf8_data {
+    fn to_data(&self, uc: Utf8Char) -> Utf8Data {
         utf8_to_data(uc)
     }
 
-    unsafe fn cstr_has(&self, set: *const u8, ud: *const utf8_data) -> bool {
+    unsafe fn cstr_has(&self, set: *const u8, ud: *const Utf8Data) -> bool {
         unsafe { utf8_cstrhas(set, ud) }
     }
 }
@@ -868,7 +872,7 @@ pub fn install_grid_codec() {
 #[cfg(fuzzing)]
 pub fn fuzz_utf8_decode(data: &[u8]) {
     unsafe {
-        let mut ud: utf8_data = std::mem::zeroed();
+        let mut ud: Utf8Data = std::mem::zeroed();
         let mut in_sequence = false;
 
         for &byte in data {
@@ -963,8 +967,8 @@ mod tests {
     #[test]
     fn from_data_to_data_roundtrip_ascii() {
         // 1-byte ASCII 'Z'
-        let ud = utf8_data::new([b'Z'], 1, 1, 1);
-        let mut uc: utf8_char = 0;
+        let ud = Utf8Data::new([b'Z'], 1, 1, 1);
+        let mut uc: Utf8Char = 0;
         let state = unsafe { utf8_from_data(&ud, &mut uc) };
         assert_eq!(state, utf8_state::UTF8_DONE);
         assert_eq!(utf8_get_size(uc), 1);
@@ -979,8 +983,8 @@ mod tests {
     #[test]
     fn from_data_to_data_roundtrip_2byte() {
         // U+00E9 (e-acute) = 0xC3 0xA9
-        let ud = utf8_data::new([0xC3, 0xA9], 2, 2, 1);
-        let mut uc: utf8_char = 0;
+        let ud = Utf8Data::new([0xC3, 0xA9], 2, 2, 1);
+        let mut uc: Utf8Char = 0;
         let state = unsafe { utf8_from_data(&ud, &mut uc) };
         assert_eq!(state, utf8_state::UTF8_DONE);
         assert_eq!(utf8_get_size(uc), 2);
@@ -993,8 +997,8 @@ mod tests {
     #[test]
     fn from_data_to_data_roundtrip_3byte() {
         // U+4E16 (CJK "world") = 0xE4 0xB8 0x96
-        let ud = utf8_data::new([0xE4, 0xB8, 0x96], 3, 3, 2);
-        let mut uc: utf8_char = 0;
+        let ud = Utf8Data::new([0xE4, 0xB8, 0x96], 3, 3, 2);
+        let mut uc: Utf8Char = 0;
         let state = unsafe { utf8_from_data(&ud, &mut uc) };
         assert_eq!(state, utf8_state::UTF8_DONE);
         assert_eq!(utf8_get_size(uc), 3);
@@ -1011,35 +1015,35 @@ mod tests {
 
     #[test]
     fn to_string_empty() {
-        let data: Vec<utf8_data> = vec![];
+        let data: Vec<Utf8Data> = vec![];
         assert_eq!(utf8_to_string(&data), "");
     }
 
     #[test]
     fn to_string_ascii() {
-        let h = utf8_data::new([b'H'], 1, 1, 1);
-        let i = utf8_data::new([b'i'], 1, 1, 1);
+        let h = Utf8Data::new([b'H'], 1, 1, 1);
+        let i = Utf8Data::new([b'i'], 1, 1, 1);
         assert_eq!(utf8_to_string(&[h, i]), "Hi");
     }
 
     #[test]
     fn to_string_sentinel_stops() {
         // A zero-size entry should act as sentinel and stop iteration
-        let a = utf8_data::new([b'A'], 1, 1, 1);
-        let sentinel = utf8_data {
+        let a = Utf8Data::new([b'A'], 1, 1, 1);
+        let sentinel = Utf8Data {
             data: [0; UTF8_SIZE],
             have: 0,
             size: 0,
             width: 0,
         };
-        let b = utf8_data::new([b'B'], 1, 1, 1);
+        let b = Utf8Data::new([b'B'], 1, 1, 1);
         assert_eq!(utf8_to_string(&[a, sentinel, b]), "A");
     }
 
     #[test]
     fn to_string_multibyte() {
         // U+00E9 = 0xC3 0xA9 -> "e" with acute
-        let ud = utf8_data::new([0xC3, 0xA9], 2, 2, 1);
+        let ud = Utf8Data::new([0xC3, 0xA9], 2, 2, 1);
         assert_eq!(utf8_to_string(&[ud]), "\u{00E9}");
     }
 
@@ -1077,18 +1081,18 @@ mod tests {
     }
 
     // ---------------------------------------------------------------
-    // utf8_data::new and initialized_slice
+    // Utf8Data::new and initialized_slice
     // ---------------------------------------------------------------
 
     #[test]
     fn utf8_data_new_and_slice() {
-        let ud = utf8_data::new([b'x', b'y', b'z'], 3, 3, 1);
+        let ud = Utf8Data::new([b'x', b'y', b'z'], 3, 3, 1);
         assert_eq!(ud.initialized_slice(), b"xyz");
     }
 
     #[test]
     fn utf8_data_new_pads_with_zeroes() {
-        let ud = utf8_data::new([b'a'], 1, 1, 1);
+        let ud = Utf8Data::new([b'a'], 1, 1, 1);
         // Bytes beyond size should be zero
         assert_eq!(ud.data[1], 0);
         assert_eq!(ud.data[UTF8_SIZE - 1], 0);
@@ -1102,7 +1106,7 @@ mod tests {
     fn open_rejects_ascii() {
         // ASCII bytes should not start a multi-byte sequence
         unsafe {
-            let mut ud: utf8_data = zeroed();
+            let mut ud: Utf8Data = zeroed();
             let state = utf8_open(&mut ud, b'A');
             assert_eq!(state, utf8_state::UTF8_ERROR);
         }
@@ -1111,7 +1115,7 @@ mod tests {
     #[test]
     fn open_rejects_continuation_byte() {
         unsafe {
-            let mut ud: utf8_data = zeroed();
+            let mut ud: Utf8Data = zeroed();
             // 0x80 is a continuation byte, not a valid starter
             let state = utf8_open(&mut ud, 0x80);
             assert_eq!(state, utf8_state::UTF8_ERROR);
@@ -1121,7 +1125,7 @@ mod tests {
     #[test]
     fn open_2byte_sequence() {
         unsafe {
-            let mut ud: utf8_data = zeroed();
+            let mut ud: Utf8Data = zeroed();
             // U+00E9 -> 0xC3 0xA9
             let state = utf8_open(&mut ud, 0xC3);
             assert_eq!(state, utf8_state::UTF8_MORE);
@@ -1133,7 +1137,7 @@ mod tests {
     #[test]
     fn open_3byte_sequence() {
         unsafe {
-            let mut ud: utf8_data = zeroed();
+            let mut ud: Utf8Data = zeroed();
             // U+4E16 -> 0xE4 ...
             let state = utf8_open(&mut ud, 0xE4);
             assert_eq!(state, utf8_state::UTF8_MORE);
@@ -1145,7 +1149,7 @@ mod tests {
     #[test]
     fn open_4byte_sequence() {
         unsafe {
-            let mut ud: utf8_data = zeroed();
+            let mut ud: Utf8Data = zeroed();
             // U+1F600 -> 0xF0 ...
             let state = utf8_open(&mut ud, 0xF0);
             assert_eq!(state, utf8_state::UTF8_MORE);
@@ -1157,7 +1161,7 @@ mod tests {
     #[test]
     fn open_invalid_high_byte() {
         unsafe {
-            let mut ud: utf8_data = zeroed();
+            let mut ud: Utf8Data = zeroed();
             // 0xF5 and above are not valid UTF-8 starters
             let state = utf8_open(&mut ud, 0xF5);
             assert_eq!(state, utf8_state::UTF8_ERROR);
@@ -1196,14 +1200,14 @@ mod tests {
     }
 
     // ---------------------------------------------------------------
-    // utf8_data equality via from_data encoding stability
+    // Utf8Data equality via from_data encoding stability
     // ---------------------------------------------------------------
 
     #[test]
     fn from_data_encoding_is_deterministic() {
-        let ud = utf8_data::new([0xC3, 0xA9], 2, 2, 1);
-        let mut uc1: utf8_char = 0;
-        let mut uc2: utf8_char = 0;
+        let ud = Utf8Data::new([0xC3, 0xA9], 2, 2, 1);
+        let mut uc1: Utf8Char = 0;
+        let mut uc2: Utf8Char = 0;
         unsafe {
             utf8_from_data(&ud, &mut uc1);
             utf8_from_data(&ud, &mut uc2);

@@ -15,7 +15,7 @@ use core::ffi::c_void;
 
 use libc::memcmp;
 
-use crate::{utf8_data, utf8_in_table, utf8_state, utf8_towc, wchar_t};
+use crate::{Utf8Data, utf8_in_table, utf8_state, utf8_towc, wchar_t};
 
 static UTF8_MODIFIER_TABLE: [wchar_t; 31] = [
     0x1F1E6, 0x1F1E7, 0x1F1E8, 0x1F1E9, 0x1F1EA, 0x1F1EB, 0x1F1EC, 0x1F1ED, 0x1F1EE, 0x1F1EF,
@@ -24,7 +24,7 @@ static UTF8_MODIFIER_TABLE: [wchar_t; 31] = [
     0x1F3FF,
 ];
 
-pub unsafe fn utf8_has_zwj(ud: *const utf8_data) -> bool {
+pub unsafe fn utf8_has_zwj(ud: *const Utf8Data) -> bool {
     unsafe {
         if (*ud).size < 3 {
             return false;
@@ -38,7 +38,7 @@ pub unsafe fn utf8_has_zwj(ud: *const utf8_data) -> bool {
     }
 }
 
-pub unsafe fn utf8_is_zwj(ud: *const utf8_data) -> bool {
+pub unsafe fn utf8_is_zwj(ud: *const Utf8Data) -> bool {
     unsafe {
         if (*ud).size != 3 {
             return false;
@@ -51,7 +51,7 @@ pub unsafe fn utf8_is_zwj(ud: *const utf8_data) -> bool {
     }
 }
 
-pub unsafe fn utf8_is_vs(ud: *const utf8_data) -> bool {
+pub unsafe fn utf8_is_vs(ud: *const Utf8Data) -> bool {
     unsafe {
         if (*ud).size != 3 {
             return false;
@@ -64,7 +64,7 @@ pub unsafe fn utf8_is_vs(ud: *const utf8_data) -> bool {
     }
 }
 
-pub unsafe fn utf8_is_modifier(ud: *const utf8_data) -> bool {
+pub unsafe fn utf8_is_modifier(ud: *const Utf8Data) -> bool {
     let mut wc: wchar_t = 0;
     unsafe {
         if utf8_towc(ud, &raw mut wc) != utf8_state::UTF8_DONE {

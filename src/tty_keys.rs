@@ -976,9 +976,9 @@ unsafe fn tty_keys_next1(
 ) -> i32 {
     unsafe {
         let c = (*tty).client;
-        let mut ud: utf8_data = zeroed();
+        let mut ud: Utf8Data = zeroed();
         let mut more: utf8_state;
-        let mut uc: utf8_char = zeroed();
+        let mut uc: Utf8Char = zeroed();
 
         // log_debug!("{}: next key is {} (%.*s) (expired=%d)", _s((*c).name), len, len as i32, buf, expired);
 
@@ -1364,8 +1364,8 @@ unsafe fn tty_keys_extended_key(
         const SIZE_OF_TMP: usize = 64;
         let mut tmp: [u8; 64] = [0; 64];
 
-        let mut ud: utf8_data = zeroed();
-        let mut uc: utf8_char = zeroed();
+        let mut ud: Utf8Data = zeroed();
+        let mut uc: Utf8Char = zeroed();
 
         *size = 0;
 

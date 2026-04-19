@@ -41,11 +41,11 @@ pub struct popup_data {
     pub flags: popup_flag,
     pub title: *mut u8,
 
-    pub border_cell: grid_cell,
+    pub border_cell: GridCell,
     pub border_lines: box_lines,
 
     pub s: screen,
-    pub defaults: grid_cell,
+    pub defaults: GridCell,
     pub palette: colour_palette,
 
     pub job: *mut job,
@@ -250,7 +250,7 @@ pub unsafe fn popup_draw_cb(c: *mut client, data: *mut c_void, rctx: *mut screen
         let mut ctx = MaybeUninit::<screen_write_ctx>::uninit();
         let (px, py) = ((*pd).px, (*pd).py);
         let palette = &raw mut (*pd).palette;
-        let mut defaults = MaybeUninit::<grid_cell>::uninit();
+        let mut defaults = MaybeUninit::<GridCell>::uninit();
         let defaults = defaults.as_mut_ptr();
 
         screen_init(s.as_mut_ptr(), (*pd).sx, (*pd).sy, 0);
@@ -848,7 +848,7 @@ pub unsafe fn popup_display(
                 (*pd).border_cell.bg = (*sytmp.as_ptr()).gc.bg;
             }
         }
-        (*pd).border_cell.attr = grid_attr::empty();
+        (*pd).border_cell.attr = GridAttr::empty();
 
         screen_init(&raw mut (*pd).s, jx, jy, 0);
         // Use ptr::write to avoid dropping the zeroed colour_palette
@@ -871,7 +871,7 @@ pub unsafe fn popup_display(
                 (*pd).defaults.bg = (*sytmp.as_ptr()).gc.bg;
             }
         }
-        (*pd).defaults.attr = grid_attr::empty();
+        (*pd).defaults.attr = GridAttr::empty();
 
         (*pd).px = px;
         (*pd).py = py;

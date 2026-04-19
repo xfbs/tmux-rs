@@ -41,7 +41,7 @@ use crate::options_::{options_get_number_, options_get_only, options_remove_or_d
 
 // Input parser cell.
 struct input_cell {
-    cell: grid_cell,
+    cell: GridCell,
     set: i32,
     g0set: i32, // 1 if ACS
     g1set: i32, // 1 if ACS
@@ -112,11 +112,11 @@ pub struct input_ctx {
     param_list: [input_param; 24],
     param_list_len: u32,
 
-    utf8data: utf8_data,
+    utf8data: Utf8Data,
     utf8started: i32,
 
     ch: i32,
-    last: utf8_data,
+    last: Utf8Data,
 
     flags: input_flags,
 
@@ -1301,9 +1301,9 @@ unsafe fn input_print(ictx: *mut input_ctx) -> i32 {
             (*ictx).cell.g1set
         };
         if set == 1 {
-            (*ictx).cell.cell.attr |= grid_attr::GRID_ATTR_CHARSET;
+            (*ictx).cell.cell.attr |= GridAttr::GRID_ATTR_CHARSET;
         } else {
-            (*ictx).cell.cell.attr &= !grid_attr::GRID_ATTR_CHARSET;
+            (*ictx).cell.cell.attr &= !GridAttr::GRID_ATTR_CHARSET;
         }
 
         utf8_set(&raw mut (*ictx).cell.cell.data, (*ictx).ch as u8);
@@ -1312,7 +1312,7 @@ unsafe fn input_print(ictx: *mut input_ctx) -> i32 {
         utf8_copy(&raw mut (*ictx).last, &raw mut (*ictx).cell.cell.data);
         (*ictx).flags |= input_flags::INPUT_LAST;
 
-        (*ictx).cell.cell.attr &= !grid_attr::GRID_ATTR_CHARSET;
+        (*ictx).cell.cell.attr &= !GridAttr::GRID_ATTR_CHARSET;
     }
 
     0
@@ -2168,23 +2168,23 @@ unsafe fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u32) {
                 0 => (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE,
                 1 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE;
+                    (*gc).attr |= GridAttr::GRID_ATTR_UNDERSCORE;
                 }
                 2 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE_2;
+                    (*gc).attr |= GridAttr::GRID_ATTR_UNDERSCORE_2;
                 }
                 3 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE_3;
+                    (*gc).attr |= GridAttr::GRID_ATTR_UNDERSCORE_3;
                 }
                 4 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE_4;
+                    (*gc).attr |= GridAttr::GRID_ATTR_UNDERSCORE_4;
                 }
                 5 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE_5;
+                    (*gc).attr |= GridAttr::GRID_ATTR_UNDERSCORE_5;
                 }
                 _ => (),
             }
@@ -2262,34 +2262,34 @@ unsafe fn input_csi_dispatch_sgr(ictx: *mut input_ctx) {
                     memcpy__(gc, &raw const GRID_DEFAULT_CELL);
                     (*gc).link = link;
                 }
-                1 => (*gc).attr |= grid_attr::GRID_ATTR_BRIGHT,
-                2 => (*gc).attr |= grid_attr::GRID_ATTR_DIM,
-                3 => (*gc).attr |= grid_attr::GRID_ATTR_ITALICS,
+                1 => (*gc).attr |= GridAttr::GRID_ATTR_BRIGHT,
+                2 => (*gc).attr |= GridAttr::GRID_ATTR_DIM,
+                3 => (*gc).attr |= GridAttr::GRID_ATTR_ITALICS,
                 4 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE;
+                    (*gc).attr |= GridAttr::GRID_ATTR_UNDERSCORE;
                 }
-                5 | 6 => (*gc).attr |= grid_attr::GRID_ATTR_BLINK,
-                7 => (*gc).attr |= grid_attr::GRID_ATTR_REVERSE,
-                8 => (*gc).attr |= grid_attr::GRID_ATTR_HIDDEN,
-                9 => (*gc).attr |= grid_attr::GRID_ATTR_STRIKETHROUGH,
+                5 | 6 => (*gc).attr |= GridAttr::GRID_ATTR_BLINK,
+                7 => (*gc).attr |= GridAttr::GRID_ATTR_REVERSE,
+                8 => (*gc).attr |= GridAttr::GRID_ATTR_HIDDEN,
+                9 => (*gc).attr |= GridAttr::GRID_ATTR_STRIKETHROUGH,
                 21 => {
                     (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE;
-                    (*gc).attr |= grid_attr::GRID_ATTR_UNDERSCORE_2;
+                    (*gc).attr |= GridAttr::GRID_ATTR_UNDERSCORE_2;
                 }
-                22 => (*gc).attr &= !(grid_attr::GRID_ATTR_BRIGHT | grid_attr::GRID_ATTR_DIM),
-                23 => (*gc).attr &= !grid_attr::GRID_ATTR_ITALICS,
+                22 => (*gc).attr &= !(GridAttr::GRID_ATTR_BRIGHT | GridAttr::GRID_ATTR_DIM),
+                23 => (*gc).attr &= !GridAttr::GRID_ATTR_ITALICS,
                 24 => (*gc).attr &= !GRID_ATTR_ALL_UNDERSCORE,
-                25 => (*gc).attr &= !grid_attr::GRID_ATTR_BLINK,
-                27 => (*gc).attr &= !grid_attr::GRID_ATTR_REVERSE,
-                28 => (*gc).attr &= !grid_attr::GRID_ATTR_HIDDEN,
-                29 => (*gc).attr &= !grid_attr::GRID_ATTR_STRIKETHROUGH,
+                25 => (*gc).attr &= !GridAttr::GRID_ATTR_BLINK,
+                27 => (*gc).attr &= !GridAttr::GRID_ATTR_REVERSE,
+                28 => (*gc).attr &= !GridAttr::GRID_ATTR_HIDDEN,
+                29 => (*gc).attr &= !GridAttr::GRID_ATTR_STRIKETHROUGH,
                 30..=37 => (*gc).fg = n - 30,
                 39 => (*gc).fg = 8,
                 40..=47 => (*gc).bg = n - 40,
                 49 => (*gc).bg = 8,
-                53 => (*gc).attr |= grid_attr::GRID_ATTR_OVERLINE,
-                55 => (*gc).attr &= !grid_attr::GRID_ATTR_OVERLINE,
+                53 => (*gc).attr |= GridAttr::GRID_ATTR_OVERLINE,
+                55 => (*gc).attr &= !GridAttr::GRID_ATTR_OVERLINE,
                 59 => (*gc).us = 8,
                 90..=97 => (*gc).fg = n,
                 100..=107 => (*gc).bg = n - 10,
@@ -2803,7 +2803,7 @@ unsafe fn input_get_fg_control_client(wp: *mut window_pane) -> i32 {
 unsafe fn input_osc_10(ictx: *mut input_ctx, p: *const u8) {
     unsafe {
         let wp = pane_ptr_from_id((*ictx).wp);
-        let mut defaults: grid_cell = zeroed();
+        let mut defaults: GridCell = zeroed();
         let mut c;
 
         if streq_(p, "?") {
@@ -2861,7 +2861,7 @@ unsafe fn input_osc_110(ictx: *mut input_ctx, p: *const u8) {
 unsafe fn input_osc_11(ictx: *mut input_ctx, p: *const u8) {
     unsafe {
         let wp = pane_ptr_from_id((*ictx).wp);
-        let mut defaults: grid_cell = zeroed();
+        let mut defaults: GridCell = zeroed();
 
         let mut c;
 
@@ -2954,7 +2954,7 @@ unsafe fn input_osc_112(ictx: *mut input_ctx, p: *const u8) {
 /// Handle the OSC 133 sequence.
 unsafe fn input_osc_133(ictx: *mut input_ctx, p: *const u8) {
     unsafe {
-        let gd: *mut grid = &raw mut *(*(*ictx).ctx.s).grid;
+        let gd: *mut Grid = &raw mut *(*(*ictx).ctx.s).grid;
         let line = (*(*ictx).ctx.s).cy + (*gd).hsize;
 
         if line > (*gd).hsize + (*gd).sy - 1 {
@@ -2963,8 +2963,8 @@ unsafe fn input_osc_133(ictx: *mut input_ctx, p: *const u8) {
         let gl = (*gd).get_line(line);
 
         match *p {
-            b'A' => (*gl).flags |= grid_line_flag::START_PROMPT,
-            b'C' => (*gl).flags |= grid_line_flag::START_OUTPUT,
+            b'A' => (*gl).flags |= GridLineFlag::START_PROMPT,
+            b'C' => (*gl).flags |= GridLineFlag::START_OUTPUT,
             _ => (),
         }
     }

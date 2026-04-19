@@ -305,7 +305,7 @@ pub unsafe fn server_destroy_pane(wp: *mut window_pane, notify: i32) {
         let mut ctx: MaybeUninit<screen_write_ctx> = MaybeUninit::<screen_write_ctx>::uninit();
         let ctx = ctx.as_mut_ptr();
 
-        let mut gc: MaybeUninit<grid_cell> = MaybeUninit::<grid_cell>::uninit();
+        let mut gc: MaybeUninit<GridCell> = MaybeUninit::<GridCell>::uninit();
         let gc = gc.as_mut_ptr();
 
         let sx = screen_size_x(&raw mut (*wp).base);
@@ -352,7 +352,7 @@ pub unsafe fn server_destroy_pane(wp: *mut window_pane, notify: i32) {
                         screen_write_scrollregion(ctx, 0, sy - 1);
                         screen_write_cursormove(ctx, 0, sy as i32 - 1, 0);
                         screen_write_linefeed(ctx, true, 8);
-                        memcpy_(gc, &raw const GRID_DEFAULT_CELL, size_of::<grid_cell>());
+                        memcpy_(gc, &raw const GRID_DEFAULT_CELL, size_of::<GridCell>());
 
                         let expanded =
                             format_single(null_mut(), cstr_to_str(s), null_mut(), null_mut(), null_mut(), wp);

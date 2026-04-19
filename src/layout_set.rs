@@ -635,7 +635,7 @@ pub unsafe fn layout_set_tiled(w: *mut window) {
         layout_set_size(lc, sx, sy, 0, 0);
         layout_make_node(lc, layout_type::LAYOUT_TOPBOTTOM);
 
-        // Create a grid of the cells.
+        // Create a Grid of the cells.
         let mut wp = (*w).panes.first().copied().unwrap_or(null_mut());
         for j in 0..rows {
             // If this is the last cell, all done.

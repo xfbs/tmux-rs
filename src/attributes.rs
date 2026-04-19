@@ -13,7 +13,7 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 //! Terminal text attribute parsing and formatting.
 //!
-//! Converts between [`grid_attr`] bitflags and their string representation.
+//! Converts between [`GridAttr`] bitflags and their string representation.
 //! Supports 14 attributes (bright/bold, dim, underscore variants, blink, reverse,
 //! hidden, italics, strikethrough, overline, acs/charset).
 //!
@@ -23,7 +23,7 @@
 
 use std::borrow::Cow;
 
-use crate::grid_attr;
+use crate::GridAttr;
 
 /// Fuzz-friendly wrapper: parse attributes from a string.
 /// Exercises the parsing logic without asserting round-trip stability.
@@ -32,63 +32,63 @@ pub fn fuzz_attributes(input: &str) {
     let _ = attributes_fromstring(input);
 }
 
-/// Converts a [`grid_attr`] bitflag set into a comma-separated string.
+/// Converts a [`GridAttr`] bitflag set into a comma-separated string.
 /// Returns `"none"` for empty attributes. Trailing comma is included in output
 /// for non-empty sets (matches C tmux behavior).
 #[rustfmt::skip]
-pub fn attributes_tostring(attr: grid_attr) -> Cow<'static, str> {
+pub fn attributes_tostring(attr: GridAttr) -> Cow<'static, str> {
     if attr.is_empty() {
         return Cow::Borrowed("none");
     }
 
     Cow::Owned(format!(
         "{}{}{}{}{}{}{}{}{}{}{}{}{}{}",
-        if attr.intersects(grid_attr::GRID_ATTR_CHARSET) { "acs," } else { "" },
-        if attr.intersects(grid_attr::GRID_ATTR_BRIGHT) { "bright," } else { "" },
-        if attr.intersects(grid_attr::GRID_ATTR_DIM ) { "dim," } else { "" },
-        if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE) { "underscore," } else { "" },
-        if attr.intersects(grid_attr::GRID_ATTR_BLINK) { "blink," } else { "" },
-        if attr.intersects(grid_attr::GRID_ATTR_REVERSE ) { "reverse," } else { "" },
-        if attr.intersects(grid_attr::GRID_ATTR_HIDDEN) { "hidden," } else { "" },
-        if attr.intersects(grid_attr::GRID_ATTR_ITALICS ) { "italics," } else { "" },
-        if attr.intersects(grid_attr::GRID_ATTR_STRIKETHROUGH) { "strikethrough," } else { "" },
-        if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE_2) { "double-underscore," } else { "" },
-        if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE_3) { "curly-underscore," } else { "" },
-        if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE_4) { "dotted-underscore," } else { "" },
-        if attr.intersects(grid_attr::GRID_ATTR_UNDERSCORE_5) { "dashed-underscore," } else { "" },
-        if attr.intersects(grid_attr::GRID_ATTR_OVERLINE) { "overline," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_CHARSET) { "acs," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_BRIGHT) { "bright," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_DIM ) { "dim," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_UNDERSCORE) { "underscore," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_BLINK) { "blink," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_REVERSE ) { "reverse," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_HIDDEN) { "hidden," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_ITALICS ) { "italics," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_STRIKETHROUGH) { "strikethrough," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_UNDERSCORE_2) { "double-underscore," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_UNDERSCORE_3) { "curly-underscore," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_UNDERSCORE_4) { "dotted-underscore," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_UNDERSCORE_5) { "dashed-underscore," } else { "" },
+        if attr.intersects(GridAttr::GRID_ATTR_OVERLINE) { "overline," } else { "" },
     ))
 }
 
-/// Parses a delimiter-separated attribute string into [`grid_attr`] bitflags.
+/// Parses a delimiter-separated attribute string into [`GridAttr`] bitflags.
 /// Accepts commas, spaces, or pipes as delimiters. Case-insensitive.
 /// `"none"` and `"default"` return empty attributes.
 /// Returns `Err(())` if the string is empty, starts/ends with a delimiter,
 /// or contains an unrecognized attribute name.
 /// Note: `"bold"` is an alias for `"bright"`.
-pub fn attributes_fromstring(str: &str) -> Result<grid_attr, ()> {
+pub fn attributes_fromstring(str: &str) -> Result<GridAttr, ()> {
     struct table_entry {
         name: &'static str,
-        attr: grid_attr,
+        attr: GridAttr,
     }
 
     #[rustfmt::skip]
     const TABLE: [table_entry; 15] = [
-        table_entry { name: "acs", attr: grid_attr::GRID_ATTR_CHARSET, },
-        table_entry { name: "bright", attr: grid_attr::GRID_ATTR_BRIGHT, },
-        table_entry { name: "bold", attr: grid_attr::GRID_ATTR_BRIGHT, },
-        table_entry { name: "dim", attr: grid_attr::GRID_ATTR_DIM, },
-        table_entry { name: "underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE, },
-        table_entry { name: "blink", attr: grid_attr::GRID_ATTR_BLINK, },
-        table_entry { name: "reverse", attr: grid_attr::GRID_ATTR_REVERSE, },
-        table_entry { name: "hidden", attr: grid_attr::GRID_ATTR_HIDDEN, },
-        table_entry { name: "italics", attr: grid_attr::GRID_ATTR_ITALICS, },
-        table_entry { name: "strikethrough", attr: grid_attr::GRID_ATTR_STRIKETHROUGH, },
-        table_entry { name: "double-underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE_2, },
-        table_entry { name: "curly-underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE_3, },
-        table_entry { name: "dotted-underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE_4, },
-        table_entry { name: "dashed-underscore", attr: grid_attr::GRID_ATTR_UNDERSCORE_5, },
-        table_entry { name: "overline", attr: grid_attr::GRID_ATTR_OVERLINE, },
+        table_entry { name: "acs", attr: GridAttr::GRID_ATTR_CHARSET, },
+        table_entry { name: "bright", attr: GridAttr::GRID_ATTR_BRIGHT, },
+        table_entry { name: "bold", attr: GridAttr::GRID_ATTR_BRIGHT, },
+        table_entry { name: "dim", attr: GridAttr::GRID_ATTR_DIM, },
+        table_entry { name: "underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE, },
+        table_entry { name: "blink", attr: GridAttr::GRID_ATTR_BLINK, },
+        table_entry { name: "reverse", attr: GridAttr::GRID_ATTR_REVERSE, },
+        table_entry { name: "hidden", attr: GridAttr::GRID_ATTR_HIDDEN, },
+        table_entry { name: "italics", attr: GridAttr::GRID_ATTR_ITALICS, },
+        table_entry { name: "strikethrough", attr: GridAttr::GRID_ATTR_STRIKETHROUGH, },
+        table_entry { name: "double-underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE_2, },
+        table_entry { name: "curly-underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE_3, },
+        table_entry { name: "dotted-underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE_4, },
+        table_entry { name: "dashed-underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE_5, },
+        table_entry { name: "overline", attr: GridAttr::GRID_ATTR_OVERLINE, },
     ];
 
     let delimiters = &[' ', ',', '|'];
@@ -102,10 +102,10 @@ pub fn attributes_fromstring(str: &str) -> Result<grid_attr, ()> {
     }
 
     if str.eq_ignore_ascii_case("default") || str.eq_ignore_ascii_case("none") {
-        return Ok(grid_attr::empty());
+        return Ok(GridAttr::empty());
     }
 
-    let mut attr = grid_attr::empty();
+    let mut attr = GridAttr::empty();
     for str in str.split(delimiters) {
         let Some(i) = TABLE.iter().position(|t| str.eq_ignore_ascii_case(t.name)) else {
             return Err(());
@@ -126,27 +126,27 @@ mod tests {
 
     #[test]
     fn tostring_empty_is_none() {
-        assert_eq!(attributes_tostring(grid_attr::empty()).as_ref(), "none");
+        assert_eq!(attributes_tostring(GridAttr::empty()).as_ref(), "none");
     }
 
     #[test]
     fn tostring_single_attributes() {
         // Each single attribute should produce its name followed by a comma.
         let cases = [
-            (grid_attr::GRID_ATTR_BRIGHT, "bright,"),
-            (grid_attr::GRID_ATTR_DIM, "dim,"),
-            (grid_attr::GRID_ATTR_UNDERSCORE, "underscore,"),
-            (grid_attr::GRID_ATTR_BLINK, "blink,"),
-            (grid_attr::GRID_ATTR_REVERSE, "reverse,"),
-            (grid_attr::GRID_ATTR_HIDDEN, "hidden,"),
-            (grid_attr::GRID_ATTR_ITALICS, "italics,"),
-            (grid_attr::GRID_ATTR_CHARSET, "acs,"),
-            (grid_attr::GRID_ATTR_STRIKETHROUGH, "strikethrough,"),
-            (grid_attr::GRID_ATTR_UNDERSCORE_2, "double-underscore,"),
-            (grid_attr::GRID_ATTR_UNDERSCORE_3, "curly-underscore,"),
-            (grid_attr::GRID_ATTR_UNDERSCORE_4, "dotted-underscore,"),
-            (grid_attr::GRID_ATTR_UNDERSCORE_5, "dashed-underscore,"),
-            (grid_attr::GRID_ATTR_OVERLINE, "overline,"),
+            (GridAttr::GRID_ATTR_BRIGHT, "bright,"),
+            (GridAttr::GRID_ATTR_DIM, "dim,"),
+            (GridAttr::GRID_ATTR_UNDERSCORE, "underscore,"),
+            (GridAttr::GRID_ATTR_BLINK, "blink,"),
+            (GridAttr::GRID_ATTR_REVERSE, "reverse,"),
+            (GridAttr::GRID_ATTR_HIDDEN, "hidden,"),
+            (GridAttr::GRID_ATTR_ITALICS, "italics,"),
+            (GridAttr::GRID_ATTR_CHARSET, "acs,"),
+            (GridAttr::GRID_ATTR_STRIKETHROUGH, "strikethrough,"),
+            (GridAttr::GRID_ATTR_UNDERSCORE_2, "double-underscore,"),
+            (GridAttr::GRID_ATTR_UNDERSCORE_3, "curly-underscore,"),
+            (GridAttr::GRID_ATTR_UNDERSCORE_4, "dotted-underscore,"),
+            (GridAttr::GRID_ATTR_UNDERSCORE_5, "dashed-underscore,"),
+            (GridAttr::GRID_ATTR_OVERLINE, "overline,"),
         ];
         for (attr, expected) in &cases {
             assert_eq!(
@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn tostring_multiple_attributes() {
-        let attr = grid_attr::GRID_ATTR_BRIGHT | grid_attr::GRID_ATTR_ITALICS;
+        let attr = GridAttr::GRID_ATTR_BRIGHT | GridAttr::GRID_ATTR_ITALICS;
         let s = attributes_tostring(attr);
         assert!(s.contains("bright,"));
         assert!(s.contains("italics,"));
@@ -171,35 +171,35 @@ mod tests {
 
     #[test]
     fn fromstring_none() {
-        assert_eq!(attributes_fromstring("none"), Ok(grid_attr::empty()));
-        assert_eq!(attributes_fromstring("None"), Ok(grid_attr::empty()));
-        assert_eq!(attributes_fromstring("NONE"), Ok(grid_attr::empty()));
+        assert_eq!(attributes_fromstring("none"), Ok(GridAttr::empty()));
+        assert_eq!(attributes_fromstring("None"), Ok(GridAttr::empty()));
+        assert_eq!(attributes_fromstring("NONE"), Ok(GridAttr::empty()));
     }
 
     #[test]
     fn fromstring_default() {
-        assert_eq!(attributes_fromstring("default"), Ok(grid_attr::empty()));
-        assert_eq!(attributes_fromstring("Default"), Ok(grid_attr::empty()));
+        assert_eq!(attributes_fromstring("default"), Ok(GridAttr::empty()));
+        assert_eq!(attributes_fromstring("Default"), Ok(GridAttr::empty()));
     }
 
     #[test]
     fn fromstring_single_attributes() {
         let cases = [
-            ("bright", grid_attr::GRID_ATTR_BRIGHT),
-            ("bold", grid_attr::GRID_ATTR_BRIGHT), // alias
-            ("dim", grid_attr::GRID_ATTR_DIM),
-            ("underscore", grid_attr::GRID_ATTR_UNDERSCORE),
-            ("blink", grid_attr::GRID_ATTR_BLINK),
-            ("reverse", grid_attr::GRID_ATTR_REVERSE),
-            ("hidden", grid_attr::GRID_ATTR_HIDDEN),
-            ("italics", grid_attr::GRID_ATTR_ITALICS),
-            ("acs", grid_attr::GRID_ATTR_CHARSET),
-            ("strikethrough", grid_attr::GRID_ATTR_STRIKETHROUGH),
-            ("double-underscore", grid_attr::GRID_ATTR_UNDERSCORE_2),
-            ("curly-underscore", grid_attr::GRID_ATTR_UNDERSCORE_3),
-            ("dotted-underscore", grid_attr::GRID_ATTR_UNDERSCORE_4),
-            ("dashed-underscore", grid_attr::GRID_ATTR_UNDERSCORE_5),
-            ("overline", grid_attr::GRID_ATTR_OVERLINE),
+            ("bright", GridAttr::GRID_ATTR_BRIGHT),
+            ("bold", GridAttr::GRID_ATTR_BRIGHT), // alias
+            ("dim", GridAttr::GRID_ATTR_DIM),
+            ("underscore", GridAttr::GRID_ATTR_UNDERSCORE),
+            ("blink", GridAttr::GRID_ATTR_BLINK),
+            ("reverse", GridAttr::GRID_ATTR_REVERSE),
+            ("hidden", GridAttr::GRID_ATTR_HIDDEN),
+            ("italics", GridAttr::GRID_ATTR_ITALICS),
+            ("acs", GridAttr::GRID_ATTR_CHARSET),
+            ("strikethrough", GridAttr::GRID_ATTR_STRIKETHROUGH),
+            ("double-underscore", GridAttr::GRID_ATTR_UNDERSCORE_2),
+            ("curly-underscore", GridAttr::GRID_ATTR_UNDERSCORE_3),
+            ("dotted-underscore", GridAttr::GRID_ATTR_UNDERSCORE_4),
+            ("dashed-underscore", GridAttr::GRID_ATTR_UNDERSCORE_5),
+            ("overline", GridAttr::GRID_ATTR_OVERLINE),
         ];
         for (name, expected) in &cases {
             assert_eq!(
@@ -214,41 +214,41 @@ mod tests {
     fn fromstring_case_insensitive() {
         assert_eq!(
             attributes_fromstring("BOLD"),
-            Ok(grid_attr::GRID_ATTR_BRIGHT)
+            Ok(GridAttr::GRID_ATTR_BRIGHT)
         );
         assert_eq!(
             attributes_fromstring("Italics"),
-            Ok(grid_attr::GRID_ATTR_ITALICS)
+            Ok(GridAttr::GRID_ATTR_ITALICS)
         );
     }
 
     #[test]
     fn fromstring_comma_delimiter() {
         let result = attributes_fromstring("bold,italics").unwrap();
-        assert!(result.intersects(grid_attr::GRID_ATTR_BRIGHT));
-        assert!(result.intersects(grid_attr::GRID_ATTR_ITALICS));
+        assert!(result.intersects(GridAttr::GRID_ATTR_BRIGHT));
+        assert!(result.intersects(GridAttr::GRID_ATTR_ITALICS));
     }
 
     #[test]
     fn fromstring_space_delimiter() {
         let result = attributes_fromstring("bold italics").unwrap();
-        assert!(result.intersects(grid_attr::GRID_ATTR_BRIGHT));
-        assert!(result.intersects(grid_attr::GRID_ATTR_ITALICS));
+        assert!(result.intersects(GridAttr::GRID_ATTR_BRIGHT));
+        assert!(result.intersects(GridAttr::GRID_ATTR_ITALICS));
     }
 
     #[test]
     fn fromstring_pipe_delimiter() {
         let result = attributes_fromstring("bold|italics").unwrap();
-        assert!(result.intersects(grid_attr::GRID_ATTR_BRIGHT));
-        assert!(result.intersects(grid_attr::GRID_ATTR_ITALICS));
+        assert!(result.intersects(GridAttr::GRID_ATTR_BRIGHT));
+        assert!(result.intersects(GridAttr::GRID_ATTR_ITALICS));
     }
 
     #[test]
     fn fromstring_three_attributes() {
         let result = attributes_fromstring("bold,dim,blink").unwrap();
-        assert!(result.intersects(grid_attr::GRID_ATTR_BRIGHT));
-        assert!(result.intersects(grid_attr::GRID_ATTR_DIM));
-        assert!(result.intersects(grid_attr::GRID_ATTR_BLINK));
+        assert!(result.intersects(GridAttr::GRID_ATTR_BRIGHT));
+        assert!(result.intersects(GridAttr::GRID_ATTR_DIM));
+        assert!(result.intersects(GridAttr::GRID_ATTR_BLINK));
     }
 
     // ---------------------------------------------------------------

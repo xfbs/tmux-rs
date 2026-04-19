@@ -31,9 +31,9 @@ pub struct menu_data {
     pub item: *mut cmdq_item,
     pub flags: menu_flags,
 
-    pub style: grid_cell,
-    pub border_style: grid_cell,
-    pub selected_style: grid_cell,
+    pub style: GridCell,
+    pub border_style: GridCell,
+    pub selected_style: GridCell,
     pub border_lines: box_lines,
 
     pub fs: cmd_find_state,
@@ -546,7 +546,7 @@ pub unsafe fn menu_key_cb(c: *mut client, data: *mut c_void, mut event: *mut key
 
 pub unsafe fn menu_set_style(
     c: *mut client,
-    gc: *mut grid_cell,
+    gc: *mut GridCell,
     style: *const u8,
     option: *const u8,
 ) {
@@ -565,7 +565,7 @@ pub unsafe fn menu_set_style(
                 (*gc).bg = (*sytmp).gc.bg;
             }
         }
-        (*gc).attr = grid_attr::empty();
+        (*gc).attr = GridAttr::empty();
     }
 }
 

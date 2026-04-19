@@ -644,7 +644,7 @@ pub(crate) unsafe fn sixel_print(
 unsafe fn sixel_to_screen(si: *mut sixel_image) -> *mut screen {
     unsafe {
         let mut ctx: screen_write_ctx = zeroed();
-        let mut gc: grid_cell = zeroed();
+        let mut gc: GridCell = zeroed();
 
         let (sx, sy) = sixel_size_in_cells(&*si);
 
@@ -652,7 +652,7 @@ unsafe fn sixel_to_screen(si: *mut sixel_image) -> *mut screen {
         screen_init(s, sx, sy, 0);
 
         memcpy__(&raw mut gc, &raw const GRID_DEFAULT_CELL);
-        gc.attr |= grid_attr::GRID_ATTR_CHARSET | grid_attr::GRID_ATTR_DIM;
+        gc.attr |= GridAttr::GRID_ATTR_CHARSET | GridAttr::GRID_ATTR_DIM;
         utf8_set(&raw mut gc.data, b'~');
 
         screen_write_start(&raw mut ctx, s);

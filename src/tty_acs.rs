@@ -131,68 +131,68 @@ static TTY_ACS_REVERSE3: [tty_acs_reverse_entry; 32] = [
 ];
 
 /// UTF-8 double borders.
-static TTY_ACS_DOUBLE_BORDERS_LIST: [utf8_data; 13] = [
-    utf8_data::new([0o000, 0o000, 0o000, 0o000], 0, 0, 0),
-    utf8_data::new([0o342, 0o225, 0o221, 0o000], 0, 3, 1), // U+2551
-    utf8_data::new([0o342, 0o225, 0o220, 0o000], 0, 3, 1), // U+2550
-    utf8_data::new([0o342, 0o225, 0o224, 0o000], 0, 3, 1), // U+2554
-    utf8_data::new([0o342, 0o225, 0o227, 0o000], 0, 3, 1), // U+2557
-    utf8_data::new([0o342, 0o225, 0o232, 0o000], 0, 3, 1), // U+255A
-    utf8_data::new([0o342, 0o225, 0o235, 0o000], 0, 3, 1), // U+255D
-    utf8_data::new([0o342, 0o225, 0o246, 0o000], 0, 3, 1), // U+2566
-    utf8_data::new([0o342, 0o225, 0o251, 0o000], 0, 3, 1), // U+2569
-    utf8_data::new([0o342, 0o225, 0o240, 0o000], 0, 3, 1), // U+2560
-    utf8_data::new([0o342, 0o225, 0o243, 0o000], 0, 3, 1), // U+2563
-    utf8_data::new([0o342, 0o225, 0o254, 0o000], 0, 3, 1), // U+256C
-    utf8_data::new([0o302, 0o267, 0o000, 0o000], 0, 2, 1), // U+00B7
+static TTY_ACS_DOUBLE_BORDERS_LIST: [Utf8Data; 13] = [
+    Utf8Data::new([0o000, 0o000, 0o000, 0o000], 0, 0, 0),
+    Utf8Data::new([0o342, 0o225, 0o221, 0o000], 0, 3, 1), // U+2551
+    Utf8Data::new([0o342, 0o225, 0o220, 0o000], 0, 3, 1), // U+2550
+    Utf8Data::new([0o342, 0o225, 0o224, 0o000], 0, 3, 1), // U+2554
+    Utf8Data::new([0o342, 0o225, 0o227, 0o000], 0, 3, 1), // U+2557
+    Utf8Data::new([0o342, 0o225, 0o232, 0o000], 0, 3, 1), // U+255A
+    Utf8Data::new([0o342, 0o225, 0o235, 0o000], 0, 3, 1), // U+255D
+    Utf8Data::new([0o342, 0o225, 0o246, 0o000], 0, 3, 1), // U+2566
+    Utf8Data::new([0o342, 0o225, 0o251, 0o000], 0, 3, 1), // U+2569
+    Utf8Data::new([0o342, 0o225, 0o240, 0o000], 0, 3, 1), // U+2560
+    Utf8Data::new([0o342, 0o225, 0o243, 0o000], 0, 3, 1), // U+2563
+    Utf8Data::new([0o342, 0o225, 0o254, 0o000], 0, 3, 1), // U+256C
+    Utf8Data::new([0o302, 0o267, 0o000, 0o000], 0, 2, 1), // U+00B7
 ];
 
 /// UTF-8 heavy borders.
-static TTY_ACS_HEAVY_BORDERS_LIST: [utf8_data; 13] = [
-    utf8_data::new([0o000, 0o000, 0o000, 0o000], 0, 0, 0),
-    utf8_data::new([0o342, 0o224, 0o203, 0o000], 0, 3, 1), // U+2503
-    utf8_data::new([0o342, 0o224, 0o201, 0o000], 0, 3, 1), // U+2501
-    utf8_data::new([0o342, 0o224, 0o217, 0o000], 0, 3, 1), // U+250F
-    utf8_data::new([0o342, 0o224, 0o223, 0o000], 0, 3, 1), // U+2513
-    utf8_data::new([0o342, 0o224, 0o227, 0o000], 0, 3, 1), // U+2517
-    utf8_data::new([0o342, 0o224, 0o233, 0o000], 0, 3, 1), // U+251B
-    utf8_data::new([0o342, 0o224, 0o263, 0o000], 0, 3, 1), // U+2533
-    utf8_data::new([0o342, 0o224, 0o273, 0o000], 0, 3, 1), // U+253B
-    utf8_data::new([0o342, 0o224, 0o243, 0o000], 0, 3, 1), // U+2523
-    utf8_data::new([0o342, 0o224, 0o253, 0o000], 0, 3, 1), // U+252B
-    utf8_data::new([0o342, 0o225, 0o213, 0o000], 0, 3, 1), // U+254B
-    utf8_data::new([0o302, 0o267, 0o000, 0o000], 0, 2, 1), // U+00B7
+static TTY_ACS_HEAVY_BORDERS_LIST: [Utf8Data; 13] = [
+    Utf8Data::new([0o000, 0o000, 0o000, 0o000], 0, 0, 0),
+    Utf8Data::new([0o342, 0o224, 0o203, 0o000], 0, 3, 1), // U+2503
+    Utf8Data::new([0o342, 0o224, 0o201, 0o000], 0, 3, 1), // U+2501
+    Utf8Data::new([0o342, 0o224, 0o217, 0o000], 0, 3, 1), // U+250F
+    Utf8Data::new([0o342, 0o224, 0o223, 0o000], 0, 3, 1), // U+2513
+    Utf8Data::new([0o342, 0o224, 0o227, 0o000], 0, 3, 1), // U+2517
+    Utf8Data::new([0o342, 0o224, 0o233, 0o000], 0, 3, 1), // U+251B
+    Utf8Data::new([0o342, 0o224, 0o263, 0o000], 0, 3, 1), // U+2533
+    Utf8Data::new([0o342, 0o224, 0o273, 0o000], 0, 3, 1), // U+253B
+    Utf8Data::new([0o342, 0o224, 0o243, 0o000], 0, 3, 1), // U+2523
+    Utf8Data::new([0o342, 0o224, 0o253, 0o000], 0, 3, 1), // U+252B
+    Utf8Data::new([0o342, 0o225, 0o213, 0o000], 0, 3, 1), // U+254B
+    Utf8Data::new([0o302, 0o267, 0o000, 0o000], 0, 2, 1), // U+00B7
 ];
 
 /// UTF-8 rounded borders.
-static TTY_ACS_ROUNDED_BORDERS_LIST: [utf8_data; 13] = [
-    utf8_data::new([0o000, 0o000, 0o000, 0o000], 0, 0, 0),
-    utf8_data::new([0o342, 0o224, 0o202, 0o000], 0, 3, 1), // U+2502
-    utf8_data::new([0o342, 0o224, 0o200, 0o000], 0, 3, 1), // U+2500
-    utf8_data::new([0o342, 0o225, 0o255, 0o000], 0, 3, 1), // U+256D
-    utf8_data::new([0o342, 0o225, 0o256, 0o000], 0, 3, 1), // U+256E
-    utf8_data::new([0o342, 0o225, 0o260, 0o000], 0, 3, 1), // U+2570
-    utf8_data::new([0o342, 0o225, 0o257, 0o000], 0, 3, 1), // U+256F
-    utf8_data::new([0o342, 0o224, 0o263, 0o000], 0, 3, 1), // U+2533
-    utf8_data::new([0o342, 0o224, 0o273, 0o000], 0, 3, 1), // U+253B
-    utf8_data::new([0o342, 0o224, 0o234, 0o000], 0, 3, 1), // U+2524
-    utf8_data::new([0o342, 0o224, 0o244, 0o000], 0, 3, 1), // U+251C
-    utf8_data::new([0o342, 0o225, 0o213, 0o000], 0, 3, 1), // U+254B
-    utf8_data::new([0o302, 0o267, 0o000, 0o000], 0, 2, 1), // U+00B7
+static TTY_ACS_ROUNDED_BORDERS_LIST: [Utf8Data; 13] = [
+    Utf8Data::new([0o000, 0o000, 0o000, 0o000], 0, 0, 0),
+    Utf8Data::new([0o342, 0o224, 0o202, 0o000], 0, 3, 1), // U+2502
+    Utf8Data::new([0o342, 0o224, 0o200, 0o000], 0, 3, 1), // U+2500
+    Utf8Data::new([0o342, 0o225, 0o255, 0o000], 0, 3, 1), // U+256D
+    Utf8Data::new([0o342, 0o225, 0o256, 0o000], 0, 3, 1), // U+256E
+    Utf8Data::new([0o342, 0o225, 0o260, 0o000], 0, 3, 1), // U+2570
+    Utf8Data::new([0o342, 0o225, 0o257, 0o000], 0, 3, 1), // U+256F
+    Utf8Data::new([0o342, 0o224, 0o263, 0o000], 0, 3, 1), // U+2533
+    Utf8Data::new([0o342, 0o224, 0o273, 0o000], 0, 3, 1), // U+253B
+    Utf8Data::new([0o342, 0o224, 0o234, 0o000], 0, 3, 1), // U+2524
+    Utf8Data::new([0o342, 0o224, 0o244, 0o000], 0, 3, 1), // U+251C
+    Utf8Data::new([0o342, 0o225, 0o213, 0o000], 0, 3, 1), // U+254B
+    Utf8Data::new([0o302, 0o267, 0o000, 0o000], 0, 2, 1), // U+00B7
 ];
 
 /// Get cell border character for double-line style (═║╔╗╚╝).
-pub fn tty_acs_double_borders(cell_type: cell_type) -> &'static utf8_data {
+pub fn tty_acs_double_borders(cell_type: cell_type) -> &'static Utf8Data {
     &TTY_ACS_DOUBLE_BORDERS_LIST[cell_type as usize]
 }
 
 /// Get cell border character for heavy/thick style (━┃┏┓┗┛).
-pub fn tty_acs_heavy_borders(cell_type: cell_type) -> &'static utf8_data {
+pub fn tty_acs_heavy_borders(cell_type: cell_type) -> &'static Utf8Data {
     &TTY_ACS_HEAVY_BORDERS_LIST[cell_type as usize]
 }
 
 /// Get cell border character for rounded style.
-pub fn tty_acs_rounded_borders(cell_type: cell_type) -> &'static utf8_data {
+pub fn tty_acs_rounded_borders(cell_type: cell_type) -> &'static Utf8Data {
     &TTY_ACS_ROUNDED_BORDERS_LIST[cell_type as usize]
 }
 

@@ -256,7 +256,7 @@ fn layout_tiled_6_panes() {
     let panes = list_panes(&tmux);
     assert_eq!(panes.len(), 6);
 
-    // With 6 panes in a 200x200 window, tiled should produce a roughly 3x2 or 2x3 grid.
+    // With 6 panes in a 200x200 window, tiled should produce a roughly 3x2 or 2x3 Grid.
     // Check that no two panes overlap.
     for i in 0..panes.len() {
         for j in (i + 1)..panes.len() {

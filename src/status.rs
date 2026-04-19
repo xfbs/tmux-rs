@@ -367,7 +367,7 @@ pub unsafe fn status_redraw(c: *mut client) -> i32 {
         // status_line_entry *sle;
         let s = client_get_session(c);
         let mut ctx: screen_write_ctx = zeroed();
-        let mut gc: grid_cell = zeroed();
+        let mut gc: GridCell = zeroed();
 
         // u_int lines, i, n;
 
@@ -577,14 +577,14 @@ pub unsafe fn status_message_redraw(c: *mut client) -> i32 {
         let s = client_get_session(c);
         // size_t len;
         // u_int lines, offset, messageline;
-        let mut gc: grid_cell = zeroed();
+        let mut gc: GridCell = zeroed();
         // struct format_tree *ft;
 
         if (*c).tty.sx == 0 || (*c).tty.sy == 0 {
             return 0;
         }
-        // Snapshot the old grid before reinit overwrites it.
-        let mut old_grid = std::mem::replace(&mut (*(*sl).active).grid, grid_create(0, 0, 0));
+        // Snapshot the old Grid before reinit overwrites it.
+        let old_grid = std::mem::replace(&mut (*(*sl).active).grid, grid_create(0, 0, 0));
 
         let mut lines = status_line_size(c);
         if lines <= 1 {
@@ -807,15 +807,15 @@ pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
 
         let offset: u32;
 
-        let mut gc: grid_cell = zeroed();
-        let mut cursorgc: grid_cell = zeroed();
-        let mut old_grid: Box<grid>;
+        let mut gc: GridCell = zeroed();
+        let mut cursorgc: GridCell = zeroed();
+        let old_grid: Box<Grid>;
 
         'finished: {
             if (*c).tty.sx == 0 || (*c).tty.sy == 0 {
                 return 0;
             }
-            // Snapshot the old grid before reinit overwrites it.
+            // Snapshot the old Grid before reinit overwrites it.
             old_grid = std::mem::replace(&mut (*(*sl).active).grid, grid_create(0, 0, 0));
 
             let mut lines = status_line_size(c);
@@ -838,7 +838,7 @@ pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
             format_free(ft);
 
             memcpy__(&raw mut cursorgc, &raw const gc);
-            cursorgc.attr ^= grid_attr::GRID_ATTR_REVERSE;
+            cursorgc.attr ^= GridAttr::GRID_ATTR_REVERSE;
 
             let prompt_owned = (*c).prompt_string.clone().unwrap_or_default();
             let mut start = format_width(&prompt_owned);
@@ -931,7 +931,7 @@ pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
 }
 
 /// Is this a separator?
-unsafe fn status_prompt_in_list(ws: *const u8, ud: *const utf8_data) -> i32 {
+unsafe fn status_prompt_in_list(ws: *const u8, ud: *const Utf8Data) -> i32 {
     unsafe {
         if (*ud).size != 1 || (*ud).width != 1 {
             return 0;
@@ -941,7 +941,7 @@ unsafe fn status_prompt_in_list(ws: *const u8, ud: *const utf8_data) -> i32 {
 }
 
 /// Is this a space?
-unsafe fn status_prompt_space(ud: *const utf8_data) -> i32 {
+unsafe fn status_prompt_space(ud: *const Utf8Data) -> i32 {
     unsafe {
         if (*ud).size != 1 || (*ud).width != 1 {
             return 0;
@@ -1111,13 +1111,13 @@ unsafe fn status_prompt_paste(c: *mut client) -> i32 {
         // const char *bufdata;
         // size_t size, n, bufsize;
         // u_int i;
-        // struct utf8_data *ud, *udp;
+        // struct Utf8Data *ud, *udp;
         // enum utf8_state more;
 
         let mut bufsize: usize = 0;
         let n: usize;
 
-        let ud: *mut utf8_data;
+        let ud: *mut Utf8Data;
         let size = utf8_strlen((*c).prompt_buffer);
         if !(*c).prompt_saved.is_null() {
             ud = (*c).prompt_saved;
@@ -1128,7 +1128,7 @@ unsafe fn status_prompt_paste(c: *mut client) -> i32 {
                 return 0;
             }
             let bufdata: *const u8 = paste_buffer_data(pb, &raw mut bufsize).cast();
-            let mut udp = xreallocarray_::<utf8_data>(null_mut(), bufsize + 1).as_ptr();
+            let mut udp = xreallocarray_::<Utf8Data>(null_mut(), bufsize + 1).as_ptr();
             ud = udp;
             let mut i: u32 = 0;
             while i as usize != bufsize {
@@ -1158,12 +1158,12 @@ unsafe fn status_prompt_paste(c: *mut client) -> i32 {
         }
         if n != 0 {
             (*c).prompt_buffer =
-                xreallocarray_::<utf8_data>((*c).prompt_buffer, size + n + 1).as_ptr();
+                xreallocarray_::<Utf8Data>((*c).prompt_buffer, size + n + 1).as_ptr();
             if (*c).prompt_index == size {
                 libc::memcpy(
                     (*c).prompt_buffer.add((*c).prompt_index).cast(),
                     ud.cast(),
-                    n * size_of::<utf8_data>(),
+                    n * size_of::<Utf8Data>(),
                 );
                 (*c).prompt_index += n;
                 (*(*c).prompt_buffer.add((*c).prompt_index)).size = 0;
@@ -1171,12 +1171,12 @@ unsafe fn status_prompt_paste(c: *mut client) -> i32 {
                 libc::memmove(
                     (*c).prompt_buffer.add((*c).prompt_index + n).cast(),
                     (*c).prompt_buffer.add((*c).prompt_index).cast(),
-                    (size + 1 - (*c).prompt_index) * size_of::<utf8_data>(),
+                    (size + 1 - (*c).prompt_index) * size_of::<Utf8Data>(),
                 );
                 libc::memcpy(
                     (*c).prompt_buffer.add((*c).prompt_index).cast(),
                     ud.cast(),
-                    n * size_of::<utf8_data>(),
+                    n * size_of::<Utf8Data>(),
                 );
                 (*c).prompt_index += n;
             }
@@ -1196,8 +1196,8 @@ unsafe fn status_prompt_replace_complete(c: *mut client, s: Option<&str>) -> i32
 
         let mut used: usize;
 
-        let mut last: *mut utf8_data;
-        let mut ud: *mut utf8_data;
+        let mut last: *mut Utf8Data;
+        let mut ud: *mut Utf8Data;
 
         // Work out where the cursor currently is.
         let idx = (*c).prompt_index.saturating_sub(1);
@@ -1261,18 +1261,18 @@ unsafe fn status_prompt_replace_complete(c: *mut client, s: Option<&str>) -> i32
 
         // Trim out word.
         let n: usize = size - last.offset_from_unsigned((*c).prompt_buffer) + 1; /* with \0 */
-        libc::memmove(first.cast(), last.cast(), n * size_of::<utf8_data>());
+        libc::memmove(first.cast(), last.cast(), n * size_of::<Utf8Data>());
         size -= last.offset_from_unsigned(first);
 
         // Insert the new word.
         size += s_str.len();
         let off: usize = first.offset_from_unsigned((*c).prompt_buffer);
-        (*c).prompt_buffer = xreallocarray_::<utf8_data>((*c).prompt_buffer, size + 1).as_ptr();
+        (*c).prompt_buffer = xreallocarray_::<Utf8Data>((*c).prompt_buffer, size + 1).as_ptr();
         first = (*c).prompt_buffer.add(off);
         libc::memmove(
             first.add(s_str.len()).cast(),
             first.cast(),
-            n * size_of::<utf8_data>(),
+            n * size_of::<Utf8Data>(),
         );
         for (idx, &byte) in s_str.as_bytes().iter().enumerate() {
             utf8_set(first.add(idx), byte);
@@ -1420,7 +1420,7 @@ pub unsafe fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
 
         let mut idx: usize;
 
-        let mut tmp: utf8_data = zeroed();
+        let mut tmp: Utf8Data = zeroed();
 
         let word_is_separators: i32;
 
@@ -1501,7 +1501,7 @@ pub unsafe fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
                                 libc::memmove(
                                     (*c).prompt_buffer.add((*c).prompt_index - 1).cast(),
                                     (*c).prompt_buffer.add((*c).prompt_index).cast(),
-                                    (size + 1 - (*c).prompt_index) * size_of::<utf8_data>(),
+                                    (size + 1 - (*c).prompt_index) * size_of::<Utf8Data>(),
                                 );
                                 (*c).prompt_index -= 1;
                             }
@@ -1513,7 +1513,7 @@ pub unsafe fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
                             libc::memmove(
                                 (*c).prompt_buffer.add((*c).prompt_index).cast(),
                                 (*c).prompt_buffer.add((*c).prompt_index + 1).cast(),
-                                (size + 1 - (*c).prompt_index) * size_of::<utf8_data>(),
+                                (size + 1 - (*c).prompt_index) * size_of::<Utf8Data>(),
                             );
                             break 'changed;
                         }
@@ -1562,24 +1562,24 @@ pub unsafe fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
 
                         free_((*c).prompt_saved);
                         (*c).prompt_saved =
-                            xcalloc_::<utf8_data>(((*c).prompt_index - idx) + 1).as_ptr();
+                            xcalloc_::<Utf8Data>(((*c).prompt_index - idx) + 1).as_ptr();
                         libc::memcpy(
                             (*c).prompt_saved.cast(),
                             (*c).prompt_buffer.add(idx).cast(),
-                            ((*c).prompt_index - idx) * size_of::<utf8_data>(),
+                            ((*c).prompt_index - idx) * size_of::<Utf8Data>(),
                         );
 
                         libc::memmove(
                             (*c).prompt_buffer.add(idx).cast(),
                             (*c).prompt_buffer.add((*c).prompt_index).cast(),
-                            (size + 1 - (*c).prompt_index) * size_of::<utf8_data>(),
+                            (size + 1 - (*c).prompt_index) * size_of::<Utf8Data>(),
                         );
                         libc::memset(
                             (*c).prompt_buffer
                                 .add(size - ((*c).prompt_index - idx))
                                 .cast(),
                             b'\0' as i32,
-                            ((*c).prompt_index - idx) * size_of::<utf8_data>(),
+                            ((*c).prompt_index - idx) * size_of::<Utf8Data>(),
                         );
                         (*c).prompt_index = idx;
 
@@ -1745,7 +1745,7 @@ pub unsafe fn status_prompt_key(c: *mut client, mut key: key_code) -> i32 {
                 libc::memmove(
                     (*c).prompt_buffer.add((*c).prompt_index + 1).cast(),
                     (*c).prompt_buffer.add((*c).prompt_index).cast(),
-                    (size + 1 - (*c).prompt_index) * size_of::<utf8_data>(),
+                    (size + 1 - (*c).prompt_index) * size_of::<Utf8Data>(),
                 );
                 utf8_copy((*c).prompt_buffer.add((*c).prompt_index), &raw const tmp);
                 (*c).prompt_index += 1;

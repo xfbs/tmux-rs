@@ -881,15 +881,15 @@ pub unsafe fn format_cb_history_bytes(ft: &format_tree) -> format_table_type {
             return format_table_type::None;
         }
 
-        let gd: *mut grid = &raw mut *(*wp).base.grid;
+        let gd: *mut Grid = &raw mut *(*wp).base.grid;
         let mut size: usize = 0;
 
         for i in 0..((*gd).hsize + (*gd).sy) {
             let gl = (*gd).get_line(i);
-            size += (*gl).celldata.len() * std::mem::size_of::<grid_cell>();
-            size += (*gl).extddata.len() * std::mem::size_of::<grid_cell>();
+            size += (*gl).celldata.len() * std::mem::size_of::<GridCell>();
+            size += (*gl).extddata.len() * std::mem::size_of::<GridCell>();
         }
-        size += ((*gd).hsize + (*gd).sy) as usize * std::mem::size_of::<grid_line>();
+        size += ((*gd).hsize + (*gd).sy) as usize * std::mem::size_of::<GridLine>();
 
         format!("{size}").into()
     }
@@ -904,13 +904,13 @@ pub unsafe fn format_cb_history_all_bytes(ft: &format_tree) -> format_table_type
             return format_table_type::None;
         }
 
-        let gd: *mut grid = &raw mut *(*wp).base.grid;
+        let gd: *mut Grid = &raw mut *(*wp).base.grid;
         let lines = (*gd).hsize + (*gd).sy;
         let mut cells = 0;
         let mut extended_cells = 0;
 
         for i in 0..lines {
-            let gl: *mut grid_line = (*gd).get_line(i);
+            let gl: *mut GridLine = (*gd).get_line(i);
             cells += (*gl).celldata.len() as u32;
             extended_cells += (*gl).extddata.len() as u32;
         }
@@ -918,11 +918,11 @@ pub unsafe fn format_cb_history_all_bytes(ft: &format_tree) -> format_table_type
         format!(
             "{},{},{},{},{},{}",
             lines,
-            lines as usize * std::mem::size_of::<grid_line>(),
+            lines as usize * std::mem::size_of::<GridLine>(),
             cells,
-            cells as usize * std::mem::size_of::<grid_cell>(),
+            cells as usize * std::mem::size_of::<GridCell>(),
             extended_cells,
-            extended_cells as usize * std::mem::size_of::<grid_cell>(),
+            extended_cells as usize * std::mem::size_of::<GridCell>(),
         )
         .into()
     }
@@ -970,7 +970,7 @@ pub unsafe fn format_cb_pane_tabs(ft: &format_tree) -> format_table_type {
 pub unsafe fn format_cb_pane_fg(ft: &format_tree) -> format_table_type {
     unsafe {
         let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
-        let mut gc = MaybeUninit::<grid_cell>::uninit();
+        let mut gc = MaybeUninit::<GridCell>::uninit();
 
         if wp.is_null() {
             return format_table_type::None;
@@ -986,7 +986,7 @@ pub unsafe fn format_cb_pane_fg(ft: &format_tree) -> format_table_type {
 pub unsafe fn format_cb_pane_bg(ft: &format_tree) -> format_table_type {
     unsafe {
         let wp = ft.wp.and_then(|id| pane_from_id(id)).unwrap_or(null_mut());
-        let mut gc = MaybeUninit::<grid_cell>::uninit();
+        let mut gc = MaybeUninit::<GridCell>::uninit();
 
         if wp.is_null() {
             return format_table_type::None;
@@ -1141,7 +1141,7 @@ pub unsafe fn format_cb_cursor_character(ft: &format_tree) -> format_table_type 
             return format_table_type::None;
         }
         let gc = (*wp).base.grid.view_get_cell((*wp).base.cx, (*wp).base.cy);
-        if !gc.flags.intersects(grid_flag::PADDING) {
+        if !gc.flags.intersects(GridFlag::PADDING) {
             format!(
                 "{1:0$}",
                 gc.data.size as usize,
@@ -1175,7 +1175,7 @@ pub unsafe fn format_cb_mouse_word(ft: &format_tree) -> format_table_type {
             }
             return format_table_type::None;
         }
-        let gd: *mut grid = &raw mut *(*wp.as_ptr()).base.grid;
+        let gd: *mut Grid = &raw mut *(*wp.as_ptr()).base.grid;
         format_grid_word(gd, x, (*gd).hsize + y).into()
     }
 }
@@ -1194,7 +1194,7 @@ pub unsafe fn format_cb_mouse_hyperlink(ft: &format_tree) -> format_table_type {
         if cmd_mouse_at(wp.as_ptr(), &ft.m, &mut x, &mut y, 0) != 0 {
             return format_table_type::None;
         }
-        let gd: *mut grid = &raw mut *(*wp.as_ptr()).base.grid;
+        let gd: *mut Grid = &raw mut *(*wp.as_ptr()).base.grid;
         format_grid_hyperlink(gd, x, (*gd).hsize + y, (*wp.as_ptr()).screen)
             .map(Into::into)
             .unwrap_or_default()
@@ -1222,7 +1222,7 @@ pub unsafe fn format_cb_mouse_line(ft: &format_tree) -> format_table_type {
             }
             return format_table_type::None;
         }
-        let gd: *mut grid = &raw mut *(*wp.as_ptr()).base.grid;
+        let gd: *mut Grid = &raw mut *(*wp.as_ptr()).base.grid;
         format_grid_line(gd, (*gd).hsize + y).into()
     }
 }
@@ -5379,17 +5379,17 @@ pub unsafe fn format_defaults_paste_buffer(ft: *mut format_tree, pb: *mut PasteB
 }
 
 /// Return word at given coordinates. Caller frees.
-pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String {
+pub unsafe fn format_grid_word(gd: *mut Grid, mut x: u32, mut y: u32) -> String {
     unsafe {
-        let mut ud: Vec<utf8_data> = Vec::new();
-        let mut gc: grid_cell;
+        let mut ud: Vec<Utf8Data> = Vec::new();
+        let mut gc: GridCell;
         let mut found = false;
 
         let ws: *const u8 = options_get_string_(GLOBAL_S_OPTIONS, "word-separators");
 
         loop {
             gc = (*gd).get_cell(x, y);
-            if gc.flags.intersects(grid_flag::PADDING) {
+            if gc.flags.intersects(GridFlag::PADDING) {
                 break;
             }
             if utf8_cstrhas(ws, &raw const gc.data)
@@ -5405,7 +5405,7 @@ pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String 
                 }
                 let wrapped = (*gd)
                     .peek_line(y - 1)
-                    .is_some_and(|gl| gl.flags.intersects(grid_line_flag::WRAPPED));
+                    .is_some_and(|gl| gl.flags.intersects(GridLineFlag::WRAPPED));
                 if !wrapped {
                     break;
                 }
@@ -5426,7 +5426,7 @@ pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String 
                     }
                     let wrapped = (*gd)
                         .peek_line(y)
-                        .is_some_and(|gl| gl.flags.intersects(grid_line_flag::WRAPPED));
+                        .is_some_and(|gl| gl.flags.intersects(GridLineFlag::WRAPPED));
                     if !wrapped {
                         break;
                     }
@@ -5439,7 +5439,7 @@ pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String 
             found = true;
 
             gc = (*gd).get_cell(x, y);
-            if gc.flags.intersects(grid_flag::PADDING) {
+            if gc.flags.intersects(GridFlag::PADDING) {
                 break;
             }
             if utf8_cstrhas(ws, &raw mut gc.data)
@@ -5456,12 +5456,12 @@ pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String 
 }
 
 /// Return line at given coordinates. Caller frees.
-pub unsafe fn format_grid_line(gd: *mut grid, y: u32) -> String {
+pub unsafe fn format_grid_line(gd: *mut Grid, y: u32) -> String {
     unsafe {
-        let mut ud: Vec<utf8_data> = Vec::new();
+        let mut ud: Vec<Utf8Data> = Vec::new();
         for x in 0..(*gd).line_length(y) {
             let gc = (*gd).get_cell(x, y);
-            if gc.flags.intersects(grid_flag::PADDING) {
+            if gc.flags.intersects(GridFlag::PADDING) {
                 break;
             }
 
@@ -5473,7 +5473,7 @@ pub unsafe fn format_grid_line(gd: *mut grid, y: u32) -> String {
 
 /// Return hyperlink at given coordinates. Caller frees.
 pub unsafe fn format_grid_hyperlink(
-    gd: *mut grid,
+    gd: *mut Grid,
     x: u32,
     y: u32,
     s: *mut screen,
@@ -5482,7 +5482,7 @@ pub unsafe fn format_grid_hyperlink(
         let mut uri: *const u8 = null();
 
         let gc = (*gd).get_cell(x, y);
-        if gc.flags.intersects(grid_flag::PADDING) {
+        if gc.flags.intersects(GridFlag::PADDING) {
             return None;
         }
         if (*s).hyperlinks.is_none() || gc.link == 0 {

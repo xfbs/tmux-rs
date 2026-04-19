@@ -101,9 +101,9 @@ pub unsafe fn cmd_send_keys_inject_string(
 ) -> *mut cmdq_item {
     unsafe {
         let s = args_string(args, i as u32);
-        let ud: *mut utf8_data;
-        let mut loop_: *mut utf8_data;
-        let mut uc: utf8_char = 0;
+        let ud: *mut Utf8Data;
+        let mut loop_: *mut Utf8Data;
+        let mut uc: Utf8Char = 0;
         let mut key: key_code;
         let mut endptr: *mut u8 = null_mut();
 

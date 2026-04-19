@@ -103,9 +103,9 @@ unsafe fn cmd_capture_pane_history(
     len: *mut usize,
 ) -> *mut u8 {
     unsafe {
-        let gd: *mut grid;
-        let mut lastgc: Option<grid_cell> = None;
-        let mut flags = grid_string_flags::empty();
+        let gd: *mut Grid;
+        let mut lastgc: Option<GridCell> = None;
+        let mut flags = GridStringFlags::empty();
 
         let tmp: u32;
         let mut bottom: u32;
@@ -176,16 +176,16 @@ unsafe fn cmd_capture_pane_history(
 
         let join_lines = args_has(args, 'J');
         if args_has(args, 'e') {
-            flags |= grid_string_flags::GRID_STRING_WITH_SEQUENCES;
+            flags |= GridStringFlags::GRID_STRING_WITH_SEQUENCES;
         }
         if args_has(args, 'C') {
-            flags |= grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES;
+            flags |= GridStringFlags::GRID_STRING_ESCAPE_SEQUENCES;
         }
         if !join_lines && !args_has(args, 'T') {
-            flags |= grid_string_flags::GRID_STRING_EMPTY_CELLS;
+            flags |= GridStringFlags::GRID_STRING_EMPTY_CELLS;
         }
         if !join_lines && !args_has(args, 'N') {
-            flags |= grid_string_flags::GRID_STRING_TRIM_SPACES;
+            flags |= GridStringFlags::GRID_STRING_TRIM_SPACES;
         }
 
         let mut buf = null_mut();
@@ -202,7 +202,7 @@ unsafe fn cmd_capture_pane_history(
 
             let wrapped = (*gd)
                 .peek_line(i)
-                .is_some_and(|gl| gl.flags.intersects(grid_line_flag::WRAPPED));
+                .is_some_and(|gl| gl.flags.intersects(GridLineFlag::WRAPPED));
             if !join_lines || !wrapped {
                 *buf.add(*len) = b'\n' as _;
                 (*len) += 1;

@@ -794,7 +794,7 @@ unsafe fn window_customize_draw_option(
         let cx = (*s).cx;
         let cy = (*s).cy;
 
-        let mut gc: grid_cell = zeroed();
+        let mut gc: GridCell = zeroed();
         let mut space: *const u8 = c!("");
         let mut unit: *const u8 = c!("");
 

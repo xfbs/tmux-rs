@@ -42,9 +42,9 @@ pub struct hyperlinks {
 }
 
 /// Resolve cell-level `link` ids back to their URI + external id for the
-/// grid's OSC-8 emission path. The grid crate owns the
+/// Grid's OSC-8 emission path. The Grid crate owns the
 /// [`HyperlinkLookup`](crate::HyperlinkLookup) trait; this impl is the
-/// tmux-rs side of the abstraction boundary, so the grid code can stay
+/// tmux-rs side of the abstraction boundary, so the Grid code can stay
 /// free of tmux-rs-specific types.
 impl HyperlinkLookup for hyperlinks {
     fn hyperlink(&self, id: u32) -> Option<Hyperlink<'_>> {

@@ -278,8 +278,8 @@ pub unsafe fn key_string_lookup_string(mut string: *const u8) -> key_code {
         let mut key: key_code;
         let mut modifiers: key_code = 0;
         let mut u: u32 = 0;
-        let mut ud: utf8_data = zeroed();
-        let mut uc: utf8_char = 0;
+        let mut ud: Utf8Data = zeroed();
+        let mut uc: Utf8Char = 0;
 
         let mut m = [MaybeUninit::<u8>::uninit(); MB_LEN_MAX + 1];
 
@@ -305,7 +305,7 @@ pub unsafe fn key_string_lookup_string(mut string: *const u8) -> key_code {
             }
             m[mlen as usize].write(b'\0');
 
-            let udp: *mut utf8_data = utf8_fromcstr(m.as_slice().as_ptr().cast());
+            let udp: *mut Utf8Data = utf8_fromcstr(m.as_slice().as_ptr().cast());
             if udp.is_null()
                 || (*udp).size == 0
                 || (*udp.add(1)).size != 0

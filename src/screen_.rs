@@ -27,7 +27,7 @@ pub struct screen_sel {
     pub ex: u32,
     pub ey: u32,
 
-    pub cell: grid_cell,
+    pub cell: GridCell,
 }
 
 /// Free titles stack.
@@ -183,7 +183,7 @@ pub unsafe fn screen_free(s: *mut screen) {
         }
 
         (*s).saved_grid = None;
-        // grid: Box<grid> drops automatically when screen is freed
+        // Grid: Box<Grid> drops automatically when screen is freed
 
         if let Some(hl) = (*s).hyperlinks {
             hyperlinks_free(hl);
@@ -470,7 +470,7 @@ pub unsafe fn screen_set_selection(
     ey: u32,
     rectangle: u32,
     modekeys: modekey,
-    gc: *mut grid_cell,
+    gc: *mut GridCell,
 ) {
     unsafe {
         let sel = (*s).sel.get_or_insert_with(|| Box::new(zeroed()));
@@ -634,8 +634,8 @@ pub unsafe fn screen_check_selection(s: *mut screen, px: u32, py: u32) -> c_int 
     }
 }
 
-/// Get selected grid cell.
-pub unsafe fn screen_select_cell(s: *mut screen, dst: *mut grid_cell, src: *const grid_cell) {
+/// Get selected Grid cell.
+pub unsafe fn screen_select_cell(s: *mut screen, dst: *mut GridCell, src: *const GridCell) {
     unsafe {
         let sel = match (*s).sel.as_ref() {
             Some(sel) if sel.hidden == 0 => sel,
@@ -645,8 +645,8 @@ pub unsafe fn screen_select_cell(s: *mut screen, dst: *mut grid_cell, src: *cons
         *dst = sel.cell;
 
         utf8_copy(&mut (*dst).data, &(*src).data);
-        (*dst).attr &= !grid_attr::GRID_ATTR_CHARSET;
-        (*dst).attr |= (*src).attr & grid_attr::GRID_ATTR_CHARSET;
+        (*dst).attr &= !GridAttr::GRID_ATTR_CHARSET;
+        (*dst).attr |= (*src).attr & GridAttr::GRID_ATTR_CHARSET;
         (*dst).flags = (*src).flags;
     }
 }
@@ -683,7 +683,7 @@ unsafe fn screen_reflow(s: *mut screen, new_x: u32, cx: *mut u32, cy: *mut u32, 
 
 /// Enter alternative screen mode. A copy of the visible screen is saved and the
 /// history is not updated.
-pub unsafe fn screen_alternate_on(s: *mut screen, gc: *mut grid_cell, cursor: i32) {
+pub unsafe fn screen_alternate_on(s: *mut screen, gc: *mut GridCell, cursor: i32) {
     unsafe {
         if (*s).saved_grid.is_some() {
             return;
@@ -692,7 +692,7 @@ pub unsafe fn screen_alternate_on(s: *mut screen, gc: *mut grid_cell, cursor: i3
         let sy = screen_size_y(s);
 
         (*s).saved_grid = Some(grid_create(sx, sy, 0));
-        let sg: *mut grid = &raw mut **(*s).saved_grid.as_mut().unwrap();
+        let sg: *mut Grid = &raw mut **(*s).saved_grid.as_mut().unwrap();
         (*sg).duplicate_lines(0, &raw mut *(*s).grid, screen_hsize(s), sy);
         if cursor != 0 {
             (*s).saved_cx = (*s).cx;
@@ -707,8 +707,8 @@ pub unsafe fn screen_alternate_on(s: *mut screen, gc: *mut grid_cell, cursor: i3
     }
 }
 
-/// Exit alternate screen mode and restore the copied grid.
-pub unsafe fn screen_alternate_off(s: *mut screen, gc: *mut grid_cell, cursor: i32) {
+/// Exit alternate screen mode and restore the copied Grid.
+pub unsafe fn screen_alternate_off(s: *mut screen, gc: *mut GridCell, cursor: i32) {
     unsafe {
         let sx = screen_size_x(s);
         let sy = screen_size_y(s);
@@ -740,10 +740,10 @@ pub unsafe fn screen_alternate_off(s: *mut screen, gc: *mut grid_cell, cursor: i
             return;
         }
 
-        // Restore the saved grid.
+        // Restore the saved Grid.
         let sg = (*s).saved_grid.as_ref().unwrap();
         let sg_sy = sg.sy;
-        let sg_ptr: *mut grid = &**sg as *const grid as *mut grid;
+        let sg_ptr: *mut Grid = &**sg as *const Grid as *mut Grid;
         (*s).grid.duplicate_lines(
             screen_hsize(s),
             sg_ptr,
@@ -1132,7 +1132,7 @@ mod tests {
     fn screen_set_and_check_selection_rectangle() {
         unsafe {
             let s = make_screen(80, 24);
-            let mut gc: grid_cell = zeroed();
+            let mut gc: GridCell = zeroed();
 
             // Set a rectangular selection from (2,1) to (5,3).
             screen_set_selection(s, 2, 1, 5, 3, 1, modekey::MODEKEY_EMACS, &mut gc);
@@ -1157,7 +1157,7 @@ mod tests {
     fn screen_clear_selection_removes_it() {
         unsafe {
             let s = make_screen(80, 24);
-            let mut gc: grid_cell = zeroed();
+            let mut gc: GridCell = zeroed();
 
             screen_set_selection(s, 0, 0, 10, 10, 1, modekey::MODEKEY_EMACS, &mut gc);
             assert_ne!(screen_check_selection(s, 5, 5), 0);
@@ -1173,7 +1173,7 @@ mod tests {
     fn screen_hide_selection_hides_it() {
         unsafe {
             let s = make_screen(80, 24);
-            let mut gc: grid_cell = zeroed();
+            let mut gc: GridCell = zeroed();
 
             screen_set_selection(s, 0, 0, 10, 10, 1, modekey::MODEKEY_EMACS, &mut gc);
             assert_ne!(screen_check_selection(s, 5, 5), 0);
@@ -1189,7 +1189,7 @@ mod tests {
     fn screen_check_selection_linear_downward() {
         unsafe {
             let s = make_screen(80, 24);
-            let mut gc: grid_cell = zeroed();
+            let mut gc: GridCell = zeroed();
 
             // Linear (non-rectangle) selection from (5,2) to (10,4) in vi mode.
             screen_set_selection(s, 5, 2, 10, 4, 0, modekey::MODEKEY_VI, &mut gc);
@@ -1304,7 +1304,7 @@ mod tests {
         let s = screen_placeholder();
         assert!(s.title.is_empty());
         assert!(s.path.is_none());
-        assert_eq!(s.grid.sx, 0); // placeholder grid is empty
+        assert_eq!(s.grid.sx, 0); // placeholder Grid is empty
         assert!(s.saved_grid.is_none());
         assert!(s.sel.is_none());
         assert!(s.tabs.is_none());

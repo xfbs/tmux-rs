@@ -502,7 +502,7 @@ fn copy_mode_emacs_word_navigation() {
 
     // next-word-end wraps around indented line breaks. Note: the upstream
     // regress script asserts "words\n\tIndented" but the tab in
-    // copy-mode-test.txt is rendered as 8 spaces in the grid (both C tmux
+    // copy-mode-test.txt is rendered as 8 spaces in the Grid (both C tmux
     // 3.5a and tmux-rs do this), so the captured selection contains spaces.
     x("next-word"); x("next-word"); x("next-word");
     x("begin-selection");

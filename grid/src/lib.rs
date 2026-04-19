@@ -13,13 +13,13 @@
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 //! Grid — the character-cell backing store behind every [`screen`](crate::screen).
 //!
-//! A [`grid`] owns a `Vec<grid_line>`; each line owns a `Vec<grid_cell_entry>`
-//! (packed per-column state) and a `Vec<grid_extd_entry>` side-table for
+//! A [`Grid`] owns a `Vec<GridLine>`; each line owns a `Vec<GridCellEntry>`
+//! (packed per-column state) and a `Vec<GridExtdEntry>` side-table for
 //! extended attributes (RGB color, underline color, hyperlinks).
 //!
 //! # Coordinate system
 //!
-//! The grid stores both **scrollback history** and the **visible screen**
+//! The Grid stores both **scrollback history** and the **visible screen**
 //! in one flat array of lines:
 //!
 //! ```text
@@ -41,7 +41,7 @@
 //! Two coordinate flavors are used throughout the code:
 //!
 //! - **Grid (absolute) coordinates** — `y` spans `0 .. hsize + sy`. This is
-//!   what the [`grid`] methods `get_cell`, `set_cell`, `get_line`, etc. take.
+//!   what the [`Grid`] methods `get_cell`, `set_cell`, `get_line`, etc. take.
 //! - **View (screen-relative) coordinates** — `y` spans `0 .. sy`, with
 //!   `y = 0` being the top of the visible screen. The `view_*` family
 //!   (`view_get_cell`, `view_set_cell`, `view_clear`, …) translates by
@@ -49,23 +49,22 @@
 //!
 //! # Line and cell encoding
 //!
-//! A [`grid_line`] contains `cellused` (the number of columns actually
+//! A [`GridLine`] contains `cellused` (the number of columns actually
 //! written on this line) plus the raw per-cell entries. Each
-//! [`grid_cell_entry`] is a packed 8-byte record; cells whose state doesn't
+//! [`GridCellEntry`] is a packed 8-byte record; cells whose state doesn't
 //! fit (RGB colors, hyperlinks, non-default style) spill into the line's
 //! `extddata` array, with an `EXTENDED` flag on the cell entry pointing at
-//! the side-table index. [`grid_cell`] is the unpacked view callers work
+//! the side-table index. [`GridCell`] is the unpacked view callers work
 //! with — conversion happens inside `get_cell` / `set_cell`.
 //!
 //! # Wrapped lines
 //!
-//! A line with [`grid_line_flag::WRAPPED`] means its content logically
-//! continues onto the next line. The [`wrap_position`](grid::wrap_position)
-//! / [`unwrap_position`](grid::unwrap_position) pair convert between
-//! "(column, row)" in grid coordinates and "(column, logical-line)" for
+//! A line with [`GridLineFlag::WRAPPED`] means its content logically
+//! continues onto the next line. The [`wrap_position`](Grid::wrap_position)
+//! / [`unwrap_position`](Grid::unwrap_position) pair convert between
+//! "(column, row)" in Grid coordinates and "(column, logical-line)" for
 //! reflow and search.
-#![allow(non_camel_case_types)]
-// The grid carries a handful of raw-pointer helpers (union access,
+// The Grid carries a handful of raw-pointer helpers (union access,
 // ptr::write on line slots) whose SAFETY comments are inlined.
 // Silence the blanket "unsafe op in unsafe fn" lint that would
 // otherwise require wrapping every single op.
@@ -83,9 +82,9 @@ pub const WHITESPACE: *const u8 = b" \0".as_ptr();
 
 use tmux_types::{
     COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, GRID_HISTORY, colour_split_rgb,
-    grid_attr, grid_cell, grid_cell_entry, grid_cell_entry_data, grid_cell_entry_union,
-    grid_extd_entry, grid_flag, grid_line, grid_line_flag, grid_string_flags,
-    utf8_char, utf8_data,
+    GridAttr, GridCell, GridCellEntry, GridCellEntryData, GridCellEntryUnion,
+    GridExtdEntry, GridFlag, GridLine, GridLineFlag, GridStringFlags,
+    Utf8Char, Utf8Data,
 };
 
 use std::ffi::{c_int, c_uchar, c_uint};
@@ -93,13 +92,13 @@ use std::mem::{MaybeUninit, zeroed};
 use std::ptr::null_mut;
 use std::sync::OnceLock;
 
-/// Entire grid of cells.
+/// Entire Grid of cells.
 ///
-/// Owns a `Vec<grid_line>` holding both scrollback history (`hsize` rows)
+/// Owns a `Vec<GridLine>` holding both scrollback history (`hsize` rows)
 /// and visible screen (`sy` rows). Mutation goes through the inherent
 /// methods defined later in this module; direct field access is kept
 /// within the crate.
-pub struct grid {
+pub struct Grid {
     pub flags: i32,
 
     pub sx: u32,
@@ -109,16 +108,16 @@ pub struct grid {
     pub hsize: u32,
     pub hlimit: u32,
 
-    pub linedata: Vec<grid_line>,
+    pub linedata: Vec<GridLine>,
 }
 
-/// Virtual cursor in a grid.
+/// Virtual cursor in a Grid.
 ///
-/// Borrows the grid for the lifetime `'a`, so the reader cannot outlive
-/// the grid it navigates. Construct with `grid_reader::new` (defined in
+/// Borrows the Grid for the lifetime `'a`, so the reader cannot outlive
+/// the Grid it navigates. Construct with `GridReader::new` (defined in
 /// the [`reader`] module).
-pub struct grid_reader<'a> {
-    pub(crate) gd: &'a mut grid,
+pub struct GridReader<'a> {
+    pub(crate) gd: &'a mut Grid,
     pub(crate) cx: u32,
     pub(crate) cy: u32,
 }
@@ -126,14 +125,14 @@ pub struct grid_reader<'a> {
 // ---------------------------------------------------------------
 // UTF-8 codec — pluggable integration point
 //
-// The grid needs to round-trip utf8_data ↔ utf8_char for its extended-
+// The Grid needs to round-trip Utf8Data ↔ Utf8Char for its extended-
 // cell storage. That conversion uses an interning table kept in the
 // top-level tmux-rs crate. Rather than pull the whole intern machinery
 // down here, we define a trait the host crate implements, register it
 // once at startup via `set_codec`, and call through the global.
 // ---------------------------------------------------------------
 
-/// Result of encoding a [`utf8_data`] into a [`utf8_char`]. Mirrors
+/// Result of encoding a [`Utf8Data`] into a [`Utf8Char`]. Mirrors
 /// tmux-rs's `utf8_state` enum.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[repr(i32)]
@@ -143,29 +142,29 @@ pub enum Utf8State {
     Error,
 }
 
-/// Pluggable encode/decode for the UTF-8 intern table. The grid crate
+/// Pluggable encode/decode for the UTF-8 intern table. The Grid crate
 /// doesn't own the intern storage (it lives in tmux-rs's `utf8` module
 /// to share across the parser, tty, and format subsystems), so it asks
 /// the host via this trait.
 ///
 /// Register the implementation exactly once — typically at process
-/// startup — via [`set_codec`]. After registration, grid code calls
+/// startup — via [`set_codec`]. After registration, Grid code calls
 /// `codec()` to reach the impl. Unregistered calls panic with a
 /// clear message (the register-once-at-startup pattern makes this a
 /// configuration bug rather than a runtime edge case).
 pub trait Utf8Codec: Send + Sync {
     /// Encode an expanded cell into the packed u32 form. Stores the
     /// result in `uc`; returns `Done` on success, `Error` on an
-    /// unrepresentable input (grid callers substitute a replacement).
+    /// unrepresentable input (Grid callers substitute a replacement).
     ///
     /// # Safety
     /// `ud` and `uc` must point to valid reads/writes of their types
     /// respectively. The same call-site contract as the underlying
     /// C-era `utf8_from_data`.
-    unsafe fn from_data(&self, ud: *const utf8_data, uc: *mut utf8_char) -> Utf8State;
+    unsafe fn from_data(&self, ud: *const Utf8Data, uc: *mut Utf8Char) -> Utf8State;
 
     /// Decode a packed u32 back into an expanded cell.
-    fn to_data(&self, uc: utf8_char) -> utf8_data;
+    fn to_data(&self, uc: Utf8Char) -> Utf8Data;
 
     /// Return `true` if the character described by `ud` appears anywhere
     /// in the NUL-terminated byte `set`. Used by the reader's word-set
@@ -173,9 +172,9 @@ pub trait Utf8Codec: Send + Sync {
     ///
     /// # Safety
     /// `set` must be a valid NUL-terminated byte string and `ud` a valid
-    /// pointer for reading. The grid passes a freshly-copied cell's
+    /// pointer for reading. The Grid passes a freshly-copied cell's
     /// `data` field so aliasing is trivial.
-    unsafe fn cstr_has(&self, set: *const u8, ud: *const utf8_data) -> bool;
+    unsafe fn cstr_has(&self, set: *const u8, ud: *const Utf8Data) -> bool;
 }
 
 static CODEC: OnceLock<&'static dyn Utf8Codec> = OnceLock::new();
@@ -193,7 +192,7 @@ pub fn set_codec(codec: &'static dyn Utf8Codec) {
 fn codec() -> &'static dyn Utf8Codec {
     *CODEC
         .get()
-        .expect("tmux_grid::set_codec must be called before grid operations")
+        .expect("tmux_grid::set_codec must be called before Grid operations")
 }
 
 /// Inline replacement for tmux-rs's `utf8_build_one`: pack an ASCII byte
@@ -206,10 +205,10 @@ fn utf8_build_one(ch: c_uchar) -> u32 {
     (1u32 << 24) | (2u32 << 29) | ch as u32
 }
 
-/// Inline replacement for `utf8_set`: initialize a `utf8_data` slot
+/// Inline replacement for `utf8_set`: initialize a `Utf8Data` slot
 /// with a single ASCII byte and size/width = 1.
 #[inline]
-unsafe fn utf8_set(ud: *mut utf8_data, ch: c_uchar) {
+unsafe fn utf8_set(ud: *mut Utf8Data, ch: c_uchar) {
     unsafe {
         (*ud).have = 1;
         (*ud).size = 1;
@@ -221,20 +220,20 @@ unsafe fn utf8_set(ud: *mut utf8_data, ch: c_uchar) {
 
 /// Wrapper over the installed codec's `from_data`.
 #[inline]
-unsafe fn utf8_from_data(ud: *const utf8_data, uc: *mut utf8_char) -> Utf8State {
+unsafe fn utf8_from_data(ud: *const Utf8Data, uc: *mut Utf8Char) -> Utf8State {
     unsafe { codec().from_data(ud, uc) }
 }
 
 /// Wrapper over the installed codec's `to_data`.
 #[inline]
-fn utf8_to_data(uc: utf8_char) -> utf8_data {
+fn utf8_to_data(uc: Utf8Char) -> Utf8Data {
     codec().to_data(uc)
 }
 
-/// An OSC-8 hyperlink resolved from a [`grid_cell::link`] id. Returned
+/// An OSC-8 hyperlink resolved from a [`GridCell::link`] id. Returned
 /// by [`HyperlinkLookup::hyperlink`] when the id is present in the
 /// caller's registry. Both fields are raw byte slices, not required to
-/// be UTF-8 (URIs are, in practice, but the grid treats them opaquely).
+/// be UTF-8 (URIs are, in practice, but the Grid treats them opaquely).
 pub struct Hyperlink<'a> {
     /// Destination URL (the `uri=` part of the OSC-8 sequence).
     pub uri: &'a [u8],
@@ -243,7 +242,7 @@ pub struct Hyperlink<'a> {
     pub external_id: &'a [u8],
 }
 
-/// Context trait: the grid crate doesn't own the hyperlinks registry,
+/// Context trait: the Grid crate doesn't own the hyperlinks registry,
 /// so it asks the caller to resolve link ids via this trait. tmux-rs
 /// provides the impl on its `hyperlinks` struct. Using a trait here
 /// (rather than a function pointer or closure) keeps the call site
@@ -259,65 +258,65 @@ pub trait HyperlinkLookup {
     fn hyperlink(&self, id: u32) -> Option<Hyperlink<'_>>;
 }
 
-/// Default grid cell data.
-pub static GRID_DEFAULT_CELL: grid_cell = grid_cell::new(
-    utf8_data::new([b' '], 0, 1, 1),
-    grid_attr::empty(),
-    grid_flag::empty(),
+/// Default Grid cell data.
+pub static GRID_DEFAULT_CELL: GridCell = GridCell::new(
+    Utf8Data::new([b' '], 0, 1, 1),
+    GridAttr::empty(),
+    GridFlag::empty(),
     8,
     8,
     8,
     0,
 );
 
-/// Padding grid cell data. Padding cells are the only zero width cell that
-/// appears in the grid - because of this, they are always extended cells.
-pub static GRID_PADDING_CELL: grid_cell = grid_cell::new(
-    utf8_data::new([b'!'], 0, 0, 0),
-    grid_attr::empty(),
-    grid_flag::PADDING,
+/// Padding Grid cell data. Padding cells are the only zero width cell that
+/// appears in the Grid - because of this, they are always extended cells.
+pub static GRID_PADDING_CELL: GridCell = GridCell::new(
+    Utf8Data::new([b'!'], 0, 0, 0),
+    GridAttr::empty(),
+    GridFlag::PADDING,
     8,
     8,
     8,
     0,
 );
 
-/// Cleared grid cell data.
-pub static GRID_CLEARED_CELL: grid_cell = grid_cell::new(
-    utf8_data::new([b' '], 0, 1, 1),
-    grid_attr::empty(),
-    grid_flag::CLEARED,
+/// Cleared Grid cell data.
+pub static GRID_CLEARED_CELL: GridCell = GridCell::new(
+    Utf8Data::new([b' '], 0, 1, 1),
+    GridAttr::empty(),
+    GridFlag::CLEARED,
     8,
     8,
     8,
     0,
 );
 
-pub static GRID_CLEARED_ENTRY: grid_cell_entry = grid_cell_entry {
-    union_: grid_cell_entry_union {
-        data: grid_cell_entry_data {
+pub static GRID_CLEARED_ENTRY: GridCellEntry = GridCellEntry {
+    union_: GridCellEntryUnion {
+        data: GridCellEntryData {
             attr: 0,
             fg: 8,
             bg: 8,
             data: b' ',
         },
     },
-    flags: grid_flag::CLEARED,
+    flags: GridFlag::CLEARED,
 };
 
 /// Store cell in entry.
-unsafe fn grid_store_cell(gce: *mut grid_cell_entry, gc: *const grid_cell, c: u8) {
+unsafe fn grid_store_cell(gce: *mut GridCellEntry, gc: *const GridCell, c: u8) {
     unsafe {
-        (*gce).flags = (*gc).flags & !grid_flag::CLEARED;
+        (*gce).flags = (*gc).flags & !GridFlag::CLEARED;
 
         (*gce).union_.data.fg = ((*gc).fg & 0xff) as u8;
         if (*gc).fg & COLOUR_FLAG_256 != 0 {
-            (*gce).flags |= grid_flag::FG256;
+            (*gce).flags |= GridFlag::FG256;
         }
 
         (*gce).union_.data.bg = ((*gc).bg & 0xff) as u8;
         if (*gc).bg & COLOUR_FLAG_256 != 0 {
-            (*gce).flags |= grid_flag::BG256;
+            (*gce).flags |= GridFlag::BG256;
         }
 
         (*gce).union_.data.attr = (*gc).attr.bits() as u8;
@@ -326,9 +325,9 @@ unsafe fn grid_store_cell(gce: *mut grid_cell_entry, gc: *const grid_cell, c: u8
 }
 
 /// Check if a cell should be an extended cell.
-unsafe fn grid_need_extended_cell(gce: *const grid_cell_entry, gc: *const grid_cell) -> bool {
+unsafe fn grid_need_extended_cell(gce: *const GridCellEntry, gc: *const GridCell) -> bool {
     unsafe {
-        if (*gce).flags.contains(grid_flag::EXTENDED) {
+        if (*gce).flags.contains(GridFlag::EXTENDED) {
             return true;
         }
         if (*gc).attr.bits() > 0xff {
@@ -353,36 +352,36 @@ unsafe fn grid_need_extended_cell(gce: *const grid_cell_entry, gc: *const grid_c
 
 /// Get an extended cell.
 unsafe fn grid_get_extended_cell(
-    gl: *mut grid_line,
-    gce: *mut grid_cell_entry,
-    flags: grid_flag,
+    gl: *mut GridLine,
+    gce: *mut GridCellEntry,
+    flags: GridFlag,
 ) {
     unsafe {
         (*gl).extddata.push(zeroed());
         let at = (*gl).extddata.len() as u32;
 
         (*gce).union_.offset = at - 1;
-        (*gce).flags = flags | grid_flag::EXTENDED;
+        (*gce).flags = flags | GridFlag::EXTENDED;
     }
 }
 
 /// Set cell as extended.
 unsafe fn grid_extended_cell(
-    gl: *mut grid_line,
-    gce: *mut grid_cell_entry,
-    gc: *const grid_cell,
-) -> *mut grid_extd_entry {
+    gl: *mut GridLine,
+    gce: *mut GridCellEntry,
+    gc: *const GridCell,
+) -> *mut GridExtdEntry {
     unsafe {
-        let flags = (*gc).flags & !grid_flag::CLEARED;
+        let flags = (*gc).flags & !GridFlag::CLEARED;
 
-        if !(*gce).flags.contains(grid_flag::EXTENDED) {
+        if !(*gce).flags.contains(GridFlag::EXTENDED) {
             grid_get_extended_cell(gl, gce, flags);
         } else if (*gce).union_.offset as usize >= (*gl).extddata.len() {
-            panic!("grid extended-cell offset out of range");
+            panic!("Grid extended-cell offset out of range");
         }
-        (*gl).flags |= grid_line_flag::EXTENDED;
+        (*gl).flags |= GridLineFlag::EXTENDED;
 
-        let mut uc = MaybeUninit::<utf8_char>::uninit();
+        let mut uc = MaybeUninit::<Utf8Char>::uninit();
         let uc = uc.as_mut_ptr();
         utf8_from_data(&raw const (*gc).data, uc);
 
@@ -399,7 +398,7 @@ unsafe fn grid_extended_cell(
 }
 
 /// Free up unused extended cells.
-fn grid_compact_line(gl: &mut grid_line) {
+fn grid_compact_line(gl: &mut GridLine) {
     if gl.extddata.is_empty() {
         return;
     }
@@ -408,7 +407,7 @@ fn grid_compact_line(gl: &mut grid_line) {
     let new_extdsize = gl
         .celldata
         .iter()
-        .filter(|gce| gce.flags.contains(grid_flag::EXTENDED))
+        .filter(|gce| gce.flags.contains(GridFlag::EXTENDED))
         .count();
 
     if new_extdsize == 0 {
@@ -419,7 +418,7 @@ fn grid_compact_line(gl: &mut grid_line) {
     // Build new extddata, remapping offsets
     let mut new_extddata = Vec::with_capacity(new_extdsize);
     for gce in &mut gl.celldata {
-        if gce.flags.contains(grid_flag::EXTENDED) {
+        if gce.flags.contains(GridFlag::EXTENDED) {
             // SAFETY: union field read is safe when EXTENDED flag is set (the
             // entry is the `offset` variant).
             new_extddata.push(gl.extddata[unsafe { gce.union_.offset } as usize]);
@@ -431,15 +430,15 @@ fn grid_compact_line(gl: &mut grid_line) {
 }
 
 /// Copy default into a cell.
-fn grid_clear_cell(gd: &mut grid, px: c_uint, py: c_uint, bg: c_uint) {
+fn grid_clear_cell(gd: &mut Grid, px: c_uint, py: c_uint, bg: c_uint) {
     let gl = &mut gd.linedata[py as usize];
     gl.celldata[px as usize] = GRID_CLEARED_ENTRY;
     if bg != 8 {
         // SAFETY: grid_get_extended_cell / grid_extended_cell take raw pointers
-        // into the same grid_line; we hand them a pointer derived from the &mut
+        // into the same GridLine; we hand them a pointer derived from the &mut
         // we already hold. No aliasing for the duration of the call.
         unsafe {
-            let gl_ptr: *mut grid_line = gl;
+            let gl_ptr: *mut GridLine = gl;
             let gce = gl.celldata.as_mut_ptr().add(px as usize);
             if (bg & COLOUR_FLAG_RGB as u32) != 0 {
                 grid_get_extended_cell(gl_ptr, gce, (*gce).flags);
@@ -447,7 +446,7 @@ fn grid_clear_cell(gd: &mut grid, px: c_uint, py: c_uint, bg: c_uint) {
                 (*gee).bg = bg as i32;
             } else {
                 if (bg & COLOUR_FLAG_256 as u32) != 0 {
-                    (*gce).flags |= grid_flag::BG256;
+                    (*gce).flags |= GridFlag::BG256;
                 }
                 (*gce).union_.data.bg = bg as c_uchar;
             }
@@ -455,9 +454,9 @@ fn grid_clear_cell(gd: &mut grid, px: c_uint, py: c_uint, bg: c_uint) {
     }
 }
 
-/// Check grid y position. `from` is a human-readable tag identifying the
+/// Check Grid y position. `from` is a human-readable tag identifying the
 /// caller, emitted as a debug log message when `py` falls out of range.
-fn grid_check_y(gd: &grid, from: &str, py: c_uint) -> c_int {
+fn grid_check_y(gd: &Grid, from: &str, py: c_uint) -> c_int {
     if py >= gd.hsize + gd.sy {
         ::log::debug!("{from}: y out of range: {py}");
         return -1;
@@ -470,7 +469,7 @@ fn grid_check_y(gd: &grid, from: &str, py: c_uint) -> c_int {
 /// (character and width) is **not** compared — use [`grid_cells_equal`] for
 /// that. Used by the renderer to detect when a terminal attribute change can
 /// be skipped between adjacent cells.
-pub fn grid_cells_look_equal(gc1: &grid_cell, gc2: &grid_cell) -> bool {
+pub fn grid_cells_look_equal(gc1: &GridCell, gc2: &GridCell) -> bool {
     gc1.fg == gc2.fg
         && gc1.bg == gc2.bg
         && gc1.attr == gc2.attr
@@ -481,7 +480,7 @@ pub fn grid_cells_look_equal(gc1: &grid_cell, gc2: &grid_cell) -> bool {
 /// Full-equality comparison: same style as [`grid_cells_look_equal`], plus
 /// matching UTF-8 data (width, size, and byte contents). Returns `true` if
 /// the cells are structurally identical.
-pub fn grid_cells_equal(gc1: &grid_cell, gc2: &grid_cell) -> bool {
+pub fn grid_cells_equal(gc1: &GridCell, gc2: &GridCell) -> bool {
     if !grid_cells_look_equal(gc1, gc2) {
         return false;
     }
@@ -493,7 +492,7 @@ pub fn grid_cells_equal(gc1: &grid_cell, gc2: &grid_cell) -> bool {
 }
 
 /// Free one line.
-fn grid_free_line(gd: &mut grid, py: c_uint) {
+fn grid_free_line(gd: &mut Grid, py: c_uint) {
     let gl = &mut gd.linedata[py as usize];
     gl.celldata = Vec::new();
     gl.cellused = 0;
@@ -501,21 +500,21 @@ fn grid_free_line(gd: &mut grid, py: c_uint) {
 }
 
 /// Free several lines.
-fn grid_free_lines(gd: &mut grid, py: c_uint, ny: c_uint) {
+fn grid_free_lines(gd: &mut Grid, py: c_uint, ny: c_uint) {
     for yy in py..(py + ny) {
         grid_free_line(gd, yy);
     }
 }
 
-/// Allocate a new grid of `sx` columns by `sy` visible rows, with a scrollback
+/// Allocate a new Grid of `sx` columns by `sy` visible rows, with a scrollback
 /// history of up to `hlimit` lines. The history-retention flag
 /// [`GRID_HISTORY`] is set iff `hlimit > 0`; screens without history
 /// (alternate-screen buffers, popups, menus) pass `hlimit = 0`.
 /// Lines are created zero-length and expanded on first write.
-pub fn grid_create(sx: u32, sy: u32, hlimit: u32) -> Box<grid> {
+pub fn grid_create(sx: u32, sy: u32, hlimit: u32) -> Box<Grid> {
     let mut linedata = Vec::with_capacity(sy as usize);
-    linedata.resize_with(sy as usize, grid_line::new);
-    Box::new(grid {
+    linedata.resize_with(sy as usize, GridLine::new);
+    Box::new(Grid {
         sx,
         sy,
         flags: if hlimit != 0 { GRID_HISTORY } else { 0 },
@@ -526,14 +525,14 @@ pub fn grid_create(sx: u32, sy: u32, hlimit: u32) -> Box<grid> {
     })
 }
 
-// grid_destroy removed — Grid is now Box<grid>, Drop handles cleanup.
+// grid_destroy removed — Grid is now Box<Grid>, Drop handles cleanup.
 
 /// Compare two grids for full-content equality across the visible region
 /// (`sy` rows). Returns `true` if every corresponding cell is equal by
 /// [`grid_cells_equal`] (style + UTF-8 data) and lines are the same length.
 /// Used by the renderer and the integration-test harness to decide whether
 /// a redraw is needed.
-pub fn grid_compare(ga: &grid, gb: &grid) -> bool {
+pub fn grid_compare(ga: &Grid, gb: &Grid) -> bool {
     if ga.sx != gb.sx || ga.sy != gb.sy {
         return false;
     }
@@ -560,7 +559,7 @@ pub fn grid_compare(ga: &grid, gb: &grid) -> bool {
 }
 
 /// Trim lines from the history.
-fn grid_trim_history(gd: &mut grid, ny: c_uint) {
+fn grid_trim_history(gd: &mut Grid, ny: c_uint) {
     grid_free_lines(gd, 0, ny);
     // Remove the first `ny` lines (already freed above) by draining them.
     // drain(0..ny) shifts the remaining lines to the front.
@@ -568,7 +567,7 @@ fn grid_trim_history(gd: &mut grid, ny: c_uint) {
 }
 
 /// Expand line to fit to cell.
-fn grid_expand_line(gd: &mut grid, py: c_uint, mut sx: c_uint, bg: c_uint) {
+fn grid_expand_line(gd: &mut Grid, py: c_uint, mut sx: c_uint, bg: c_uint) {
     let old_len = gd.linedata[py as usize].celldata.len() as u32;
     if sx <= old_len {
         return;
@@ -590,17 +589,17 @@ fn grid_expand_line(gd: &mut grid, py: c_uint, mut sx: c_uint, bg: c_uint) {
 }
 
 /// Get cell from line.
-unsafe fn grid_get_cell1(gl: &grid_line, px: c_uint, gc: *mut grid_cell) {
+unsafe fn grid_get_cell1(gl: &GridLine, px: c_uint, gc: *mut GridCell) {
     unsafe {
         let gce = &gl.celldata[px as usize];
 
-        if gce.flags.contains(grid_flag::EXTENDED) {
+        if gce.flags.contains(GridFlag::EXTENDED) {
             if (gce.union_.offset as usize) >= gl.extddata.len() {
                 std::ptr::copy(&GRID_DEFAULT_CELL, gc, 1);
             } else {
                 let gee = &gl.extddata[gce.union_.offset as usize];
-                (*gc).flags = grid_flag::from_bits(gee.flags).unwrap();
-                (*gc).attr = grid_attr::from_bits(gee.attr).expect("invalid grid_attr");
+                (*gc).flags = GridFlag::from_bits(gee.flags).unwrap();
+                (*gc).attr = GridAttr::from_bits(gee.attr).expect("invalid GridAttr");
                 (*gc).fg = gee.fg;
                 (*gc).bg = gee.bg;
                 (*gc).us = gee.us;
@@ -610,14 +609,14 @@ unsafe fn grid_get_cell1(gl: &grid_line, px: c_uint, gc: *mut grid_cell) {
             return;
         }
 
-        (*gc).flags = gce.flags & !(grid_flag::FG256 | grid_flag::BG256);
-        (*gc).attr = grid_attr::from_bits(gce.union_.data.attr as u16).unwrap();
+        (*gc).flags = gce.flags & !(GridFlag::FG256 | GridFlag::BG256);
+        (*gc).attr = GridAttr::from_bits(gce.union_.data.attr as u16).unwrap();
         (*gc).fg = gce.union_.data.fg as i32;
-        if gce.flags.contains(grid_flag::FG256) {
+        if gce.flags.contains(GridFlag::FG256) {
             (*gc).fg |= COLOUR_FLAG_256;
         }
         (*gc).bg = gce.union_.data.bg as i32;
-        if gce.flags.contains(grid_flag::BG256) {
+        if gce.flags.contains(GridFlag::BG256) {
             (*gc).bg |= COLOUR_FLAG_256;
         }
         (*gc).us = 8;
@@ -626,33 +625,33 @@ unsafe fn grid_get_cell1(gl: &grid_line, px: c_uint, gc: *mut grid_cell) {
     }
 }
 
-impl grid {
+impl Grid {
     /// Borrow the line at absolute row `line` for reading. Panics if `line`
     /// is out of bounds — callers must validate `line < hsize + sy`.
-    pub fn line(&self, line: c_uint) -> &grid_line {
+    pub fn line(&self, line: c_uint) -> &GridLine {
         &self.linedata[line as usize]
     }
 
     /// Borrow the line at absolute row `line` for mutation. Panics if `line`
     /// is out of bounds — callers must validate `line < hsize + sy`.
-    pub fn get_line(&mut self, line: c_uint) -> &mut grid_line {
+    pub fn get_line(&mut self, line: c_uint) -> &mut GridLine {
         &mut self.linedata[line as usize]
     }
 
     /// Resize the line array to `lines` rows, creating empty lines at the
     /// end if growing or dropping them if shrinking. Used during reflow and
-    /// window resize to reshape the grid without touching `sx`/`sy`.
+    /// window resize to reshape the Grid without touching `sx`/`sy`.
     pub fn adjust_lines(&mut self, lines: c_uint) {
-        self.linedata.resize_with(lines as usize, grid_line::new);
+        self.linedata.resize_with(lines as usize, GridLine::new);
     }
 
     /// Bounds-checked line accessor. Returns `Some(&line)` if `py` is in
     /// range, `None` (with a debug log) otherwise. Contrast with
     /// [`get_line`](Self::get_line) which panics out-of-range, and
-    /// [`line`](Self::line) which panics but returns a plain `&grid_line`.
+    /// [`line`](Self::line) which panics but returns a plain `&GridLine`.
     /// `peek_line` is the right choice when `py` may be untrusted
     /// (reflow, search across history boundaries).
-    pub fn peek_line(&self, py: c_uint) -> Option<&grid_line> {
+    pub fn peek_line(&self, py: c_uint) -> Option<&GridLine> {
         if grid_check_y(self, "grid_peek_line", py) != 0 {
             return None;
         }
@@ -670,7 +669,7 @@ impl grid {
         }
         while px > 0 {
             let gc = self.get_cell(px - 1, py);
-            if (gc.flags.intersects(grid_flag::PADDING))
+            if (gc.flags.intersects(GridFlag::PADDING))
                 || gc.data.size != 1
                 || gc.data.data[0] != b' '
             {
@@ -683,13 +682,13 @@ impl grid {
 
     /// Get cell at position `(px, py)`. Returns `GRID_DEFAULT_CELL` if the
     /// position is out of range.
-    pub fn get_cell(&self, px: c_uint, py: c_uint) -> grid_cell {
+    pub fn get_cell(&self, px: c_uint, py: c_uint) -> GridCell {
         if grid_check_y(self, "grid_get_cell", py) != 0
             || px as usize >= self.linedata[py as usize].celldata.len()
         {
             GRID_DEFAULT_CELL
         } else {
-            let mut gc: grid_cell = GRID_DEFAULT_CELL;
+            let mut gc: GridCell = GRID_DEFAULT_CELL;
             unsafe {
                 grid_get_cell1(&self.linedata[py as usize], px, &raw mut gc);
             }
@@ -697,12 +696,12 @@ impl grid {
         }
     }
 
-    /// Write `gc` to position `(px, py)` in absolute grid coordinates.
+    /// Write `gc` to position `(px, py)` in absolute Grid coordinates.
     /// Expands the target line if `px` exceeds its current width, bumps
     /// `cellused` if needed, and promotes the cell to the line's extended
     /// side-table if the style doesn't fit the packed representation. Silently
     /// skips out-of-range `py` (logged at debug).
-    pub fn set_cell(&mut self, px: c_uint, py: c_uint, gc: &grid_cell) {
+    pub fn set_cell(&mut self, px: c_uint, py: c_uint, gc: &GridCell) {
         if grid_check_y(self, "grid_set_cell", py) != 0 {
             return;
         }
@@ -714,8 +713,8 @@ impl grid {
             gl.cellused = px + 1;
         }
 
-        let gc_ptr: *const grid_cell = gc;
-        let gce = &mut gl.celldata[px as usize] as *mut grid_cell_entry;
+        let gc_ptr: *const GridCell = gc;
+        let gce = &mut gl.celldata[px as usize] as *mut GridCellEntry;
         unsafe {
             if grid_need_extended_cell(gce, gc_ptr) {
                 grid_extended_cell(gl, gce, gc_ptr);
@@ -736,7 +735,7 @@ impl grid {
     /// copied from `gc`. A fast path for string emission (used by
     /// `screen_write` during input processing) that skips per-cell extended
     /// style promotion.
-    pub fn set_cells(&mut self, px: u32, py: u32, gc: &grid_cell, s: &[u8]) {
+    pub fn set_cells(&mut self, px: u32, py: u32, gc: &GridCell, s: &[u8]) {
         let slen = s.len();
         if grid_check_y(self, "grid_set_cells", py) != 0 {
             return;
@@ -754,7 +753,7 @@ impl grid {
                 (*gl).cellused = px + slen as c_uint;
             }
 
-            let gc_ptr = gc as *const grid_cell;
+            let gc_ptr = gc as *const GridCell;
             for (i, &byte) in s.iter().enumerate() {
                 let gce = (*gl).celldata.as_mut_ptr().add((px + i as c_uint) as usize);
                 if grid_need_extended_cell(gce, gc_ptr) {
@@ -813,7 +812,7 @@ impl grid {
     /// per event-loop tick); tests pass `0`.
     pub fn scroll_history(&mut self, bg: c_uint, now: libc::time_t) {
         let yy = self.hsize + self.sy;
-        self.linedata.push(grid_line::new());
+        self.linedata.push(GridLine::new());
 
         self.empty_line(yy, bg);
 
@@ -833,13 +832,13 @@ impl grid {
         self.hscrolled = 0;
         self.hsize = 0;
 
-        self.linedata.resize_with(self.sy as usize, grid_line::new);
+        self.linedata.resize_with(self.sy as usize, GridLine::new);
     }
 
     /// Scroll the rows in `[upper, lower]` upward by one line, promoting the
     /// top row into the history. Used when a DECSTBM scroll region is
     /// anchored at the top of the screen so scroll-off content is still
-    /// captured in scrollback. `upper` and `lower` are in absolute grid
+    /// captured in scrollback. `upper` and `lower` are in absolute Grid
     /// coordinates. `bg` is the background-color used to paint the new
     /// bottom row. `now` timestamps the new history line (see
     /// [`scroll_history`](Self::scroll_history)).
@@ -857,7 +856,7 @@ impl grid {
         self.linedata[hsize].time = now;
 
         // The region shifted up by one. Insert a new empty line at the lower position.
-        self.linedata.insert(lower_abs + 1, grid_line::new());
+        self.linedata.insert(lower_abs + 1, GridLine::new());
         if !COLOUR_DEFAULT(bg as i32) {
             let sx = self.sx;
             grid_expand_line(self, (lower_abs + 1) as u32, sx, bg);
@@ -935,11 +934,11 @@ impl grid {
             self.empty_line(yy, bg);
         }
         if py != 0 {
-            self.linedata[py as usize - 1].flags &= !grid_line_flag::WRAPPED;
+            self.linedata[py as usize - 1].flags &= !GridLineFlag::WRAPPED;
         }
     }
 
-    /// Move `ny` lines starting at row `py` to row `dy` (absolute grid
+    /// Move `ny` lines starting at row `py` to row `dy` (absolute Grid
     /// coordinates). Source and destination ranges may overlap (memmove
     /// semantics). Replaced lines in the destination are freed first; the
     /// source region is re-initialized with background `bg`.
@@ -964,8 +963,8 @@ impl grid {
         // Stash source lines and replace them with placeholders. After this
         // block the src range holds default (empty) grid_lines, and `staged`
         // owns the real data — which is why the overlap problem disappears.
-        let mut staged: Vec<grid_line> = (py..py + ny)
-            .map(|yy| std::mem::replace(&mut self.linedata[yy as usize], grid_line::new()))
+        let mut staged: Vec<GridLine> = (py..py + ny)
+            .map(|yy| std::mem::replace(&mut self.linedata[yy as usize], GridLine::new()))
             .collect();
 
         // Free any dst lines which will be overwritten and are NOT part of
@@ -977,7 +976,7 @@ impl grid {
             }
         }
         if dy != 0 {
-            self.linedata[dy as usize - 1].flags &= !grid_line_flag::WRAPPED;
+            self.linedata[dy as usize - 1].flags &= !GridLineFlag::WRAPPED;
         }
 
         // Install staged lines at destination positions.
@@ -996,7 +995,7 @@ impl grid {
             }
         }
         if py != 0 && (py < dy || py >= dy + ny) {
-            self.linedata[py as usize - 1].flags &= !grid_line_flag::WRAPPED;
+            self.linedata[py as usize - 1].flags &= !GridLineFlag::WRAPPED;
         }
     }
 
@@ -1037,7 +1036,7 @@ impl grid {
     /// color so the next redraw reflects the bg change. Caller must ensure
     /// `py` is in range (bounds-checked via the `Vec` index panic).
     pub fn empty_line(&mut self, py: c_uint, bg: c_uint) {
-        self.linedata[py as usize] = grid_line::new();
+        self.linedata[py as usize] = GridLine::new();
         if !COLOUR_DEFAULT(bg as i32) {
             let sx = self.sx;
             grid_expand_line(self, py, sx, bg);
@@ -1048,7 +1047,7 @@ impl grid {
     /// C-style (NUL-terminated, `xmalloc`'d) byte buffer. Caller owns the
     /// returned pointer and must `free_()` it.
     ///
-    /// Behavior is controlled by `flags` ([`grid_string_flags`]):
+    /// Behavior is controlled by `flags` ([`GridStringFlags`]):
     /// - `WITH_SEQUENCES` — emit SGR/CSI escape sequences for style changes.
     /// - `ESCAPE_SEQUENCES` — backslash-escape control characters in output.
     /// - `EMPTY_CELLS` — include trailing blank cells rather than stopping
@@ -1063,8 +1062,8 @@ impl grid {
         px: c_uint,
         py: c_uint,
         nx: c_uint,
-        lastgc: &mut Option<grid_cell>,
-        flags: grid_string_flags,
+        lastgc: &mut Option<GridCell>,
+        flags: GridStringFlags,
         hl: Option<&dyn HyperlinkLookup>,
     ) -> Vec<u8> {
         // If the caller hasn't carried a style from a prior call, seed
@@ -1079,7 +1078,7 @@ impl grid {
 
         let gl = self.peek_line(py);
         let end = match gl {
-            Some(gl) if flags.intersects(grid_string_flags::GRID_STRING_EMPTY_CELLS) => {
+            Some(gl) if flags.intersects(GridStringFlags::GRID_STRING_EMPTY_CELLS) => {
                 gl.celldata.len() as u32
             }
             Some(gl) => gl.cellused,
@@ -1091,11 +1090,11 @@ impl grid {
                 break;
             }
             let gc = self.get_cell(xx, py);
-            if gc.flags.intersects(grid_flag::PADDING) {
+            if gc.flags.intersects(GridFlag::PADDING) {
                 continue;
             }
 
-            if flags.intersects(grid_string_flags::GRID_STRING_WITH_SEQUENCES) {
+            if flags.intersects(GridStringFlags::GRID_STRING_WITH_SEQUENCES) {
                 let last = lastgc.as_ref().expect("seeded above");
                 has_link = grid_string_cells_code(last, &gc, &mut buf, flags, hl);
                 *lastgc = Some(gc);
@@ -1106,7 +1105,7 @@ impl grid {
             // output can be safely re-parsed.
             let size = gc.data.size as usize;
             let bytes = &gc.data.data[..size];
-            if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES)
+            if flags.intersects(GridStringFlags::GRID_STRING_ESCAPE_SEQUENCES)
                 && size == 1
                 && bytes[0] == b'\\'
             {
@@ -1120,7 +1119,7 @@ impl grid {
             grid_string_cells_add_hyperlink(&mut buf, b"", b"", flags);
         }
 
-        if flags.intersects(grid_string_flags::GRID_STRING_TRIM_SPACES) {
+        if flags.intersects(GridStringFlags::GRID_STRING_TRIM_SPACES) {
             while buf.last() == Some(&b' ') {
                 buf.pop();
             }
@@ -1134,7 +1133,7 @@ impl grid {
     pub unsafe fn duplicate_lines(
         &mut self,
         mut dy: c_uint,
-        src: *mut grid,
+        src: *mut Grid,
         mut sy: c_uint,
         mut ny: c_uint,
     ) {
@@ -1164,22 +1163,22 @@ impl grid {
     }
 
     /// Reflow every line to a new width `sx`, joining runs of lines that
-    /// have [`grid_line_flag::WRAPPED`] and re-splitting them at the new
-    /// width. The grid's `sx` field is updated in place. Called when the
+    /// have [`GridLineFlag::WRAPPED`] and re-splitting them at the new
+    /// width. The Grid's `sx` field is updated in place. Called when the
     /// window or pane is resized horizontally so scrollback remains usable
     /// after the resize. Marked `unsafe` for the internal `ptr::copy` line
     /// shuffle in `reflow_join` / `reflow_split`.
     pub unsafe fn reflow(&mut self, sx: u32) {
         unsafe {
-            let gd = self as *mut grid;
-            // Create destination grid - just used as container for line data
+            let gd = self as *mut Grid;
+            // Create destination Grid - just used as container for line data
             let mut target = grid_create(self.sx, 0, 0);
             let target_ptr = &raw mut *target;
 
             // Loop over each source line
             for yy in 0..(self.hsize + self.sy) {
                 let gl = self.linedata.as_mut_ptr().add(yy as usize);
-                if (*gl).flags.intersects(grid_line_flag::DEAD) {
+                if (*gl).flags.intersects(GridLineFlag::DEAD) {
                     continue;
                 }
 
@@ -1189,7 +1188,7 @@ impl grid {
                 let mut width = 0;
                 let mut gc = zeroed();
 
-                if !(*gl).flags.intersects(grid_line_flag::EXTENDED) {
+                if !(*gl).flags.intersects(GridLineFlag::EXTENDED) {
                     width = (*gl).cellused;
                     if width > sx {
                         at = sx;
@@ -1219,14 +1218,14 @@ impl grid {
                 }
 
                 // If line was previously wrapped, join as much as possible of next line
-                if (*gl).flags.intersects(grid_line_flag::WRAPPED) {
+                if (*gl).flags.intersects(GridLineFlag::WRAPPED) {
                     grid_reflow_join(target_ptr, gd, sx, yy, width, 0);
                 } else {
                     grid_reflow_move(target_ptr, gl);
                 }
             }
 
-            // Replace old grid with new
+            // Replace old Grid with new
             if target.sy < self.sy {
                 grid_reflow_add(target_ptr, self.sy - target.sy);
             }
@@ -1237,14 +1236,14 @@ impl grid {
             // Swap linedata: old Vec drops automatically, take target's.
             self.linedata = std::mem::take(&mut target.linedata);
             target.sy = 0;
-            // target is now an empty grid — Box drop handles cleanup.
+            // target is now an empty Grid — Box drop handles cleanup.
             drop(target);
         }
     }
 
-    /// Convert grid position `(px, py)` to wrapped-line position `(wx, wy)`.
+    /// Convert Grid position `(px, py)` to wrapped-line position `(wx, wy)`.
     ///
-    /// Collapses contiguous runs of lines that have `grid_line_flag::WRAPPED`
+    /// Collapses contiguous runs of lines that have `GridLineFlag::WRAPPED`
     /// on the previous line into a single logical line: `wy` counts the
     /// number of unwrapped ("visual") lines above `py`, and `wx` is the
     /// column within that logical line. If `px` is past the end of the
@@ -1254,7 +1253,7 @@ impl grid {
         let mut ay = 0;
 
         for yy in 0..py as usize {
-            if self.linedata[yy].flags.intersects(grid_line_flag::WRAPPED) {
+            if self.linedata[yy].flags.intersects(GridLineFlag::WRAPPED) {
                 ax += self.linedata[yy].cellused;
             } else {
                 ax = 0;
@@ -1270,7 +1269,7 @@ impl grid {
         (wx, ay)
     }
 
-    /// Convert wrapped-line position `(wx, wy)` back to grid position
+    /// Convert wrapped-line position `(wx, wy)` back to Grid position
     /// `(px, py)`.
     ///
     /// Inverse of [`wrap_position`](Self::wrap_position). `wx == u32::MAX`
@@ -1284,7 +1283,7 @@ impl grid {
             if ay == wy {
                 break;
             }
-            if !self.linedata[yy].flags.intersects(grid_line_flag::WRAPPED) {
+            if !self.linedata[yy].flags.intersects(GridLineFlag::WRAPPED) {
                 ay += 1;
             }
             yy += 1;
@@ -1293,12 +1292,12 @@ impl grid {
         // yy is now 0 on unwrapped line containing wx
         // Walk forwards until we find end or line now containing wx
         if wx == u32::MAX {
-            while self.linedata[yy].flags.intersects(grid_line_flag::WRAPPED) {
+            while self.linedata[yy].flags.intersects(GridLineFlag::WRAPPED) {
                 yy += 1;
             }
             wx = self.linedata[yy].cellused;
         } else {
-            while self.linedata[yy].flags.intersects(grid_line_flag::WRAPPED) {
+            while self.linedata[yy].flags.intersects(GridLineFlag::WRAPPED) {
                 if wx < self.linedata[yy].cellused {
                     break;
                 }
@@ -1313,18 +1312,18 @@ impl grid {
     // View-coordinate helpers.
     //
     // "View" coordinates treat y=0 as the top of the visible screen.
-    // Converting to absolute grid coordinates means adding `hsize`
+    // Converting to absolute Grid coordinates means adding `hsize`
     // (the number of scrollback history lines). The x translation is
     // currently the identity, so we simply inline `self.hsize + py`.
     // ---------------------------------------------------------------
 
     /// Get a cell from the visible area at view coordinates (px, py).
-    pub fn view_get_cell(&self, px: u32, py: u32) -> grid_cell {
+    pub fn view_get_cell(&self, px: u32, py: u32) -> GridCell {
         self.get_cell(px, self.hsize + py)
     }
 
     /// Set a cell in the visible area at view coordinates (px, py).
-    pub fn view_set_cell(&mut self, px: u32, py: u32, gc: &grid_cell) {
+    pub fn view_set_cell(&mut self, px: u32, py: u32, gc: &GridCell) {
         self.set_cell(px, self.hsize + py, gc);
     }
 
@@ -1334,7 +1333,7 @@ impl grid {
     }
 
     /// Set a run of cells in the visible area starting at (px, py).
-    pub fn view_set_cells(&mut self, px: u32, py: u32, gc: &grid_cell, s: &[u8]) {
+    pub fn view_set_cells(&mut self, px: u32, py: u32, gc: &GridCell, s: &[u8]) {
         self.set_cells(px, self.hsize + py, gc, s);
     }
 
@@ -1373,7 +1372,7 @@ impl grid {
     }
 
     /// Scroll a region upward: contents of `[rupper, rlower]` move up by
-    /// one line. When the grid has history and the region covers the
+    /// one line. When the Grid has history and the region covers the
     /// whole visible screen, the scrolled-off line is promoted to
     /// scrollback via [`scroll_history`](Self::scroll_history) and
     /// timestamped with `now`.
@@ -1477,7 +1476,7 @@ impl grid {
     pub fn view_string_cells(&mut self, px: u32, py: u32, nx: u32) -> Vec<u8> {
         let py_abs = self.hsize + py;
         let mut lastgc = None;
-        self.string_cells(px, py_abs, nx, &mut lastgc, grid_string_flags::empty(), None)
+        self.string_cells(px, py_abs, nx, &mut lastgc, GridStringFlags::empty(), None)
     }
 }
 
@@ -1487,7 +1486,7 @@ impl grid {
 /// values (e.g. `[38, 2, r, g, b]` for RGB, `[38, 5, idx]` for 256-color,
 /// `[39]` for default, `[90..=97]` for bright, or empty for "no change
 /// needed relative to default").
-fn grid_string_cells_fg(gc: &grid_cell) -> Vec<c_int> {
+fn grid_string_cells_fg(gc: &GridCell) -> Vec<c_int> {
     let mut v = Vec::with_capacity(5);
     if gc.fg & COLOUR_FLAG_256 != 0 {
         v.extend_from_slice(&[38, 5, (gc.fg & 0xff)]);
@@ -1507,7 +1506,7 @@ fn grid_string_cells_fg(gc: &grid_cell) -> Vec<c_int> {
 
 /// Get ANSI background SGR parameters for a cell style. Same shape as
 /// [`grid_string_cells_fg`] but offset by 10 (SGR bg codes).
-fn grid_string_cells_bg(gc: &grid_cell) -> Vec<c_int> {
+fn grid_string_cells_bg(gc: &GridCell) -> Vec<c_int> {
     let mut v = Vec::with_capacity(5);
     if gc.bg & COLOUR_FLAG_256 != 0 {
         v.extend_from_slice(&[48, 5, (gc.bg & 0xff)]);
@@ -1528,7 +1527,7 @@ fn grid_string_cells_bg(gc: &grid_cell) -> Vec<c_int> {
 /// Get underscore-color SGR parameters for a cell style. Returns empty if
 /// the default underscore color is active (only 256/RGB variants emit
 /// anything, as there are no basic-palette SGR codes for underscore).
-fn grid_string_cells_us(gc: &grid_cell) -> Vec<c_int> {
+fn grid_string_cells_us(gc: &GridCell) -> Vec<c_int> {
     let mut v = Vec::with_capacity(5);
     if gc.us & COLOUR_FLAG_256 != 0 {
         v.extend_from_slice(&[58, 5, (gc.us & 0xff)]);
@@ -1557,7 +1556,7 @@ fn grid_string_cells_add_code(
     s: &[c_int],
     newc: &[c_int],
     oldc: &[c_int],
-    flags: grid_string_flags,
+    flags: GridStringFlags,
 ) {
     let reset = n != 0 && s[0] == 0;
 
@@ -1571,7 +1570,7 @@ fn grid_string_cells_add_code(
         return; // reset and colour default
     }
 
-    if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
+    if flags.intersects(GridStringFlags::GRID_STRING_ESCAPE_SEQUENCES) {
         buf.extend_from_slice(b"\\033[");
     } else {
         buf.extend_from_slice(b"\x1b[");
@@ -1599,7 +1598,7 @@ fn grid_string_cells_add_hyperlink(
     buf: &mut Vec<u8>,
     id: &[u8],
     uri: &[u8],
-    flags: grid_string_flags,
+    flags: GridStringFlags,
 ) -> bool {
     // Mirrors the C-era sanity limit (`strlen(uri) + strlen(id) + 17 >= len`
     // with `len = code.len() = 8192`). Keep the same threshold so behavior
@@ -1608,7 +1607,7 @@ fn grid_string_cells_add_hyperlink(
         return false;
     }
 
-    if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
+    if flags.intersects(GridStringFlags::GRID_STRING_ESCAPE_SEQUENCES) {
         buf.extend_from_slice(b"\\033]8;");
     } else {
         buf.extend_from_slice(b"\x1b]8;");
@@ -1624,7 +1623,7 @@ fn grid_string_cells_add_hyperlink(
 
     buf.extend_from_slice(uri);
 
-    if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
+    if flags.intersects(GridStringFlags::GRID_STRING_ESCAPE_SEQUENCES) {
         buf.extend_from_slice(b"\\033\\\\");
     } else {
         buf.extend_from_slice(b"\x1b\\");
@@ -1642,10 +1641,10 @@ fn grid_string_cells_add_hyperlink(
 /// an OSC-8 URI+id. Pass `None` to disable hyperlink emission entirely
 /// (also skipped implicitly when `lastgc.link == gc.link`).
 fn grid_string_cells_code(
-    lastgc: &grid_cell,
-    gc: &grid_cell,
+    lastgc: &GridCell,
+    gc: &GridCell,
     buf: &mut Vec<u8>,
-    flags: grid_string_flags,
+    flags: GridStringFlags,
     hl: Option<&dyn HyperlinkLookup>,
 ) -> bool {
     let mut s: Vec<c_int> = Vec::with_capacity(16);
@@ -1653,20 +1652,20 @@ fn grid_string_cells_code(
     let mut lastattr = lastgc.attr;
     let mut has_link = false;
 
-    static ATTRS: [(grid_attr, c_uint); 13] = [
-        (grid_attr::GRID_ATTR_BRIGHT, 1),
-        (grid_attr::GRID_ATTR_DIM, 2),
-        (grid_attr::GRID_ATTR_ITALICS, 3),
-        (grid_attr::GRID_ATTR_UNDERSCORE, 4),
-        (grid_attr::GRID_ATTR_BLINK, 5),
-        (grid_attr::GRID_ATTR_REVERSE, 7),
-        (grid_attr::GRID_ATTR_HIDDEN, 8),
-        (grid_attr::GRID_ATTR_STRIKETHROUGH, 9),
-        (grid_attr::GRID_ATTR_UNDERSCORE_2, 42),
-        (grid_attr::GRID_ATTR_UNDERSCORE_3, 43),
-        (grid_attr::GRID_ATTR_UNDERSCORE_4, 44),
-        (grid_attr::GRID_ATTR_UNDERSCORE_5, 45),
-        (grid_attr::GRID_ATTR_OVERLINE, 53),
+    static ATTRS: [(GridAttr, c_uint); 13] = [
+        (GridAttr::GRID_ATTR_BRIGHT, 1),
+        (GridAttr::GRID_ATTR_DIM, 2),
+        (GridAttr::GRID_ATTR_ITALICS, 3),
+        (GridAttr::GRID_ATTR_UNDERSCORE, 4),
+        (GridAttr::GRID_ATTR_BLINK, 5),
+        (GridAttr::GRID_ATTR_REVERSE, 7),
+        (GridAttr::GRID_ATTR_HIDDEN, 8),
+        (GridAttr::GRID_ATTR_STRIKETHROUGH, 9),
+        (GridAttr::GRID_ATTR_UNDERSCORE_2, 42),
+        (GridAttr::GRID_ATTR_UNDERSCORE_3, 43),
+        (GridAttr::GRID_ATTR_UNDERSCORE_4, 44),
+        (GridAttr::GRID_ATTR_UNDERSCORE_5, 45),
+        (GridAttr::GRID_ATTR_OVERLINE, 53),
     ];
 
     // If any attribute is removed, begin with 0
@@ -1675,7 +1674,7 @@ fn grid_string_cells_code(
             || (lastgc.us != 8 && gc.us == 8)
         {
             s.push(0);
-            lastattr &= grid_attr::GRID_ATTR_CHARSET;
+            lastattr &= GridAttr::GRID_ATTR_CHARSET;
             break;
         }
     }
@@ -1689,7 +1688,7 @@ fn grid_string_cells_code(
 
     // Write the attributes
     if !s.is_empty() {
-        if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
+        if flags.intersects(GridStringFlags::GRID_STRING_ESCAPE_SEQUENCES) {
             buf.extend_from_slice(b"\\033[");
         } else {
             buf.extend_from_slice(b"\x1b[");
@@ -1729,19 +1728,19 @@ fn grid_string_cells_code(
     grid_string_cells_add_code(buf, n, &s, &newc, &oldc, flags);
 
     // Append shift in/shift out if needed
-    if attr.intersects(grid_attr::GRID_ATTR_CHARSET)
-        && !lastattr.intersects(grid_attr::GRID_ATTR_CHARSET)
+    if attr.intersects(GridAttr::GRID_ATTR_CHARSET)
+        && !lastattr.intersects(GridAttr::GRID_ATTR_CHARSET)
     {
-        if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
+        if flags.intersects(GridStringFlags::GRID_STRING_ESCAPE_SEQUENCES) {
             buf.extend_from_slice(b"\\016"); // SO
         } else {
             buf.push(0x0e); // SO
         }
     }
-    if !attr.intersects(grid_attr::GRID_ATTR_CHARSET)
-        && lastattr.intersects(grid_attr::GRID_ATTR_CHARSET)
+    if !attr.intersects(GridAttr::GRID_ATTR_CHARSET)
+        && lastattr.intersects(GridAttr::GRID_ATTR_CHARSET)
     {
-        if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
+        if flags.intersects(GridStringFlags::GRID_STRING_ESCAPE_SEQUENCES) {
             buf.extend_from_slice(b"\\017"); // SI
         } else {
             buf.push(0x0f); // SI
@@ -1764,26 +1763,26 @@ fn grid_string_cells_code(
 
 /// Mark line as dead. Caller must ensure the line's Vec fields have already
 /// been moved out or dropped — this overwrites without dropping.
-unsafe fn grid_reflow_dead(gl: *mut grid_line) {
+unsafe fn grid_reflow_dead(gl: *mut GridLine) {
     unsafe {
-        std::ptr::write(gl, grid_line::new_dead());
+        std::ptr::write(gl, GridLine::new_dead());
     }
 }
 
 /// Add lines, return the first new one.
-unsafe fn grid_reflow_add(gd: *mut grid, n: c_uint) -> *mut grid_line {
+unsafe fn grid_reflow_add(gd: *mut Grid, n: c_uint) -> *mut GridLine {
     unsafe {
         let sy = (*gd).sy + n;
 
         let old_sy = (*gd).sy as usize;
-        (*gd).linedata.resize_with(sy as usize, grid_line::new);
+        (*gd).linedata.resize_with(sy as usize, GridLine::new);
         (*gd).sy = sy;
         (*gd).linedata.as_mut_ptr().add(old_sy)
     }
 }
 
 /// Move a line across.
-unsafe fn grid_reflow_move(gd: *mut grid, from: *mut grid_line) -> *mut grid_line {
+unsafe fn grid_reflow_move(gd: *mut Grid, from: *mut GridLine) -> *mut GridLine {
     unsafe {
         let to = grid_reflow_add(gd, 1);
         // Move the line value out of `from`, write it to `to`.
@@ -1798,15 +1797,15 @@ unsafe fn grid_reflow_move(gd: *mut grid, from: *mut grid_line) -> *mut grid_lin
 
 /// Join line below onto this one.
 unsafe fn grid_reflow_join(
-    target: *mut grid,
-    gd: *mut grid,
+    target: *mut Grid,
+    gd: *mut Grid,
     sx: c_uint,
     yy: c_uint,
     mut width: c_uint,
     already: c_int,
 ) {
     unsafe {
-        let mut from: *mut grid_line = null_mut();
+        let mut from: *mut GridLine = null_mut();
         let mut gc = zeroed();
         let mut lines = 0;
         let mut wrapped = true;
@@ -1835,7 +1834,7 @@ unsafe fn grid_reflow_join(
             // If next line is empty, skip it
             if !(&(*gd).linedata)[line as usize]
                 .flags
-                .intersects(grid_line_flag::WRAPPED)
+                .intersects(GridLineFlag::WRAPPED)
             {
                 wrapped = false;
             }
@@ -1891,7 +1890,7 @@ unsafe fn grid_reflow_join(
             (*from).cellused = left;
             lines -= 1;
         } else if !wrapped {
-            (*gl).flags &= !grid_line_flag::WRAPPED;
+            (*gl).flags &= !GridLineFlag::WRAPPED;
         }
 
         // Remove lines that were completely consumed
@@ -1912,7 +1911,7 @@ unsafe fn grid_reflow_join(
 }
 
 /// Split this line into several new ones
-unsafe fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, at: u32) {
+unsafe fn grid_reflow_split(target: *mut Grid, gd: *mut Grid, sx: u32, yy: u32, at: u32) {
     unsafe {
         let gl = (*gd).linedata.as_mut_ptr().add(yy as usize);
         let mut gc = zeroed();
@@ -1920,7 +1919,7 @@ unsafe fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, 
         let flags = (*gl).flags;
 
         // How many lines do we need to insert? We know we need at least two.
-        let lines = if !(*gl).flags.intersects(grid_line_flag::EXTENDED) {
+        let lines = if !(*gl).flags.intersects(GridLineFlag::EXTENDED) {
             1 + ((*gl).cellused - 1) / sx
         } else {
             let mut lines = 2;
@@ -1946,7 +1945,7 @@ unsafe fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, 
         for i in at..used {
             grid_get_cell1(&*gl, i, &raw mut gc);
             if width + gc.data.width as u32 > sx {
-                (&mut (*target).linedata)[line as usize].flags |= grid_line_flag::WRAPPED;
+                (&mut (*target).linedata)[line as usize].flags |= GridLineFlag::WRAPPED;
 
                 line += 1;
                 width = 0;
@@ -1956,14 +1955,14 @@ unsafe fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, 
             (*target).set_cell(xx, line, &gc);
             xx += 1;
         }
-        if flags.intersects(grid_line_flag::WRAPPED) {
-            (&mut (*target).linedata)[line as usize].flags |= grid_line_flag::WRAPPED;
+        if flags.intersects(GridLineFlag::WRAPPED) {
+            (&mut (*target).linedata)[line as usize].flags |= GridLineFlag::WRAPPED;
         }
 
         // Move remainder of original line
         (*gl).celldata.truncate(at as usize);
         (*gl).cellused = at;
-        (*gl).flags |= grid_line_flag::WRAPPED;
+        (*gl).flags |= GridLineFlag::WRAPPED;
         // Move the line value to `first`, then mark source as dead.
         std::ptr::drop_in_place(first);
         std::ptr::write(first, std::ptr::read(gl));
@@ -1976,7 +1975,7 @@ unsafe fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, 
 
         // If original line had wrapped flag and there is still space in last new line,
         // try to join with next lines
-        if width < sx && flags.intersects(grid_line_flag::WRAPPED) {
+        if width < sx && flags.intersects(GridLineFlag::WRAPPED) {
             grid_reflow_join(target, gd, sx, yy, width, 1);
         }
     }
@@ -1989,15 +1988,15 @@ mod tests {
     use crate::test_support::install_test_codec;
     use tmux_types::colour_join_rgb;
 
-    /// Helper: create a grid_cell with a single ASCII character.
-    /// Registers the test codec as a side effect so downstream grid
+    /// Helper: create a GridCell with a single ASCII character.
+    /// Registers the test codec as a side effect so downstream Grid
     /// operations (extended cells, interning) don't panic on unset codec.
-    fn make_cell(ch: u8, fg: i32, bg: i32) -> grid_cell {
+    fn make_cell(ch: u8, fg: i32, bg: i32) -> GridCell {
         install_test_codec();
-        grid_cell::new(
-            utf8_data::new([ch], 0, 1, 1),
-            grid_attr::empty(),
-            grid_flag::empty(),
+        GridCell::new(
+            Utf8Data::new([ch], 0, 1, 1),
+            GridAttr::empty(),
+            GridFlag::empty(),
             fg,
             bg,
             8,
@@ -2042,9 +2041,9 @@ mod tests {
     fn grid_get_cell_on_fresh_grid_returns_default() {
         let gd = grid_create(80, 24, 0);
         unsafe {
-            let gc: grid_cell;
+            let gc: GridCell;
             gc = gd.get_cell(0, 0);
-            // Fresh grid returns GRID_DEFAULT_CELL (space character).
+            // Fresh Grid returns GRID_DEFAULT_CELL (space character).
             assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
             drop(gd);
         }
@@ -2057,7 +2056,7 @@ mod tests {
             let cell_in = make_cell(b'A', 8, 8);
             gd.set_cell(5, 3, &cell_in);
 
-            let cell_out: grid_cell;
+            let cell_out: GridCell;
             cell_out = gd.get_cell(5, 3);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
@@ -2075,8 +2074,8 @@ mod tests {
             gd.set_cell(0, 0, &cell_a);
             gd.set_cell(1, 0, &cell_b);
 
-            let out_a: grid_cell;
-            let out_b: grid_cell;
+            let out_a: GridCell;
+            let out_b: GridCell;
             out_a = gd.get_cell(0, 0);
             out_b = gd.get_cell(1, 0);
 
@@ -2175,7 +2174,7 @@ mod tests {
             gd.empty_line(0, 8);
 
             // After emptying, get_cell should return default.
-            let gc: grid_cell;
+            let gc: GridCell;
             gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
 
@@ -2203,7 +2202,7 @@ mod tests {
             gd.clear(2, 0, 4, 1, 8);
 
             // Cells outside cleared region should still be '#'.
-            let mut gc: grid_cell;
+            let mut gc: GridCell;
             gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &cell));
             gc = gd.get_cell(1, 0);
@@ -2303,7 +2302,7 @@ mod tests {
     #[test]
     fn grid_wrap_position_at_end_of_line() {
         let gd = grid_create(80, 10, 0);
-        // cellused for line 0 is 0 on a fresh grid, so px=0 >= cellused=0.
+        // cellused for line 0 is 0 on a fresh Grid, so px=0 >= cellused=0.
         let (wx, wy) = gd.wrap_position(0, 0);
         assert_eq!(wx, u32::MAX);
         assert_eq!(wy, 0);
@@ -2318,7 +2317,7 @@ mod tests {
     fn grid_string_cells_empty_line() {
         let mut gd = grid_create(80, 24, 0);
         let mut lastgc = None;
-        let buf = gd.string_cells(0, 0, 80, &mut lastgc, grid_string_flags::empty(), None);
+        let buf = gd.string_cells(0, 0, 80, &mut lastgc, GridStringFlags::empty(), None);
         // Empty line should produce empty output.
         assert!(buf.is_empty(), "expected empty buf, got {buf:?}");
     }
@@ -2332,7 +2331,7 @@ mod tests {
         gd.set_cell(1, 0, &cell_i);
 
         let mut lastgc = None;
-        let buf = gd.string_cells(0, 0, 80, &mut lastgc, grid_string_flags::empty(), None);
+        let buf = gd.string_cells(0, 0, 80, &mut lastgc, GridStringFlags::empty(), None);
         assert_eq!(buf, b"Hi");
     }
 
@@ -2395,13 +2394,13 @@ mod tests {
 
     #[test]
     fn grid_padding_cell_has_padding_flag() {
-        assert!(GRID_PADDING_CELL.flags.intersects(grid_flag::PADDING));
+        assert!(GRID_PADDING_CELL.flags.intersects(GridFlag::PADDING));
         assert_eq!(GRID_PADDING_CELL.data.width, 0);
     }
 
     #[test]
     fn grid_cleared_cell_has_cleared_flag() {
-        assert!(GRID_CLEARED_CELL.flags.intersects(grid_flag::CLEARED));
+        assert!(GRID_CLEARED_CELL.flags.intersects(GridFlag::CLEARED));
         assert_eq!(GRID_CLEARED_CELL.data.data[0], b' ');
     }
 
@@ -2409,14 +2408,14 @@ mod tests {
     // Extended cells (wide chars, RGB colors, attributes)
     // ---------------------------------------------------------------
 
-    /// Helper: create a grid_cell with an RGB foreground color.
-    /// RGB colors force the EXTENDED code path in grid storage.
-    fn make_rgb_fg_cell(ch: u8, r: u8, g: u8, b: u8) -> grid_cell {
+    /// Helper: create a GridCell with an RGB foreground color.
+    /// RGB colors force the EXTENDED code path in Grid storage.
+    fn make_rgb_fg_cell(ch: u8, r: u8, g: u8, b: u8) -> GridCell {
         install_test_codec();
-        grid_cell::new(
-            utf8_data::new([ch], 0, 1, 1),
-            grid_attr::empty(),
-            grid_flag::empty(),
+        GridCell::new(
+            Utf8Data::new([ch], 0, 1, 1),
+            GridAttr::empty(),
+            GridFlag::empty(),
             colour_join_rgb(r, g, b),
             8,
             8,
@@ -2424,13 +2423,13 @@ mod tests {
         )
     }
 
-    /// Helper: create a grid_cell with an RGB background color.
-    fn make_rgb_bg_cell(ch: u8, r: u8, g: u8, b: u8) -> grid_cell {
+    /// Helper: create a GridCell with an RGB background color.
+    fn make_rgb_bg_cell(ch: u8, r: u8, g: u8, b: u8) -> GridCell {
         install_test_codec();
-        grid_cell::new(
-            utf8_data::new([ch], 0, 1, 1),
-            grid_attr::empty(),
-            grid_flag::empty(),
+        GridCell::new(
+            Utf8Data::new([ch], 0, 1, 1),
+            GridAttr::empty(),
+            GridFlag::empty(),
             8,
             colour_join_rgb(r, g, b),
             8,
@@ -2440,12 +2439,12 @@ mod tests {
 
     /// Helper: create a wide (width=2) cell. The multi-byte UTF-8 data
     /// and width > 1 both force the EXTENDED path.
-    fn make_wide_cell() -> grid_cell {
+    fn make_wide_cell() -> GridCell {
         install_test_codec();
-        grid_cell::new(
-            utf8_data::new([0xE4, 0xB8, 0x96], 0, 3, 2),
-            grid_attr::empty(),
-            grid_flag::empty(),
+        GridCell::new(
+            Utf8Data::new([0xE4, 0xB8, 0x96], 0, 3, 2),
+            GridAttr::empty(),
+            GridFlag::empty(),
             8,
             8,
             8,
@@ -2454,12 +2453,12 @@ mod tests {
     }
 
     /// Helper: create a cell with underscore color (forces EXTENDED).
-    fn make_us_cell(ch: u8, us: i32) -> grid_cell {
+    fn make_us_cell(ch: u8, us: i32) -> GridCell {
         install_test_codec();
-        grid_cell::new(
-            utf8_data::new([ch], 0, 1, 1),
-            grid_attr::empty(),
-            grid_flag::empty(),
+        GridCell::new(
+            Utf8Data::new([ch], 0, 1, 1),
+            GridAttr::empty(),
+            GridFlag::empty(),
             8,
             8,
             us,
@@ -2474,7 +2473,7 @@ mod tests {
             let cell_in = make_rgb_fg_cell(b'R', 255, 0, 128);
             gd.set_cell(0, 0, &cell_in);
 
-            let cell_out: grid_cell;
+            let cell_out: GridCell;
             cell_out = gd.get_cell(0, 0);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
@@ -2491,7 +2490,7 @@ mod tests {
             let cell_in = make_rgb_bg_cell(b'B', 0, 128, 255);
             gd.set_cell(3, 1, &cell_in);
 
-            let cell_out: grid_cell;
+            let cell_out: GridCell;
             cell_out = gd.get_cell(3, 1);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
@@ -2507,7 +2506,7 @@ mod tests {
             let cell_in = make_wide_cell();
             gd.set_cell(0, 0, &cell_in);
 
-            let cell_out: grid_cell;
+            let cell_out: GridCell;
             cell_out = gd.get_cell(0, 0);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
@@ -2525,7 +2524,7 @@ mod tests {
             let cell_in = make_us_cell(b'U', COLOUR_FLAG_256 | 42);
             gd.set_cell(2, 0, &cell_in);
 
-            let cell_out: grid_cell;
+            let cell_out: GridCell;
             cell_out = gd.get_cell(2, 0);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
@@ -2540,10 +2539,10 @@ mod tests {
         let mut gd = grid_create(80, 24, 0);
         unsafe {
             // attr > 0xff forces EXTENDED path.
-            let cell_in = grid_cell::new(
-                utf8_data::new([b'A'], 0, 1, 1),
-                grid_attr::GRID_ATTR_BRIGHT | grid_attr::GRID_ATTR_UNDERSCORE_2,
-                grid_flag::empty(),
+            let cell_in = GridCell::new(
+                Utf8Data::new([b'A'], 0, 1, 1),
+                GridAttr::GRID_ATTR_BRIGHT | GridAttr::GRID_ATTR_UNDERSCORE_2,
+                GridFlag::empty(),
                 8,
                 8,
                 8,
@@ -2551,12 +2550,12 @@ mod tests {
             );
             gd.set_cell(0, 0, &cell_in);
 
-            let cell_out: grid_cell;
+            let cell_out: GridCell;
             cell_out = gd.get_cell(0, 0);
 
             assert!(grid_cells_equal(&cell_in, &cell_out));
-            assert!(cell_out.attr.contains(grid_attr::GRID_ATTR_BRIGHT));
-            assert!(cell_out.attr.contains(grid_attr::GRID_ATTR_UNDERSCORE_2));
+            assert!(cell_out.attr.contains(GridAttr::GRID_ATTR_BRIGHT));
+            assert!(cell_out.attr.contains(GridAttr::GRID_ATTR_UNDERSCORE_2));
             drop(gd);
         }
     }
@@ -2579,7 +2578,7 @@ mod tests {
 
             // Verify all round-trip correctly.
             for x in 0..10u32 {
-                let gc: grid_cell;
+                let gc: GridCell;
                 gc = gd.get_cell(x, 0);
                 if x % 2 == 0 {
                     assert!(grid_cells_equal(&gc, &simple), "mismatch at x={x}");
@@ -2602,7 +2601,7 @@ mod tests {
             gd.set_cell(0, 0, &simple);
             gd.set_cell(0, 0, &extended);
 
-            let gc: grid_cell;
+            let gc: GridCell;
             gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &extended));
             drop(gd);
@@ -2620,7 +2619,7 @@ mod tests {
             gd.set_cell(0, 0, &extended);
             gd.set_cell(0, 0, &simple);
 
-            let gc: grid_cell;
+            let gc: GridCell;
             gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &simple));
             drop(gd);
@@ -2634,9 +2633,9 @@ mod tests {
         gd.set_cell(0, 0, &wide);
         gd.set_padding(1, 0);
 
-        let gc: grid_cell;
+        let gc: GridCell;
         gc = gd.get_cell(1, 0);
-        assert!(gc.flags.intersects(grid_flag::PADDING));
+        assert!(gc.flags.intersects(GridFlag::PADDING));
         drop(gd);
     }
 
@@ -2652,7 +2651,7 @@ mod tests {
 
             dst.duplicate_lines(0, &raw mut *src, 0, 5);
 
-            let mut gc: grid_cell;
+            let mut gc: GridCell;
             gc = dst.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &extended));
 
@@ -2709,7 +2708,7 @@ mod tests {
             gd.set_cell(5, 0, &cell);
 
             // Positions 0..5 should be cleared (default-ish) cells.
-            let mut gc: grid_cell;
+            let mut gc: GridCell;
             for x in 0..5u32 {
                 gc = gd.get_cell(x, 0);
                 // Cleared cells have the CLEARED flag OR are default.
@@ -2753,7 +2752,7 @@ mod tests {
             assert_eq!(gd.hscrolled, 1);
 
             // The old visible line 0 is now history line 0.
-            let gc: grid_cell;
+            let gc: GridCell;
             gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &cell));
 
@@ -2780,7 +2779,7 @@ mod tests {
         assert_eq!(gd.hsize, 2);
 
         // History lines should contain '0' and '1'.
-        let mut gc: grid_cell;
+        let mut gc: GridCell;
         gc = gd.get_cell(0, 0);
         assert_eq!(gc.data.data[0], b'0');
         gc = gd.get_cell(0, 1);
@@ -2803,7 +2802,7 @@ mod tests {
         assert_eq!(gd.hsize, 1);
 
         // History line 0 should be line that had 'B'.
-        let gc: grid_cell;
+        let gc: GridCell;
         gc = gd.get_cell(0, 0);
         assert_eq!(gc.data.data[0], b'B');
 
@@ -2858,7 +2857,7 @@ mod tests {
         assert_eq!(gd.hsize, 1);
 
         // Remaining history line should be the oldest ('0').
-        let gc: grid_cell;
+        let gc: GridCell;
         gc = gd.get_cell(0, 0);
         assert_eq!(gc.data.data[0], b'0');
         drop(gd);
@@ -2879,7 +2878,7 @@ mod tests {
 
             gd.clear_lines(1, 2, 8);
 
-            let mut gc: grid_cell;
+            let mut gc: GridCell;
             // Lines 1 and 2 should be empty.
             assert_eq!(gd.line_length(1), 0);
             assert_eq!(gd.line_length(2), 0);
@@ -2904,7 +2903,7 @@ mod tests {
             // Move 2 cells from position 0 to position 5.
             gd.move_cells(5, 0, 0, 2, 8);
 
-            let mut gc: grid_cell;
+            let mut gc: GridCell;
             gc = gd.get_cell(5, 0);
             assert_eq!(gc.data.data[0], b'A');
             gc = gd.get_cell(6, 0);
@@ -2934,7 +2933,7 @@ mod tests {
                 gd.set_cell(x, 0, &cell);
             }
             // Mark line as wrapped (as tmux does for long lines).
-            (*gd.get_line(0)).flags |= grid_line_flag::WRAPPED;
+            (*gd.get_line(0)).flags |= GridLineFlag::WRAPPED;
             gd.scroll_history(8, 0);
             let hsize_before = gd.hsize;
 
@@ -2947,7 +2946,7 @@ mod tests {
             );
 
             // Content should be preserved.
-            let gc: grid_cell;
+            let gc: GridCell;
             gc = gd.get_cell(0, 0);
             assert_eq!(gc.data.data[0], b'.');
             drop(gd);
@@ -2963,7 +2962,7 @@ mod tests {
             for x in 0..10u32 {
                 gd.set_cell(x, 0, &cell);
             }
-            (*gd.get_line(0)).flags |= grid_line_flag::WRAPPED;
+            (*gd.get_line(0)).flags |= GridLineFlag::WRAPPED;
             let cell_b = make_cell(b'B', 8, 8);
             for x in 0..5u32 {
                 gd.set_cell(x, 1, &cell_b);
@@ -3001,7 +3000,7 @@ mod tests {
             // Reflow to width 10 — short unwrapped line should stay as-is.
             gd.reflow(10);
 
-            let mut gc: grid_cell;
+            let mut gc: GridCell;
             gc = gd.get_cell(0, 0);
             assert_eq!(gc.data.data[0], b'S');
             gc = gd.get_cell(4, 0);
@@ -3025,7 +3024,7 @@ mod tests {
             gd.reflow(80);
             assert_eq!(gd.hsize, hsize_before);
 
-            let gc: grid_cell;
+            let gc: GridCell;
             gc = gd.get_cell(0, 0);
             assert_eq!(gc.data.data[0], b'I');
             drop(gd);
@@ -3046,7 +3045,7 @@ mod tests {
         gd.set_cell(2, 0, &ascii);
 
         let mut lastgc = None;
-        let buf = gd.string_cells(0, 0, 80, &mut lastgc, grid_string_flags::empty(), None);
+        let buf = gd.string_cells(0, 0, 80, &mut lastgc, GridStringFlags::empty(), None);
         let s = std::str::from_utf8(&buf).unwrap();
         // Should contain the UTF-8 bytes of '世' followed by '!'.
         assert!(s.contains('世'), "expected '世' in output, got: {s}");
@@ -3083,7 +3082,7 @@ mod tests {
             gd.scroll_history(8, 0);
 
             // Extended cell should survive in history.
-            let gc: grid_cell;
+            let gc: GridCell;
             gc = gd.get_cell(0, 0);
             assert!(grid_cells_equal(&gc, &extended));
             assert_eq!(gc.fg, colour_join_rgb(0, 255, 0));
@@ -3103,7 +3102,7 @@ mod tests {
             let cell = make_cell(b'X', 8, 8);
             gd.set_cell(0, 0, &cell);
 
-            let gc: grid_cell;
+            let gc: GridCell;
             gc = gd.get_cell(50, 0);
             assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
             drop(gd);
@@ -3139,9 +3138,9 @@ mod tests {
         gd.clear(2, 0, 3, 1, bg);
 
         // Cleared cells should have a non-default bg.
-        let gc: grid_cell;
+        let gc: GridCell;
         gc = gd.get_cell(2, 0);
-        assert!(gc.flags.intersects(grid_flag::CLEARED));
+        assert!(gc.flags.intersects(GridFlag::CLEARED));
         drop(gd);
     }
 
@@ -3167,15 +3166,15 @@ mod tests {
     // ---------------------------------------------------------------
     // view_* coordinate translation
     //
-    // The grid stores both scrollback history and the visible screen.
+    // The Grid stores both scrollback history and the visible screen.
     // History occupies rows `0..hsize`, and the visible area occupies
     // `hsize..hsize+sy`. The view_* methods translate "view coordinates"
-    // (where y=0 is the top of the visible screen) into absolute grid
+    // (where y=0 is the top of the visible screen) into absolute Grid
     // coordinates by adding `hsize` to y.
     // ---------------------------------------------------------------
 
-    /// Helper: create a grid cell containing a single ASCII character.
-    fn make_char_cell(ch: u8) -> grid_cell {
+    /// Helper: create a Grid cell containing a single ASCII character.
+    fn make_char_cell(ch: u8) -> GridCell {
         let mut gc = GRID_DEFAULT_CELL;
         gc.data.data[0] = ch;
         gc.data.size = 1;
@@ -3184,16 +3183,16 @@ mod tests {
     }
 
     /// Helper: read back the character at view coordinates (px, py).
-    unsafe fn read_view_char(gd: *mut grid, px: u32, py: u32) -> u8 {
+    unsafe fn read_view_char(gd: *mut Grid, px: u32, py: u32) -> u8 {
         unsafe {
-            let gc: grid_cell;
+            let gc: GridCell;
             gc = (*gd).view_get_cell(px, py);
             gc.data.data[0]
         }
     }
 
     /// Helper: extract a string from the view at row py, columns 0..nx.
-    fn view_row_string(gd: &mut grid, py: u32, nx: u32) -> String {
+    fn view_row_string(gd: &mut Grid, py: u32, nx: u32) -> String {
         let bytes = gd.view_string_cells(0, py, nx);
         String::from_utf8(bytes).unwrap()
     }
@@ -3204,7 +3203,7 @@ mod tests {
             let mut gd = grid_create(10, 5, 100);
             let gd_ptr = &raw mut *gd;
 
-            // With hsize=0, view y=0 maps to grid y=0.
+            // With hsize=0, view y=0 maps to Grid y=0.
             assert_eq!((*gd_ptr).hsize + 0, 0);
             assert_eq!((*gd_ptr).hsize + 3, 3);
 
@@ -3246,8 +3245,8 @@ mod tests {
             // Scroll into history — view row 0 is now a new empty line.
             (*gd_ptr).scroll_history(8, 0);
 
-            // 'X' is now in history (grid row 0), not visible view row 0.
-            // View row 0 is now grid row 1 (the new line).
+            // 'X' is now in history (Grid row 0), not visible view row 0.
+            // View row 0 is now Grid row 1 (the new line).
             assert_ne!(read_view_char(gd_ptr, 0, 0), b'X');
 
             // Write 'Y' to the new view row 0.
@@ -3255,8 +3254,8 @@ mod tests {
             (*gd_ptr).view_set_cell(0, 0, &gc_y);
             assert_eq!(read_view_char(gd_ptr, 0, 0), b'Y');
 
-            // The old 'X' should still be in grid row 0 (history).
-            let gc_read: grid_cell;
+            // The old 'X' should still be in Grid row 0 (history).
+            let gc_read: GridCell;
             gc_read = (*gd_ptr).get_cell(0, 0);
             assert_eq!(gc_read.data.data[0], b'X');
 

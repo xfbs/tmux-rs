@@ -11,8 +11,8 @@ use std::ffi::c_uint;
 /// is opaque to this crate — `tmux-rs::utf8` owns the interning table and
 /// the conversion helpers (`utf8_from_data`, `utf8_to_data`, `utf8_set`,
 /// `utf8_build_one`). This crate just names the handle type so other
-/// shared data types (`grid_extd_entry`) can embed it.
-pub type utf8_char = c_uint;
+/// shared data types (`GridExtdEntry`) can embed it.
+pub type Utf8Char = c_uint;
 
 /// Maximum combined-character size. Must fit a base codepoint plus any
 /// combining marks that tmux renders as a single cell. Increasing this
@@ -21,7 +21,7 @@ pub const UTF8_SIZE: usize = 21;
 
 /// Expanded UTF-8 character with width metadata. Used wherever a cell
 /// needs to carry the *bytes* (not just a handle) — notably in
-/// `grid_cell.data` for the unpacked-cell representation.
+/// `GridCell.data` for the unpacked-cell representation.
 ///
 /// - `data`: raw UTF-8 bytes; only the first `size` are meaningful.
 /// - `have`: bytes filled so far during streaming decode.
@@ -29,16 +29,16 @@ pub const UTF8_SIZE: usize = 21;
 ///   sentinel meaning "no character" (empty cell).
 /// - `width`: display columns (0, 1, or 2). `0xff` indicates invalid.
 #[derive(Copy, Clone)]
-pub struct utf8_data {
+pub struct Utf8Data {
     pub data: [u8; UTF8_SIZE],
     pub have: u8,
     pub size: u8,
     pub width: u8,
 }
 
-impl utf8_data {
+impl Utf8Data {
     /// Const constructor: pad `data` to `UTF8_SIZE` bytes with zeros so
-    /// `utf8_data` can appear in `static` initializers (e.g. GRID_DEFAULT_CELL).
+    /// `Utf8Data` can appear in `static` initializers (e.g. GRID_DEFAULT_CELL).
     /// Panics at compile time if `N >= UTF8_SIZE`.
     pub const fn new<const N: usize>(data: [u8; N], have: u8, size: u8, width: u8) -> Self {
         if N >= UTF8_SIZE {

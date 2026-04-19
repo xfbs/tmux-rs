@@ -723,8 +723,8 @@ pub unsafe fn mode_tree_draw(mtd: &mut mode_tree_data) {
         let oo = (*window_pane_window(wp)).options;
         let mut ctx: screen_write_ctx = zeroed();
 
-        let mut gc0: grid_cell = zeroed();
-        let mut gc: grid_cell = zeroed();
+        let mut gc0: GridCell = zeroed();
+        let mut gc: GridCell = zeroed();
 
         'done: {
             if mtd.line_list.is_empty() {
@@ -822,8 +822,8 @@ pub unsafe fn mode_tree_draw(mtd: &mut mode_tree_data) {
                 free_(start);
 
                 if (*mti).tagged != 0 {
-                    gc.attr ^= grid_attr::GRID_ATTR_BRIGHT;
-                    gc0.attr ^= grid_attr::GRID_ATTR_BRIGHT;
+                    gc.attr ^= GridAttr::GRID_ATTR_BRIGHT;
+                    gc0.attr ^= GridAttr::GRID_ATTR_BRIGHT;
                 }
 
                 if i as u32 != mtd.current {
@@ -857,8 +857,8 @@ pub unsafe fn mode_tree_draw(mtd: &mut mode_tree_data) {
                 free_(key);
 
                 if (*mti).tagged != 0 {
-                    gc.attr ^= grid_attr::GRID_ATTR_BRIGHT;
-                    gc0.attr ^= grid_attr::GRID_ATTR_BRIGHT;
+                    gc.attr ^= GridAttr::GRID_ATTR_BRIGHT;
+                    gc0.attr ^= GridAttr::GRID_ATTR_BRIGHT;
                 }
             }
 

@@ -638,7 +638,7 @@ enum tty_code_code {
 }
 
 // WHITESPACE moved to tmux_grid (it's specifically a reader input for
-// word-boundary classification). Re-exported via the grid pub use below.
+// word-boundary classification). Re-exported via the Grid pub use below.
 
 #[repr(i32)]
 #[derive(Copy, Clone, Eq, PartialEq, num_enum::TryFromPrimitive)]
@@ -694,12 +694,12 @@ const MOUSE_PARAM_POS_OFF: u32 = 0x21;
 
 // Re-export shared types from `tmux-types`. These items were previously
 // defined here; the `pub use` keeps every call site in the tmux-rs tree
-// working unchanged (`use crate::{grid_attr, ...}`), while future
+// working unchanged (`use crate::{GridAttr, ...}`), while future
 // extracted crates (tmux-grid) can import them directly from tmux-types
 // without a tmux-rs dependency.
 pub use tmux_types::{
     COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, GRID_ATTR_ALL_UNDERSCORE,
-    colour_join_rgb, colour_split_rgb, grid_attr, grid_flag, grid_line_flag, grid_string_flags,
+    colour_join_rgb, colour_split_rgb, GridAttr, GridFlag, GridLineFlag, GridStringFlags,
 };
 
 /// Cell positions.
@@ -730,24 +730,24 @@ const SIMPLE_BORDERS: [u8; 13] = [
 ];
 const PADDED_BORDERS: [u8; 13] = [b' '; 13];
 
-// grid_cell / grid_extd_entry / grid_cell_entry* / grid_line /
+// GridCell / GridExtdEntry / GridCellEntry* / GridLine /
 // GRID_HISTORY all moved to the `tmux-types` crate and re-exported at
 // crate-root via the earlier `pub use tmux_types::{...}` block. The
-// `grid` struct itself (and its many impls) stays in tmux-rs for now —
+// `Grid` struct itself (and its many impls) stays in tmux-rs for now —
 // inherent impls must live in the crate that defines the type.
 pub use tmux_types::{
-    GRID_HISTORY, grid_cell, grid_cell_entry, grid_cell_entry_data, grid_cell_entry_union,
-    grid_extd_entry, grid_line,
+    GRID_HISTORY, GridCell, GridCellEntry, GridCellEntryData, GridCellEntryUnion,
+    GridExtdEntry, GridLine,
 };
 
-// The `grid` struct itself (plus `grid_reader` and all their inherent
+// The `Grid` struct itself (plus `GridReader` and all their inherent
 // impls) lives in the `tmux-grid` crate — Rust requires inherent impls
 // to be in the defining crate. Re-exported here so existing
-// `use crate::{grid, grid_reader, ...}` call sites keep working.
+// `use crate::{Grid, GridReader, ...}` call sites keep working.
 pub use tmux_grid::{
     GRID_CLEARED_CELL, GRID_CLEARED_ENTRY, GRID_DEFAULT_CELL, GRID_PADDING_CELL, Hyperlink,
-    HyperlinkLookup, Utf8Codec, Utf8State, WHITESPACE, grid, grid_cells_equal,
-    grid_cells_look_equal, grid_compare, grid_create, grid_reader,
+    HyperlinkLookup, Utf8Codec, Utf8State, WHITESPACE, Grid, grid_cells_equal,
+    grid_cells_look_equal, grid_compare, grid_create, GridReader,
 };
 
 /// Style alignment.
@@ -809,7 +809,7 @@ enum style_default_type {
 
 #[derive(Copy, Clone)]
 struct style {
-    gc: grid_cell,
+    gc: GridCell,
     ignore: i32,
 
     fill: i32,
@@ -854,8 +854,8 @@ struct screen {
     path: Option<CString>,
     titles: Vec<CString>,
 
-    /// grid data
-    grid: Box<grid>,
+    /// Grid data
+    grid: Box<Grid>,
 
     /// cursor x
     cx: u32,
@@ -880,8 +880,8 @@ struct screen {
 
     saved_cx: u32,
     saved_cy: u32,
-    saved_grid: Option<Box<grid>>,
-    saved_cell: grid_cell,
+    saved_grid: Option<Box<Grid>>,
+    saved_cell: GridCell,
     saved_flags: i32,
 
     tabs: Option<Rc<RefCell<BitStr>>>,
@@ -967,7 +967,7 @@ struct screen_redraw_ctx {
     pane_status: pane_status,
     pane_lines: pane_lines,
 
-    no_pane_gc: grid_cell,
+    no_pane_gc: GridCell,
     no_pane_gc_set: i32,
 
     sx: u32,
@@ -1157,8 +1157,8 @@ struct window_pane {
 
     ictx: *mut input_ctx,
 
-    cached_gc: grid_cell,
-    cached_active_gc: grid_cell,
+    cached_gc: GridCell,
+    cached_active_gc: GridCell,
     palette: colour_palette,
 
     pipe_fd: i32,
@@ -1184,7 +1184,7 @@ struct window_pane {
     searchregex: i32,
 
     border_gc_set: i32,
-    border_gc: grid_cell,
+    border_gc: GridCell,
 
     control_bg: i32,
     control_fg: i32,
@@ -1250,7 +1250,7 @@ struct window {
     new_xpixel: u32,
     new_ypixel: u32,
 
-    fill_character: *mut utf8_data,
+    fill_character: *mut Utf8Data,
     flags: window_flag,
 
     alerts_queued: i32,
@@ -1870,8 +1870,8 @@ struct tty {
 
     tio: termios,
 
-    cell: grid_cell,
-    last_cell: grid_cell,
+    cell: GridCell,
+    last_cell: GridCell,
 
     flags: tty_flags,
 
@@ -1899,7 +1899,7 @@ struct tty_ctx {
     set_client_cb: tty_ctx_set_client_cb,
     arg: *mut c_void,
 
-    cell: *const grid_cell,
+    cell: *const GridCell,
     wrapped: bool,
 
     num: u32,
@@ -1929,7 +1929,7 @@ struct tty_ctx {
     bg: u32,
 
     // The default colours and palette.
-    defaults: grid_cell,
+    defaults: GridCell,
     palette: *const colour_palette,
 
     // Containing region (usually window) offset and size.
@@ -2250,7 +2250,7 @@ struct status_line {
     active: *mut screen,
     references: c_int,
 
-    style: grid_cell,
+    style: GridCell,
     entries: [status_line_entry; STATUS_LINES_LIMIT],
 }
 
@@ -2464,7 +2464,7 @@ struct client {
     message_timer: Option<TimerHandle>,
 
     prompt_string: Option<String>,
-    prompt_buffer: *mut utf8_data,
+    prompt_buffer: *mut Utf8Data,
     prompt_last: *mut u8,
     prompt_index: usize,
     prompt_inputcb: prompt_input_cb,
@@ -2472,7 +2472,7 @@ struct client {
     prompt_data: *mut c_void,
     prompt_hindex: [c_uint; 4],
     prompt_mode: prompt_mode,
-    prompt_saved: *mut utf8_data,
+    prompt_saved: *mut Utf8Data,
 
     prompt_flags: prompt_flags,
     prompt_type: prompt_type,

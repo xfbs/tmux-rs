@@ -15,7 +15,7 @@
 //! Style parsing and formatting for tmux status line and option values.
 //!
 //! A style is a combination of:
-//! - Terminal attributes (bold, dim, italics, etc.) from [`grid_attr`]
+//! - Terminal attributes (bold, dim, italics, etc.) from [`GridAttr`]
 //! - Foreground/background/underscore colors (`fg=`, `bg=`, `us=`)
 //! - Fill color (`fill=`)
 //! - Alignment (`align=left|centre|right|absolute-centre`)
@@ -26,7 +26,7 @@
 //!
 //! Styles are parsed from comma/space/newline-delimited strings by [`style_parse`]
 //! and formatted back to strings by [`style_tostring`]. The `"default"` keyword
-//! resets colors and attributes to the base grid cell.
+//! resets colors and attributes to the base Grid cell.
 //!
 //! Color value 8 means "default" (terminal default color).
 
@@ -37,10 +37,10 @@ use crate::options_::*;
 // #define STYLE_ATTR_MASK (~0)
 
 pub static mut STYLE_DEFAULT: style = style {
-    gc: grid_cell::new(
-        utf8_data::new([b' '], 0, 1, 1),
-        grid_attr::empty(),
-        grid_flag::empty(),
+    gc: GridCell::new(
+        Utf8Data::new([b' '], 0, 1, 1),
+        GridAttr::empty(),
+        GridFlag::empty(),
         8,
         8,
         0,
@@ -61,7 +61,7 @@ pub static mut STYLE_DEFAULT: style = style {
 
 /// Fuzz-friendly wrapper: parses a NUL-terminated byte slice as a style string.
 /// Returns 0 on success, -1 on error. Encapsulates private types so fuzz targets
-/// don't need to import `style` or `grid_cell`.
+/// don't need to import `style` or `GridCell`.
 #[cfg(fuzzing)]
 pub fn fuzz_style_parse(input: &[u8]) -> i32 {
     unsafe {
@@ -77,10 +77,10 @@ pub unsafe fn style_set_range_string(sy: *mut style, s: *const u8) {
 }
 
 /// Parse a style string into a [`style`] struct.
-/// The `base` grid cell provides default values for the `"default"` keyword.
+/// The `base` Grid cell provides default values for the `"default"` keyword.
 /// Returns 0 on success, -1 on parse error (style is restored to its prior state).
 /// Delimiters are spaces, commas, and newlines.
-pub unsafe fn style_parse(sy: *mut style, base: *const grid_cell, mut in_: *const u8) -> i32 {
+pub unsafe fn style_parse(sy: *mut style, base: *const GridCell, mut in_: *const u8) -> i32 {
     unsafe {
         let delimiters = c!(" ,\n");
 
@@ -274,7 +274,7 @@ pub unsafe fn style_parse(sy: *mut style, base: *const grid_cell, mut in_: *cons
                         (*sy).gc.us = (*base).us;
                     }
                 } else if strcaseeq_(tmp, "none") {
-                    (*sy).gc.attr = grid_attr::empty();
+                    (*sy).gc.attr = GridAttr::empty();
                 } else if end > 2 && strncasecmp(tmp, c!("no"), 2) == 0 {
                     let Some(s) = cstr_to_str_(tmp.add(2)) else { break 'error };
                     let Ok(value) = attributes_fromstring(s) else {
@@ -489,9 +489,9 @@ pub unsafe fn style_tostring(sy: *const style) -> *const u8 {
     }
 }
 
-/// Merge a named style option into a grid cell (additive — OR's attributes).
+/// Merge a named style option into a Grid cell (additive — OR's attributes).
 pub unsafe fn style_add(
-    gc: *mut grid_cell,
+    gc: *mut GridCell,
     oo: *mut options,
     name: *const u8,
     mut ft: *mut format_tree,
@@ -525,9 +525,9 @@ pub unsafe fn style_add(
     }
 }
 
-/// Reset a grid cell to defaults, then apply a named style option.
+/// Reset a Grid cell to defaults, then apply a named style option.
 pub unsafe fn style_apply(
-    gc: *mut grid_cell,
+    gc: *mut GridCell,
     oo: *mut options,
     name: *const u8,
     ft: *mut format_tree,
@@ -538,8 +538,8 @@ pub unsafe fn style_apply(
     }
 }
 
-/// Initialize a style from a grid cell, resetting all other fields to defaults.
-pub unsafe fn style_set(sy: *mut style, gc: *const grid_cell) {
+/// Initialize a style from a Grid cell, resetting all other fields to defaults.
+pub unsafe fn style_set(sy: *mut style, gc: *const GridCell) {
     unsafe {
         memcpy__(sy, &raw const STYLE_DEFAULT);
         memcpy__(&raw mut (*sy).gc, gc);
@@ -676,7 +676,7 @@ mod tests {
     fn parse_bold() {
         unsafe {
             let sy = parse("bold").unwrap();
-            assert!(sy.gc.attr.intersects(grid_attr::GRID_ATTR_BRIGHT));
+            assert!(sy.gc.attr.intersects(GridAttr::GRID_ATTR_BRIGHT));
         }
     }
 
@@ -684,8 +684,8 @@ mod tests {
     fn parse_multiple_attrs() {
         unsafe {
             let sy = parse("bold,italics").unwrap();
-            assert!(sy.gc.attr.intersects(grid_attr::GRID_ATTR_BRIGHT));
-            assert!(sy.gc.attr.intersects(grid_attr::GRID_ATTR_ITALICS));
+            assert!(sy.gc.attr.intersects(GridAttr::GRID_ATTR_BRIGHT));
+            assert!(sy.gc.attr.intersects(GridAttr::GRID_ATTR_ITALICS));
         }
     }
 
@@ -713,8 +713,8 @@ mod tests {
 
             let c2 = CString::new("nobold").unwrap();
             style_parse(&raw mut sy, &raw const GRID_DEFAULT_CELL, c2.as_ptr().cast());
-            assert!(!sy.gc.attr.intersects(grid_attr::GRID_ATTR_BRIGHT));
-            assert!(sy.gc.attr.intersects(grid_attr::GRID_ATTR_ITALICS));
+            assert!(!sy.gc.attr.intersects(GridAttr::GRID_ATTR_BRIGHT));
+            assert!(sy.gc.attr.intersects(GridAttr::GRID_ATTR_ITALICS));
         }
     }
 
@@ -909,7 +909,7 @@ mod tests {
             let sy = parse("fg=red,bg=blue,bold,align=centre").unwrap();
             assert_eq!(sy.gc.fg, 1);
             assert_eq!(sy.gc.bg, 4);
-            assert!(sy.gc.attr.intersects(grid_attr::GRID_ATTR_BRIGHT));
+            assert!(sy.gc.attr.intersects(GridAttr::GRID_ATTR_BRIGHT));
             assert_eq!(sy.align, style_align::STYLE_ALIGN_CENTRE);
         }
     }

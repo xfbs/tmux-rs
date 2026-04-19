@@ -36,7 +36,7 @@ pub unsafe fn screen_redraw_border_set(
     wp: *mut window_pane,
     pane_lines: pane_lines,
     cell_type: cell_type,
-    gc: *mut grid_cell,
+    gc: *mut GridCell,
 ) {
     unsafe {
         let mut idx: u32 = 0;
@@ -49,14 +49,14 @@ pub unsafe fn screen_redraw_border_set(
         match pane_lines {
             pane_lines::PANE_LINES_NUMBER => {
                 if cell_type == cell_type::CELL_OUTSIDE {
-                    (*gc).attr |= grid_attr::GRID_ATTR_CHARSET;
+                    (*gc).attr |= GridAttr::GRID_ATTR_CHARSET;
                     utf8_set(
                         &mut (*gc).data,
                         CELL_BORDERS[cell_type::CELL_OUTSIDE as usize],
                     );
                     return;
                 }
-                (*gc).attr &= !grid_attr::GRID_ATTR_CHARSET;
+                (*gc).attr &= !GridAttr::GRID_ATTR_CHARSET;
                 if !wp.is_null() && window_pane_index(wp, &raw mut idx) == 0 {
                     utf8_set(&mut (*gc).data, b'0' + ((idx % 10) as u8));
                 } else {
@@ -64,19 +64,19 @@ pub unsafe fn screen_redraw_border_set(
                 }
             }
             pane_lines::PANE_LINES_DOUBLE => {
-                (*gc).attr &= !grid_attr::GRID_ATTR_CHARSET;
+                (*gc).attr &= !GridAttr::GRID_ATTR_CHARSET;
                 utf8_copy(&mut (*gc).data, tty_acs_double_borders(cell_type));
             }
             pane_lines::PANE_LINES_HEAVY => {
-                (*gc).attr &= !grid_attr::GRID_ATTR_CHARSET;
+                (*gc).attr &= !GridAttr::GRID_ATTR_CHARSET;
                 utf8_copy(&mut (*gc).data, tty_acs_heavy_borders(cell_type));
             }
             pane_lines::PANE_LINES_SIMPLE => {
-                (*gc).attr &= !grid_attr::GRID_ATTR_CHARSET;
+                (*gc).attr &= !GridAttr::GRID_ATTR_CHARSET;
                 utf8_set(&mut (*gc).data, SIMPLE_BORDERS[cell_type as usize]);
             }
             _ => {
-                (*gc).attr |= grid_attr::GRID_ATTR_CHARSET;
+                (*gc).attr |= GridAttr::GRID_ATTR_CHARSET;
                 utf8_set(&mut (*gc).data, CELL_BORDERS[cell_type as usize]);
             }
         }
@@ -423,12 +423,12 @@ pub unsafe fn screen_redraw_make_pane_status(
 ) -> i32 {
     unsafe {
         let w = window_pane_window(wp.as_ptr());
-        let mut gc: grid_cell = std::mem::zeroed();
+        let mut gc: GridCell = std::mem::zeroed();
         let width: u32;
         let mut px: u32;
         let mut py: u32;
         let mut ctx: MaybeUninit<screen_write_ctx> = MaybeUninit::uninit();
-        let mut old_grid: Box<grid>;
+        let old_grid: Box<Grid>;
         let pane_status = (*rctx).pane_status;
 
         let ft = format_create(
@@ -479,7 +479,7 @@ pub unsafe fn screen_redraw_make_pane_status(
             screen_redraw_border_set(&*w, wp, pane_lines, cell_type, &raw mut gc);
             screen_write_cell(ctx.as_mut_ptr(), &raw const gc);
         }
-        gc.attr &= !grid_attr::GRID_ATTR_CHARSET;
+        gc.attr &= !GridAttr::GRID_ATTR_CHARSET;
 
         screen_write_cursormove(ctx.as_mut_ptr(), 0, 0, 0);
         format_draw(
@@ -743,7 +743,7 @@ pub unsafe fn screen_redraw_draw_borders_style(
     x: u32,
     y: u32,
     wp: *mut window_pane,
-) -> *const grid_cell {
+) -> *const GridCell {
     unsafe {
         let c = (*ctx).c;
         let s = client_get_session(c);
@@ -782,7 +782,7 @@ pub unsafe fn screen_redraw_draw_borders_cell(ctx: *mut screen_redraw_ctx, i: u3
         let oo = (*w).options;
         let tty = &raw mut (*c).tty;
         let active = server_client_get_pane(c);
-        let mut gc: grid_cell = zeroed();
+        let mut gc: GridCell = zeroed();
         let mut arrows = 0;
         let border;
         let x = (*ctx).ox + i;
@@ -822,7 +822,7 @@ pub unsafe fn screen_redraw_draw_borders_cell(ctx: *mut screen_redraw_ctx, i: u3
             if server_is_marked(s, (*s).curw, marked_wp)
                 && screen_redraw_check_is(ctx, x, y, marked_wp)
             {
-                gc.attr ^= grid_attr::GRID_ATTR_REVERSE;
+                gc.attr ^= GridAttr::GRID_ATTR_REVERSE;
             }
         }
         screen_redraw_border_set(&*w, wp, (*ctx).pane_lines, cell_type, &raw mut gc);
@@ -864,7 +864,7 @@ pub unsafe fn screen_redraw_draw_borders_cell(ctx: *mut screen_redraw_ctx, i: u3
                             && border == screen_redraw_border_type::SCREEN_REDRAW_BORDER_LEFT))))
                 && screen_redraw_check_is(ctx, x, y, active)
             {
-                gc.attr |= grid_attr::GRID_ATTR_CHARSET;
+                gc.attr |= GridAttr::GRID_ATTR_CHARSET;
                 utf8_set(&raw mut gc.data, BORDER_MARKERS[border as usize]);
             }
         }
@@ -968,7 +968,7 @@ pub unsafe fn screen_redraw_draw_pane(ctx: *mut screen_redraw_ctx, wp: *mut wind
         let tty = &raw mut (*c).tty;
         let s = (*wp).screen;
         let palette = &raw mut (*wp).palette;
-        let mut defaults: grid_cell = zeroed();
+        let mut defaults: GridCell = zeroed();
 
         log_debug!(
             "{}: {} @{} %%{}",
