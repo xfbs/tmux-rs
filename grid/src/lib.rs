@@ -88,7 +88,6 @@ pub const WHITESPACE: &std::ffi::CStr = c" ";
 use tmux_types::{COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, colour_split_rgb};
 use tmux_utf8::Utf8Data;
 
-use std::ffi::{c_int, c_uchar, c_uint};
 use std::mem::zeroed;
 use std::ptr::null_mut;
 
@@ -345,7 +344,7 @@ fn grid_compact_line(gl: &mut GridLine) {
 }
 
 /// Copy default into a cell.
-fn grid_clear_cell(gd: &mut Grid, px: c_uint, py: c_uint, bg: c_uint) {
+fn grid_clear_cell(gd: &mut Grid, px: u32, py: u32, bg: u32) {
     let gl = &mut gd.linedata[py as usize];
     gl.celldata[px as usize] = GRID_CLEARED_ENTRY;
     if bg != 8 {
@@ -364,7 +363,7 @@ fn grid_clear_cell(gd: &mut Grid, px: c_uint, py: c_uint, bg: c_uint) {
                 if (bg & COLOUR_FLAG_256 as u32) != 0 {
                     (*gce).flags |= GridFlag::BG256;
                 }
-                (*gce).union_.data.bg = bg as c_uchar;
+                (*gce).union_.data.bg = bg as u8;
             }
         }
     }
@@ -372,7 +371,7 @@ fn grid_clear_cell(gd: &mut Grid, px: c_uint, py: c_uint, bg: c_uint) {
 
 /// Check Grid y position. `from` is a human-readable tag identifying the
 /// caller, emitted as a debug log message when `py` falls out of range.
-fn grid_check_y(gd: &Grid, from: &str, py: c_uint) -> c_int {
+fn grid_check_y(gd: &Grid, from: &str, py: u32) -> i32 {
     if py >= gd.hsize + gd.sy {
         ::log::debug!("{from}: y out of range: {py}");
         return -1;
@@ -408,7 +407,7 @@ pub fn grid_cells_equal(gc1: &GridCell, gc2: &GridCell) -> bool {
 }
 
 /// Free one line.
-fn grid_free_line(gd: &mut Grid, py: c_uint) {
+fn grid_free_line(gd: &mut Grid, py: u32) {
     let gl = &mut gd.linedata[py as usize];
     gl.celldata = Vec::new();
     gl.cellused = 0;
@@ -416,7 +415,7 @@ fn grid_free_line(gd: &mut Grid, py: c_uint) {
 }
 
 /// Free several lines.
-fn grid_free_lines(gd: &mut Grid, py: c_uint, ny: c_uint) {
+fn grid_free_lines(gd: &mut Grid, py: u32, ny: u32) {
     for yy in py..(py + ny) {
         grid_free_line(gd, yy);
     }
@@ -474,7 +473,7 @@ impl Grid {
 // grid_destroy removed — Grid is now Box<Grid>, Drop handles cleanup.
 
 /// Trim lines from the history.
-fn grid_trim_history(gd: &mut Grid, ny: c_uint) {
+fn grid_trim_history(gd: &mut Grid, ny: u32) {
     grid_free_lines(gd, 0, ny);
     // Remove the first `ny` lines (already freed above) by draining them.
     // drain(0..ny) shifts the remaining lines to the front.
@@ -482,7 +481,7 @@ fn grid_trim_history(gd: &mut Grid, ny: c_uint) {
 }
 
 /// Expand line to fit to cell.
-fn grid_expand_line(gd: &mut Grid, py: c_uint, mut sx: c_uint, bg: c_uint) {
+fn grid_expand_line(gd: &mut Grid, py: u32, mut sx: u32, bg: u32) {
     let old_len = gd.linedata[py as usize].celldata.len() as u32;
     if sx <= old_len {
         return;
@@ -504,7 +503,7 @@ fn grid_expand_line(gd: &mut Grid, py: c_uint, mut sx: c_uint, bg: c_uint) {
 }
 
 /// Get cell from line.
-unsafe fn grid_get_cell1(gl: &GridLine, px: c_uint, gc: *mut GridCell) {
+unsafe fn grid_get_cell1(gl: &GridLine, px: u32, gc: *mut GridCell) {
     unsafe {
         let gce = &gl.celldata[px as usize];
 
@@ -543,20 +542,20 @@ unsafe fn grid_get_cell1(gl: &GridLine, px: c_uint, gc: *mut GridCell) {
 impl Grid {
     /// Borrow the line at absolute row `line` for reading. Panics if `line`
     /// is out of bounds — callers must validate `line < hsize + sy`.
-    pub fn line(&self, line: c_uint) -> &GridLine {
+    pub fn line(&self, line: u32) -> &GridLine {
         &self.linedata[line as usize]
     }
 
     /// Borrow the line at absolute row `line` for mutation. Panics if `line`
     /// is out of bounds — callers must validate `line < hsize + sy`.
-    pub fn get_line(&mut self, line: c_uint) -> &mut GridLine {
+    pub fn get_line(&mut self, line: u32) -> &mut GridLine {
         &mut self.linedata[line as usize]
     }
 
     /// Resize the line array to `lines` rows, creating empty lines at the
     /// end if growing or dropping them if shrinking. Used during reflow and
     /// window resize to reshape the Grid without touching `sx`/`sy`.
-    pub fn adjust_lines(&mut self, lines: c_uint) {
+    pub fn adjust_lines(&mut self, lines: u32) {
         self.linedata.resize_with(lines as usize, GridLine::new);
     }
 
@@ -566,7 +565,7 @@ impl Grid {
     /// [`line`](Self::line) which panics but returns a plain `&GridLine`.
     /// `peek_line` is the right choice when `py` may be untrusted
     /// (reflow, search across history boundaries).
-    pub fn peek_line(&self, py: c_uint) -> Option<&GridLine> {
+    pub fn peek_line(&self, py: u32) -> Option<&GridLine> {
         if grid_check_y(self, "grid_peek_line", py) != 0 {
             return None;
         }
@@ -597,7 +596,7 @@ impl Grid {
 
     /// Get cell at position `(px, py)`. Returns `GRID_DEFAULT_CELL` if the
     /// position is out of range.
-    pub fn get_cell(&self, px: c_uint, py: c_uint) -> GridCell {
+    pub fn get_cell(&self, px: u32, py: u32) -> GridCell {
         if grid_check_y(self, "grid_get_cell", py) != 0
             || px as usize >= self.linedata[py as usize].celldata.len()
         {
@@ -616,7 +615,7 @@ impl Grid {
     /// `cellused` if needed, and promotes the cell to the line's extended
     /// side-table if the style doesn't fit the packed representation. Silently
     /// skips out-of-range `py` (logged at debug).
-    pub fn set_cell(&mut self, px: c_uint, py: c_uint, gc: &GridCell) {
+    pub fn set_cell(&mut self, px: u32, py: u32, gc: &GridCell) {
         if grid_check_y(self, "grid_set_cell", py) != 0 {
             return;
         }
@@ -647,7 +646,7 @@ impl Grid {
     /// Mark the cell at `(px, py)` as padding — the continuation half of a
     /// wide (double-width) character. Padding cells are skipped by cursor
     /// movement, selection, and string extraction.
-    pub fn set_padding(&mut self, px: c_uint, py: c_uint) {
+    pub fn set_padding(&mut self, px: u32, py: u32) {
         self.set_cell(px, py, &GRID_PADDING_CELL)
     }
 
@@ -661,7 +660,7 @@ impl Grid {
             return;
         }
 
-        grid_expand_line(self, py, px + slen as c_uint, 8);
+        grid_expand_line(self, py, px + slen as u32, 8);
 
         // SAFETY: grid_need_extended_cell / grid_extended_cell / grid_store_cell
         // are translated-from-C helpers that still take raw pointers. They do
@@ -669,13 +668,13 @@ impl Grid {
         // grid_expand_line above.
         unsafe {
             let gl = self.linedata.as_mut_ptr().add(py as usize);
-            if px + slen as c_uint > (*gl).cellused {
-                (*gl).cellused = px + slen as c_uint;
+            if px + slen as u32 > (*gl).cellused {
+                (*gl).cellused = px + slen as u32;
             }
 
             let gc_ptr = gc as *const GridCell;
             for (i, &byte) in s.iter().enumerate() {
-                let gce = (*gl).celldata.as_mut_ptr().add((px + i as c_uint) as usize);
+                let gce = (*gl).celldata.as_mut_ptr().add((px + i as u32) as usize);
                 if grid_need_extended_cell(gce, gc_ptr) {
                     let gee = grid_extended_cell(gl, gce, gc_ptr);
                     (*gee).data = utf8_build_one(byte);
@@ -712,7 +711,7 @@ impl Grid {
     /// above the visible screen). Called when the visible screen grows
     /// downward and needs to reclaim rows that were in scrollback. No-op if
     /// `ny > hsize`.
-    pub fn remove_history(&mut self, ny: c_uint) {
+    pub fn remove_history(&mut self, ny: u32) {
         if ny > self.hsize {
             return;
         }
@@ -730,7 +729,7 @@ impl Grid {
     /// `now` is the wall-clock timestamp recorded on the newly-scrolled
     /// history line. Callers typically pass `CURRENT_TIME` (updated once
     /// per event-loop tick); tests pass `0`.
-    pub fn scroll_history(&mut self, bg: c_uint, now: libc::time_t) {
+    pub fn scroll_history(&mut self, bg: u32, now: libc::time_t) {
         let yy = self.hsize + self.sy;
         self.linedata.push(GridLine::new());
 
@@ -762,7 +761,7 @@ impl Grid {
     /// coordinates. `bg` is the background-color used to paint the new
     /// bottom row. `now` timestamps the new history line (see
     /// [`scroll_history`](Self::scroll_history)).
-    pub fn scroll_history_region(&mut self, upper: c_uint, lower: c_uint, bg: c_uint, now: libc::time_t) {
+    pub fn scroll_history_region(&mut self, upper: u32, lower: u32, bg: u32, now: libc::time_t) {
         // Indices are relative to the visible screen; adjust for hsize.
         let hsize = self.hsize as usize;
         let upper_abs = hsize + upper as usize;
@@ -793,7 +792,7 @@ impl Grid {
     /// the cheaper [`clear_lines`](Self::clear_lines). Defaults-background
     /// cells past `cellused` are left untouched — only the filled portion
     /// of each line is touched.
-    pub fn clear(&mut self, px: c_uint, py: c_uint, nx: c_uint, ny: c_uint, bg: c_uint) {
+    pub fn clear(&mut self, px: u32, py: u32, nx: u32, ny: u32, bg: u32) {
         if nx == 0 || ny == 0 {
             return;
         }
@@ -837,7 +836,7 @@ impl Grid {
     /// vectors are dropped; if `bg` is non-default the line is re-expanded
     /// to `sx` with the background color so terminal redraws pick it up.
     /// Faster than [`clear`](Self::clear) when clearing whole lines.
-    pub fn clear_lines(&mut self, py: c_uint, ny: c_uint, bg: c_uint) {
+    pub fn clear_lines(&mut self, py: u32, ny: u32, bg: u32) {
         if ny == 0 {
             return;
         }
@@ -862,7 +861,7 @@ impl Grid {
     /// coordinates). Source and destination ranges may overlap (memmove
     /// semantics). Replaced lines in the destination are freed first; the
     /// source region is re-initialized with background `bg`.
-    pub fn move_lines(&mut self, dy: c_uint, py: c_uint, ny: c_uint, bg: c_uint) {
+    pub fn move_lines(&mut self, dy: u32, py: u32, ny: u32, bg: u32) {
         if ny == 0 || py == dy {
             return;
         }
@@ -924,7 +923,7 @@ impl Grid {
     /// cover both ranges first; source cells are not cleared afterwards
     /// (the caller typically writes a background-colored overwrite there
     /// via [`clear`](Self::clear)).
-    pub fn move_cells(&mut self, dx: c_uint, px: c_uint, py: c_uint, nx: c_uint, bg: c_uint) {
+    pub fn move_cells(&mut self, dx: u32, px: u32, py: u32, nx: u32, bg: u32) {
         if nx == 0 || px == dx {
             return;
         }
@@ -955,7 +954,7 @@ impl Grid {
     /// expands the new line to `sx` columns pre-filled with that background
     /// color so the next redraw reflects the bg change. Caller must ensure
     /// `py` is in range (bounds-checked via the `Vec` index panic).
-    pub fn empty_line(&mut self, py: c_uint, bg: c_uint) {
+    pub fn empty_line(&mut self, py: u32, bg: u32) {
         self.linedata[py as usize] = GridLine::new();
         if !COLOUR_DEFAULT(bg as i32) {
             let sx = self.sx;
@@ -979,9 +978,9 @@ impl Grid {
     /// re-use the updated style. `s` is needed for hyperlink resolution.
     pub fn string_cells(
         &mut self,
-        px: c_uint,
-        py: c_uint,
-        nx: c_uint,
+        px: u32,
+        py: u32,
+        nx: u32,
         lastgc: &mut Option<GridCell>,
         flags: GridStringFlags,
         hl: Option<&dyn HyperlinkLookup>,
@@ -1052,10 +1051,10 @@ impl Grid {
     /// Both source and destination should be big enough.
     pub unsafe fn duplicate_lines(
         &mut self,
-        mut dy: c_uint,
+        mut dy: u32,
         src: *mut Grid,
-        mut sy: c_uint,
-        mut ny: c_uint,
+        mut sy: u32,
+        mut ny: u32,
     ) {
         unsafe {
             if dy + ny > self.hsize + self.sy {
@@ -1406,13 +1405,13 @@ impl Grid {
 /// values (e.g. `[38, 2, r, g, b]` for RGB, `[38, 5, idx]` for 256-color,
 /// `[39]` for default, `[90..=97]` for bright, or empty for "no change
 /// needed relative to default").
-fn grid_string_cells_fg(gc: &GridCell) -> Vec<c_int> {
+fn grid_string_cells_fg(gc: &GridCell) -> Vec<i32> {
     let mut v = Vec::with_capacity(5);
     if gc.fg & COLOUR_FLAG_256 != 0 {
         v.extend_from_slice(&[38, 5, (gc.fg & 0xff)]);
     } else if gc.fg & COLOUR_FLAG_RGB != 0 {
         let (r, g, b) = colour_split_rgb(gc.fg);
-        v.extend_from_slice(&[38, 2, r as c_int, g as c_int, b as c_int]);
+        v.extend_from_slice(&[38, 2, r as i32, g as i32, b as i32]);
     } else {
         match gc.fg {
             0..=7 => v.push(gc.fg + 30),
@@ -1426,13 +1425,13 @@ fn grid_string_cells_fg(gc: &GridCell) -> Vec<c_int> {
 
 /// Get ANSI background SGR parameters for a cell style. Same shape as
 /// [`grid_string_cells_fg`] but offset by 10 (SGR bg codes).
-fn grid_string_cells_bg(gc: &GridCell) -> Vec<c_int> {
+fn grid_string_cells_bg(gc: &GridCell) -> Vec<i32> {
     let mut v = Vec::with_capacity(5);
     if gc.bg & COLOUR_FLAG_256 != 0 {
         v.extend_from_slice(&[48, 5, (gc.bg & 0xff)]);
     } else if gc.bg & COLOUR_FLAG_RGB != 0 {
         let (r, g, b) = colour_split_rgb(gc.bg);
-        v.extend_from_slice(&[48, 2, r as c_int, g as c_int, b as c_int]);
+        v.extend_from_slice(&[48, 2, r as i32, g as i32, b as i32]);
     } else {
         match gc.bg {
             0..=7 => v.push(gc.bg + 40),
@@ -1447,13 +1446,13 @@ fn grid_string_cells_bg(gc: &GridCell) -> Vec<c_int> {
 /// Get underscore-color SGR parameters for a cell style. Returns empty if
 /// the default underscore color is active (only 256/RGB variants emit
 /// anything, as there are no basic-palette SGR codes for underscore).
-fn grid_string_cells_us(gc: &GridCell) -> Vec<c_int> {
+fn grid_string_cells_us(gc: &GridCell) -> Vec<i32> {
     let mut v = Vec::with_capacity(5);
     if gc.us & COLOUR_FLAG_256 != 0 {
         v.extend_from_slice(&[58, 5, (gc.us & 0xff)]);
     } else if gc.us & COLOUR_FLAG_RGB != 0 {
         let (r, g, b) = colour_split_rgb(gc.us);
-        v.extend_from_slice(&[58, 2, r as c_int, g as c_int, b as c_int]);
+        v.extend_from_slice(&[58, 2, r as i32, g as i32, b as i32]);
     }
     v
 }
@@ -1472,10 +1471,10 @@ fn grid_string_cells_us(gc: &GridCell) -> Vec<c_int> {
 /// actual 0x1b byte.
 fn grid_string_cells_add_code(
     buf: &mut Vec<u8>,
-    n: c_uint,
-    s: &[c_int],
-    newc: &[c_int],
-    oldc: &[c_int],
+    n: u32,
+    s: &[i32],
+    newc: &[i32],
+    oldc: &[i32],
     flags: GridStringFlags,
 ) {
     let reset = n != 0 && s[0] == 0;
@@ -1567,12 +1566,12 @@ fn grid_string_cells_code(
     flags: GridStringFlags,
     hl: Option<&dyn HyperlinkLookup>,
 ) -> bool {
-    let mut s: Vec<c_int> = Vec::with_capacity(16);
+    let mut s: Vec<i32> = Vec::with_capacity(16);
     let attr = gc.attr;
     let mut lastattr = lastgc.attr;
     let mut has_link = false;
 
-    static ATTRS: [(GridAttr, c_uint); 13] = [
+    static ATTRS: [(GridAttr, u32); 13] = [
         (GridAttr::GRID_ATTR_BRIGHT, 1),
         (GridAttr::GRID_ATTR_DIM, 2),
         (GridAttr::GRID_ATTR_ITALICS, 3),
@@ -1602,7 +1601,7 @@ fn grid_string_cells_code(
     // For each attribute that is newly set, add its code
     for &(mask, code) in &ATTRS {
         if attr.intersects(mask) && !lastattr.intersects(mask) {
-            s.push(code as c_int);
+            s.push(code as i32);
         }
     }
 
@@ -1630,7 +1629,7 @@ fn grid_string_cells_code(
         buf.push(b'm');
     }
 
-    let n = s.len() as c_uint;
+    let n = s.len() as u32;
 
     // If the foreground colour changed, write its parameters
     let newc = grid_string_cells_fg(gc);
@@ -1690,7 +1689,7 @@ unsafe fn grid_reflow_dead(gl: *mut GridLine) {
 }
 
 /// Add lines, return the first new one.
-unsafe fn grid_reflow_add(gd: *mut Grid, n: c_uint) -> *mut GridLine {
+unsafe fn grid_reflow_add(gd: *mut Grid, n: u32) -> *mut GridLine {
     unsafe {
         let sy = (*gd).sy + n;
 
@@ -1719,10 +1718,10 @@ unsafe fn grid_reflow_move(gd: *mut Grid, from: *mut GridLine) -> *mut GridLine 
 unsafe fn grid_reflow_join(
     target: *mut Grid,
     gd: *mut Grid,
-    sx: c_uint,
-    yy: c_uint,
-    mut width: c_uint,
-    already: c_int,
+    sx: u32,
+    yy: u32,
+    mut width: u32,
+    already: i32,
 ) {
     unsafe {
         let mut from: *mut GridLine = null_mut();
