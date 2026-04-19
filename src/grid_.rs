@@ -64,7 +64,38 @@
 //! / [`unwrap_position`](grid::unwrap_position) pair convert between
 //! "(column, row)" in grid coordinates and "(column, logical-line)" for
 //! reflow and search.
-use crate::*;
+// Explicit imports — listed here (rather than `use crate::*;`) so that the
+// module's dependency surface is visible at a glance. This is the planned
+// crate-boundary for `tmux-grid` / `tmux-types`.
+//
+// === Types/constants that would move to `tmux-types` ===
+use crate::{
+    COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, GRID_HISTORY,
+    grid, grid_attr, grid_cell, grid_cell_entry, grid_cell_entry_data, grid_cell_entry_union,
+    grid_extd_entry, grid_flag, grid_line, grid_line_flag, grid_string_flags,
+    utf8_build_one, utf8_char, utf8_data, utf8_from_data, utf8_set, utf8_to_data,
+    colour_split_rgb,
+};
+// === External types (would stay in tmux-rs; needs a trait/callback) ===
+use crate::screen;
+use crate::hyperlinks_get;
+// === C-compat allocation & formatting (blockers for crate extraction) ===
+use crate::{free_, xmalloc, xreallocarray};
+use crate::{format_nul, xsnprintf_};
+// === Globals ===
+use crate::CURRENT_TIME;
+// === Macros from crate root ===
+use crate::{c, log_debug};
+// === Small helpers that are trivially replaceable ===
+use crate::_s;
+use crate::fatalx;
+
+use crate::compat::strlcat;
+use crate::libc::strlen;
+
+use std::ffi::{c_int, c_uchar, c_uint, c_void};
+use std::mem::{MaybeUninit, zeroed};
+use std::ptr::{null, null_mut};
 
 /// Default grid cell data.
 pub static GRID_DEFAULT_CELL: grid_cell = grid_cell::new(
@@ -1924,7 +1955,9 @@ unsafe fn grid_reflow_split(target: *mut grid, gd: *mut grid, sx: u32, yy: u32, 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+    use crate::{colour_join_rgb, grid_create};
+
+    use std::ffi::CStr;
     use std::ptr::null_mut;
 
     /// Helper: create a grid_cell with a single ASCII character.

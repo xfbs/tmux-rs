@@ -37,7 +37,10 @@
 //! Cursor movement functions skip over PADDING cells to avoid landing in the
 //! middle of a wide character.
 
-use crate::*;
+// Explicit imports — dependency surface for planned `tmux-grid` crate extraction.
+use crate::{
+    WHITESPACE, grid, grid_flag, grid_line_flag, grid_reader, utf8_data, utf8_cstrhas,
+};
 
 impl<'a> grid_reader<'a> {
     /// Create a grid reader at the given position over the given grid.
@@ -508,6 +511,7 @@ impl<'a> grid_reader<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{c, grid_attr, grid_cell, grid_create};
 
     /// Helper: create a grid and fill lines with ASCII text.
     fn make_grid_with_text(lines: &[&str], width: u32) -> Box<grid> {
