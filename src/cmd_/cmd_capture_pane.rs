@@ -104,7 +104,6 @@ unsafe fn cmd_capture_pane_history(
 ) -> *mut u8 {
     unsafe {
         let gd: *mut grid;
-        let mut gl: *const grid_line;
         let mut gc: *mut grid_cell = null_mut();
         let mut flags = grid_string_flags::empty();
 
@@ -199,8 +198,10 @@ unsafe fn cmd_capture_pane_history(
 
             buf = cmd_capture_pane_append(buf, len, line, linelen);
 
-            gl = (*gd).peek_line(i);
-            if !join_lines || !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
+            let wrapped = (*gd)
+                .peek_line(i)
+                .is_some_and(|gl| gl.flags.intersects(grid_line_flag::WRAPPED));
+            if !join_lines || !wrapped {
                 *buf.add(*len) = b'\n' as _;
                 (*len) += 1;
             }

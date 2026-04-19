@@ -5403,8 +5403,10 @@ pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String 
                 if y == 0 {
                     break;
                 }
-                let gl = (*gd).peek_line(y - 1);
-                if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
+                let wrapped = (*gd)
+                    .peek_line(y - 1)
+                    .is_some_and(|gl| gl.flags.intersects(grid_line_flag::WRAPPED));
+                if !wrapped {
                     break;
                 }
                 y -= 1;
@@ -5422,8 +5424,10 @@ pub unsafe fn format_grid_word(gd: *mut grid, mut x: u32, mut y: u32) -> String 
                     if y == (*gd).hsize + (*gd).sy - 1 {
                         break;
                     }
-                    let gl = (*gd).peek_line(y);
-                    if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
+                    let wrapped = (*gd)
+                        .peek_line(y)
+                        .is_some_and(|gl| gl.flags.intersects(grid_line_flag::WRAPPED));
+                    if !wrapped {
                         break;
                     }
                     y += 1;

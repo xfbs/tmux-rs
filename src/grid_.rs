@@ -488,16 +488,17 @@ impl grid {
         self.linedata.resize_with(lines as usize, grid_line::new);
     }
 
-    /// Non-panicking line accessor. Returns a raw pointer to the line at row
-    /// `py`, or a null pointer if `py` is out of range (logged at debug
-    /// level via `grid_peek_line`). Retained with a pointer return for
-    /// callers that prefer a nullable sentinel over a borrow; new code
-    /// should prefer [`get_line`](Self::get_line) plus a bounds check.
-    pub fn peek_line(&mut self, py: c_uint) -> *mut grid_line {
+    /// Bounds-checked line accessor. Returns `Some(&line)` if `py` is in
+    /// range, `None` (with a debug log) otherwise. Contrast with
+    /// [`get_line`](Self::get_line) which panics out-of-range, and
+    /// [`line`](Self::line) which panics but returns a plain `&grid_line`.
+    /// `peek_line` is the right choice when `py` may be untrusted
+    /// (reflow, search across history boundaries).
+    pub fn peek_line(&self, py: c_uint) -> Option<&grid_line> {
         if grid_check_y(self, c!("grid_peek_line"), py) != 0 {
-            return null_mut();
+            return None;
         }
-        &raw mut self.linedata[py as usize]
+        Some(&self.linedata[py as usize])
     }
 
     /// Return the content length of line `py`: the column index one past
@@ -922,14 +923,16 @@ impl grid {
             let mut buf: *mut u8 = xmalloc(len).as_ptr() as *mut u8;
 
             let gl = self.peek_line(py);
-            let end = if flags.intersects(grid_string_flags::GRID_STRING_EMPTY_CELLS) {
-                (*gl).celldata.len() as u32
-            } else {
-                (*gl).cellused
+            let end = match gl {
+                Some(gl) if flags.intersects(grid_string_flags::GRID_STRING_EMPTY_CELLS) => {
+                    gl.celldata.len() as u32
+                }
+                Some(gl) => gl.cellused,
+                None => 0,
             };
 
             for xx in px..px + nx {
-                if gl.is_null() || xx >= end {
+                if gl.is_none() || xx >= end {
                     break;
                 }
                 gc = self.get_cell(xx, py);

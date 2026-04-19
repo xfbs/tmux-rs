@@ -258,7 +258,6 @@ pub unsafe fn window_copy_clone_screen(
     trim: i32,
 ) -> *mut screen {
     unsafe {
-        let mut gl: *const grid_line;
         let mut wx: u32 = 0;
         let mut wy: u32 = 0;
 
@@ -269,8 +268,12 @@ pub unsafe fn window_copy_clone_screen(
         let mut sy = screen_hsize(src) + screen_size_y(src);
         if trim != 0 {
             while sy > screen_hsize(src) {
-                gl = (*src).grid.peek_line(sy - 1);
-                if (*gl).cellused != 0 {
+                let cellused = (*src)
+                    .grid
+                    .peek_line(sy - 1)
+                    .map(|gl| gl.cellused)
+                    .unwrap_or(0);
+                if cellused != 0 {
                     break;
                 }
                 sy -= 1;
@@ -3783,33 +3786,31 @@ pub unsafe fn window_copy_search_rl_regex(
 }
 
 pub unsafe fn window_copy_cellstring(
-    gl: *mut grid_line,
+    gl: &grid_line,
     px: u32,
     size: *mut usize,
     allocated: *mut i32,
 ) -> *mut u8 {
     unsafe {
-        // struct grid_cell_entry *gce;
-
-        if px as usize >= (*gl).celldata.len() {
+        if px as usize >= gl.celldata.len() {
             *size = 1;
             *allocated = 0;
             return c!(" ") as *mut u8; // TODO think of a better type-safe way to represent returning a MaybeAllocated type
         }
 
-        let gce = (*gl).celldata.as_mut_ptr().add(px as usize);
-        if (*gce).flags.intersects(grid_flag::PADDING) {
+        let gce = &gl.celldata[px as usize];
+        if gce.flags.intersects(grid_flag::PADDING) {
             *size = 0;
             *allocated = 0;
             return null_mut();
         }
-        if !(*gce).flags.intersects(grid_flag::EXTENDED) {
+        if !gce.flags.intersects(grid_flag::EXTENDED) {
             *size = 1;
             *allocated = 0;
-            return (&raw mut (*gce).union_.data.data).cast();
+            return (&raw const gce.union_.data.data).cast::<u8>() as *mut u8;
         }
 
-        let ud = utf8_to_data((&(*gl).extddata)[(*gce).union_.offset as usize].data);
+        let ud = utf8_to_data(gl.extddata[gce.union_.offset as usize].data);
         if ud.size == 0 {
             *size = 0;
             *allocated = 0;
@@ -3919,7 +3920,9 @@ pub unsafe fn window_copy_stringify(
         }
         buf = xrealloc(buf.cast(), bufsize).as_ptr().cast();
 
-        let gl = (*gd).peek_line(py);
+        let Some(gl) = (*gd).peek_line(py) else {
+            return buf;
+        };
         let mut bx = *size - 1;
         for ax in first..last {
             let d = window_copy_cellstring(gl, ax, &raw mut dlen, &raw mut allocated);
@@ -3967,7 +3970,9 @@ pub unsafe fn window_copy_cstrtocellpos(
         let mut cells: Vec<Cell> = Vec::with_capacity(ncells as usize);
         let mut px = *ppx;
         let mut pywrap = *ppy;
-        let mut gl = (*gd).peek_line(pywrap);
+        let Some(mut gl) = (*gd).peek_line(pywrap) else {
+            return;
+        };
         for _ in 0..ncells {
             let mut dlen: usize = 0;
             let mut allocated: i32 = 0;
@@ -3977,7 +3982,10 @@ pub unsafe fn window_copy_cstrtocellpos(
             if px == (*gd).sx {
                 px = 0;
                 pywrap += 1;
-                gl = (*gd).peek_line(pywrap);
+                let Some(new_gl) = (*gd).peek_line(pywrap) else {
+                    break;
+                };
+                gl = new_gl;
             }
         }
 
@@ -4469,8 +4477,10 @@ pub unsafe fn window_copy_visible_lines(
         *start = (*gd).hsize - (*data).oy;
 
         while *start > 0 {
-            let gl = (*gd).peek_line((*start) - 1);
-            if !(*gl).flags.intersects(grid_line_flag::WRAPPED) {
+            let wrapped = (*gd)
+                .peek_line((*start) - 1)
+                .is_some_and(|gl| gl.flags.intersects(grid_line_flag::WRAPPED));
+            if !wrapped {
                 break;
             }
             (*start) -= 1;
