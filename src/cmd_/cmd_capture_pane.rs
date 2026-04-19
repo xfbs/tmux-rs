@@ -104,14 +104,11 @@ unsafe fn cmd_capture_pane_history(
 ) -> *mut u8 {
     unsafe {
         let gd: *mut grid;
-        let mut gc: *mut grid_cell = null_mut();
+        let mut lastgc: Option<grid_cell> = None;
         let mut flags = grid_string_flags::empty();
 
         let tmp: u32;
         let mut bottom: u32;
-        let mut line: *mut u8;
-
-        let mut linelen: usize;
 
         let sx = screen_size_x(&raw mut (*wp).base);
         if args_has(args, 'a') {
@@ -193,10 +190,13 @@ unsafe fn cmd_capture_pane_history(
 
         let mut buf = null_mut();
         for i in top..=bottom {
-            line = (*gd).string_cells(0, i, sx, &raw mut gc, flags, (*wp).screen);
-            linelen = strlen(line);
+            // Pull the pane's hyperlink registry pointer if present, so
+            // OSC-8 hyperlink sequences get emitted when requested.
+            let hl = (*(*wp).screen).hyperlinks;
+            let line = (*gd).string_cells(0, i, sx, &mut lastgc, flags, hl);
+            let linelen = line.len();
 
-            buf = cmd_capture_pane_append(buf, len, line, linelen);
+            buf = cmd_capture_pane_append(buf, len, line.as_ptr(), linelen);
 
             let wrapped = (*gd)
                 .peek_line(i)
@@ -205,8 +205,6 @@ unsafe fn cmd_capture_pane_history(
                 *buf.add(*len) = b'\n' as _;
                 (*len) += 1;
             }
-
-            free_(line);
         }
         buf
     }

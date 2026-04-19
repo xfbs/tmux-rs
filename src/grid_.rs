@@ -77,11 +77,7 @@ use crate::{
     colour_split_rgb,
 };
 // === External types (would stay in tmux-rs; needs a trait/callback) ===
-use crate::screen;
-use crate::hyperlinks_get;
-// === C-compat allocation & formatting (blockers for crate extraction) ===
-use crate::{free_, xmalloc, xreallocarray};
-use crate::{format_nul, xsnprintf_};
+use crate::{hyperlinks, hyperlinks_get};
 // === Globals ===
 use crate::CURRENT_TIME;
 // === Macros from crate root ===
@@ -90,10 +86,9 @@ use crate::c;
 use crate::_s;
 use crate::fatalx;
 
-use crate::compat::strlcat;
 use crate::libc::strlen;
 
-use std::ffi::{c_int, c_uchar, c_uint, c_void};
+use std::ffi::{c_int, c_uchar, c_uint};
 use std::mem::{MaybeUninit, zeroed};
 use std::ptr::{null, null_mut};
 
@@ -895,109 +890,75 @@ impl grid {
     /// so sequential `string_cells` invocations emit minimal diffs. Pass a
     /// pointer whose target is `null` on the first call; subsequent calls
     /// re-use the updated style. `s` is needed for hyperlink resolution.
-    pub unsafe fn string_cells(
+    pub fn string_cells(
         &mut self,
         px: c_uint,
         py: c_uint,
         nx: c_uint,
-        lastgc: *mut *mut grid_cell,
+        lastgc: &mut Option<grid_cell>,
         flags: grid_string_flags,
-        s: *mut screen,
-    ) -> *mut u8 {
-        static mut LASTGC1: grid_cell = unsafe { zeroed() };
-        unsafe {
-            let mut gc: grid_cell;
-            let mut data: *const u8;
-            let mut code: [u8; 8192] = [0; 8192];
-            let mut len: usize = 128;
-            let mut off: usize = 0;
-            let mut size: usize = 0;
-            let mut codelen: usize;
-            let mut has_link: bool = false;
-
-            if !lastgc.is_null() && (*lastgc).is_null() {
-                std::ptr::copy(&GRID_DEFAULT_CELL, &raw mut LASTGC1, 1);
-                *lastgc = &raw mut LASTGC1;
-            }
-
-            let mut buf: *mut u8 = xmalloc(len).as_ptr() as *mut u8;
-
-            let gl = self.peek_line(py);
-            let end = match gl {
-                Some(gl) if flags.intersects(grid_string_flags::GRID_STRING_EMPTY_CELLS) => {
-                    gl.celldata.len() as u32
-                }
-                Some(gl) => gl.cellused,
-                None => 0,
-            };
-
-            for xx in px..px + nx {
-                if gl.is_none() || xx >= end {
-                    break;
-                }
-                gc = self.get_cell(xx, py);
-                if gc.flags.intersects(grid_flag::PADDING) {
-                    continue;
-                }
-
-                if flags.intersects(grid_string_flags::GRID_STRING_WITH_SEQUENCES) {
-                    has_link = grid_string_cells_code(
-                        *lastgc,
-                        &gc,
-                        code.as_mut_ptr(),
-                        code.len(),
-                        flags,
-                        s
-                    );
-                    codelen = strlen(code.as_ptr());
-                    std::ptr::copy(&gc, *lastgc, 1);
-                } else {
-                    codelen = 0;
-                }
-
-                data = &raw const gc.data.data as *const u8;
-                size = gc.data.size as usize;
-                if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES)
-                    && size == 1
-                    && *data == b'\\'
-                {
-                    data = c!("\\\\");
-                    size = 2;
-                }
-
-                while len < off + size + codelen + 1 {
-                    buf = xreallocarray(buf.cast(), 2, len).as_ptr() as *mut u8;
-                    len *= 2;
-                }
-
-                if codelen != 0 {
-                    std::ptr::copy(code.as_ptr(), buf.add(off), codelen);
-                    off += codelen;
-                }
-                std::ptr::copy(data, buf.add(off), size);
-                off += size;
-            }
-
-            if has_link {
-                grid_string_cells_add_hyperlink(code.as_mut_ptr(), code.len(), c!(""), c!(""), flags);
-                codelen = strlen(code.as_ptr());
-                while len < off + size + codelen + 1 {
-                    buf = xreallocarray(buf.cast(), 2, len).as_ptr() as *mut u8;
-                    len *= 2;
-                }
-                std::ptr::copy(code.as_ptr(), buf.add(off), codelen);
-                off += codelen;
-            }
-
-            if flags.intersects(grid_string_flags::GRID_STRING_TRIM_SPACES) {
-                while off > 0 && *buf.add(off - 1) as u8 == b' ' {
-                    off -= 1;
-                }
-            }
-            *buf.add(off) = 0;
-
-            buf
+        hl: Option<*mut hyperlinks>,
+    ) -> Vec<u8> {
+        // If the caller hasn't carried a style from a prior call, seed
+        // with the default. Each iteration then updates `lastgc` to the
+        // cell we just emitted, so the next call can emit minimal diffs.
+        if lastgc.is_none() {
+            *lastgc = Some(GRID_DEFAULT_CELL);
         }
+
+        let mut buf: Vec<u8> = Vec::with_capacity(128);
+        let mut has_link = false;
+
+        let gl = self.peek_line(py);
+        let end = match gl {
+            Some(gl) if flags.intersects(grid_string_flags::GRID_STRING_EMPTY_CELLS) => {
+                gl.celldata.len() as u32
+            }
+            Some(gl) => gl.cellused,
+            None => 0,
+        };
+
+        for xx in px..px + nx {
+            if gl.is_none() || xx >= end {
+                break;
+            }
+            let gc = self.get_cell(xx, py);
+            if gc.flags.intersects(grid_flag::PADDING) {
+                continue;
+            }
+
+            if flags.intersects(grid_string_flags::GRID_STRING_WITH_SEQUENCES) {
+                let last = lastgc.as_ref().expect("seeded above");
+                has_link = grid_string_cells_code(last, &gc, &mut buf, flags, hl);
+                *lastgc = Some(gc);
+            }
+
+            // Emit the cell's UTF-8 bytes. When `ESCAPE_SEQUENCES` is
+            // active, a literal backslash needs to be escaped so the
+            // output can be safely re-parsed.
+            let size = gc.data.size as usize;
+            let bytes = &gc.data.data[..size];
+            if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES)
+                && size == 1
+                && bytes[0] == b'\\'
+            {
+                buf.extend_from_slice(b"\\\\");
+            } else {
+                buf.extend_from_slice(bytes);
+            }
+        }
+
+        if has_link {
+            grid_string_cells_add_hyperlink(&mut buf, b"", b"", flags);
+        }
+
+        if flags.intersects(grid_string_flags::GRID_STRING_TRIM_SPACES) {
+            while buf.last() == Some(&b' ') {
+                buf.pop();
+            }
+        }
+
+        buf
     }
 
     /// Duplicate a set of lines from `src` into `self` (destination).
@@ -1336,400 +1297,323 @@ impl grid {
         self.clear(sx - nx, py_abs, nx, 1, bg);
     }
 
-    /// Convert `nx` cells in the visible area starting at (px, py) into a string.
-    pub unsafe fn view_string_cells(&mut self, px: u32, py: u32, nx: u32) -> *mut u8 {
-        unsafe {
-            let py_abs = self.hsize + py;
-            self.string_cells(
-                px,
-                py_abs,
-                nx,
-                null_mut(),
-                grid_string_flags::empty(),
-                null_mut(),
-            )
-        }
+    /// Convert `nx` cells in the visible area starting at (px, py) into a
+    /// byte string. No escape sequences, no hyperlink decoration, no
+    /// carried-over style — intended for readers that want plain text
+    /// (e.g. window-name derivation).
+    pub fn view_string_cells(&mut self, px: u32, py: u32, nx: u32) -> Vec<u8> {
+        let py_abs = self.hsize + py;
+        let mut lastgc = None;
+        self.string_cells(px, py_abs, nx, &mut lastgc, grid_string_flags::empty(), None)
     }
 }
 
 
 /// Get ANSI foreground sequence.
-unsafe fn grid_string_cells_fg(gc: *const grid_cell, values: *mut c_int) -> usize {
-    unsafe {
-        let mut n: usize = 0;
-
-        if (*gc).fg & COLOUR_FLAG_256 != 0 {
-            *values.add(n) = 38;
-            n += 1;
-            *values.add(n) = 5;
-            n += 1;
-            *values.add(n) = ((*gc).fg & 0xff) as c_int;
-            n += 1;
-        } else if (*gc).fg & COLOUR_FLAG_RGB != 0 {
-            *values.add(n) = 38;
-            n += 1;
-            *values.add(n) = 2;
-            n += 1;
-            let (r, g, b) = colour_split_rgb((*gc).fg);
-            *values.add(n) = r as c_int;
-            n += 1;
-            *values.add(n) = g as c_int;
-            n += 1;
-            *values.add(n) = b as c_int;
-            n += 1;
-        } else {
-            match (*gc).fg {
-                0..=7 => {
-                    *values.add(n) = (*gc).fg + 30;
-                    n += 1;
-                }
-                8 => {
-                    *values.add(n) = 39;
-                    n += 1;
-                }
-                90..=97 => {
-                    *values.add(n) = (*gc).fg;
-                    n += 1;
-                }
-                _ => {}
-            }
+/// Get ANSI foreground SGR parameters for a cell style. Returns up to 5
+/// values (e.g. `[38, 2, r, g, b]` for RGB, `[38, 5, idx]` for 256-color,
+/// `[39]` for default, `[90..=97]` for bright, or empty for "no change
+/// needed relative to default").
+fn grid_string_cells_fg(gc: &grid_cell) -> Vec<c_int> {
+    let mut v = Vec::with_capacity(5);
+    if gc.fg & COLOUR_FLAG_256 != 0 {
+        v.extend_from_slice(&[38, 5, (gc.fg & 0xff)]);
+    } else if gc.fg & COLOUR_FLAG_RGB != 0 {
+        let (r, g, b) = colour_split_rgb(gc.fg);
+        v.extend_from_slice(&[38, 2, r as c_int, g as c_int, b as c_int]);
+    } else {
+        match gc.fg {
+            0..=7 => v.push(gc.fg + 30),
+            8 => v.push(39),
+            90..=97 => v.push(gc.fg),
+            _ => {}
         }
-        n
     }
+    v
 }
 
-/// Get ANSI background sequence.
-unsafe fn grid_string_cells_bg(gc: *const grid_cell, values: *mut c_int) -> usize {
-    unsafe {
-        let mut n: usize = 0;
-
-        if (*gc).bg & COLOUR_FLAG_256 != 0 {
-            *values.add(n) = 48;
-            n += 1;
-            *values.add(n) = 5;
-            n += 1;
-            *values.add(n) = ((*gc).bg & 0xff) as c_int;
-            n += 1;
-        } else if (*gc).bg & COLOUR_FLAG_RGB != 0 {
-            *values.add(n) = 48;
-            n += 1;
-            *values.add(n) = 2;
-            n += 1;
-            let (r, g, b) = colour_split_rgb((*gc).bg);
-            *values.add(n) = r as c_int;
-            n += 1;
-            *values.add(n) = g as c_int;
-            n += 1;
-            *values.add(n) = b as c_int;
-            n += 1;
-        } else {
-            match (*gc).bg {
-                0..=7 => {
-                    *values.add(n) = (*gc).bg + 40;
-                    n += 1;
-                }
-                8 => {
-                    *values.add(n) = 49;
-                    n += 1;
-                }
-                90..=97 => {
-                    *values.add(n) = (*gc).bg + 10;
-                    n += 1;
-                }
-                _ => {}
-            }
+/// Get ANSI background SGR parameters for a cell style. Same shape as
+/// [`grid_string_cells_fg`] but offset by 10 (SGR bg codes).
+fn grid_string_cells_bg(gc: &grid_cell) -> Vec<c_int> {
+    let mut v = Vec::with_capacity(5);
+    if gc.bg & COLOUR_FLAG_256 != 0 {
+        v.extend_from_slice(&[48, 5, (gc.bg & 0xff)]);
+    } else if gc.bg & COLOUR_FLAG_RGB != 0 {
+        let (r, g, b) = colour_split_rgb(gc.bg);
+        v.extend_from_slice(&[48, 2, r as c_int, g as c_int, b as c_int]);
+    } else {
+        match gc.bg {
+            0..=7 => v.push(gc.bg + 40),
+            8 => v.push(49),
+            90..=97 => v.push(gc.bg + 10),
+            _ => {}
         }
-        n
     }
+    v
 }
 
-/// Get underscore colour sequence.
-unsafe fn grid_string_cells_us(gc: *const grid_cell, values: *mut c_int) -> usize {
-    unsafe {
-        let mut n: usize = 0;
-        if (*gc).us & COLOUR_FLAG_256 != 0 {
-            *values.add(n) = 58;
-            n += 1;
-            *values.add(n) = 5;
-            n += 1;
-            *values.add(n) = ((*gc).us & 0xff) as c_int;
-            n += 1;
-        } else if (*gc).us & COLOUR_FLAG_RGB != 0 {
-            *values.add(n) = 58;
-            n += 1;
-            *values.add(n) = 2;
-            n += 1;
-            let (r, g, b) = colour_split_rgb((*gc).us);
-            *values.add(n) = r as c_int;
-            n += 1;
-            *values.add(n) = g as c_int;
-            n += 1;
-            *values.add(n) = b as c_int;
-            n += 1;
-        }
-        n
+/// Get underscore-color SGR parameters for a cell style. Returns empty if
+/// the default underscore color is active (only 256/RGB variants emit
+/// anything, as there are no basic-palette SGR codes for underscore).
+fn grid_string_cells_us(gc: &grid_cell) -> Vec<c_int> {
+    let mut v = Vec::with_capacity(5);
+    if gc.us & COLOUR_FLAG_256 != 0 {
+        v.extend_from_slice(&[58, 5, (gc.us & 0xff)]);
+    } else if gc.us & COLOUR_FLAG_RGB != 0 {
+        let (r, g, b) = colour_split_rgb(gc.us);
+        v.extend_from_slice(&[58, 2, r as c_int, g as c_int, b as c_int]);
     }
+    v
 }
 
-/// Add on SGR code.
-unsafe fn grid_string_cells_add_code(
-    buf: *mut u8,
-    len: usize,
+/// Append an SGR code sequence (`CSI <params> m`) to `buf` for a style
+/// change from `oldc` to `newc`. Suppresses emission when the change is
+/// redundant (same parameters, no pending reset) or when a reset is
+/// immediately followed by the default-colour code (49/39 already implied).
+///
+/// `n` and `s` describe the pending attribute prefix from the caller —
+/// `n > 0 && s[0] == 0` signals that a reset (`0`) is already queued and
+/// the colour change must emit even if it matches the old value.
+///
+/// When `ESCAPE_SEQUENCES` is set, the CSI prefix is emitted as the
+/// literal bytes `\033[` (for human-readable output); otherwise as the
+/// actual 0x1b byte.
+fn grid_string_cells_add_code(
+    buf: &mut Vec<u8>,
     n: c_uint,
-    s: *mut c_int,
-    newc: *mut c_int,
-    oldc: *mut c_int,
-    nnewc: usize,
-    noldc: usize,
+    s: &[c_int],
+    newc: &[c_int],
+    oldc: &[c_int],
     flags: grid_string_flags,
 ) {
-    unsafe {
-        let mut tmp: [u8; 64] = [0; 64];
-        let reset = n != 0 && *s == 0;
+    let reset = n != 0 && s[0] == 0;
 
-        if nnewc == 0 {
-            return; // no code to add
+    if newc.is_empty() {
+        return; // no code to add
+    }
+    if !reset && newc == oldc {
+        return; // no reset and colour unchanged
+    }
+    if reset && (newc[0] == 49 || newc[0] == 39) {
+        return; // reset and colour default
+    }
+
+    if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
+        buf.extend_from_slice(b"\\033[");
+    } else {
+        buf.extend_from_slice(b"\x1b[");
+    }
+
+    for (i, &v) in newc.iter().enumerate() {
+        use std::io::Write;
+        if i + 1 < newc.len() {
+            // Infallible: writing to Vec<u8> can't fail.
+            let _ = write!(buf, "{v};");
+        } else {
+            let _ = write!(buf, "{v}");
         }
-        if !reset
-            && nnewc == noldc
-            && libc::memcmp(
-                newc as *const c_void,
-                oldc as *const c_void,
-                nnewc * std::mem::size_of::<c_int>(),
-            ) == 0
+    }
+    buf.push(b'm');
+}
+
+/// Append an OSC-8 hyperlink sequence to `buf`. The `id` and `uri` are
+/// NUL-terminated C strings from the hyperlinks registry; pass empty
+/// slices to emit the *close* sequence.
+///
+/// Returns `false` when the id/uri would be absurdly long (> ~1MB combined);
+/// matches the original defensive check.
+fn grid_string_cells_add_hyperlink(
+    buf: &mut Vec<u8>,
+    id: &[u8],
+    uri: &[u8],
+    flags: grid_string_flags,
+) -> bool {
+    // Mirrors the C-era sanity limit (`strlen(uri) + strlen(id) + 17 >= len`
+    // with `len = code.len() = 8192`). Keep the same threshold so behavior
+    // is preserved.
+    if id.len() + uri.len() + 17 >= 8192 {
+        return false;
+    }
+
+    if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
+        buf.extend_from_slice(b"\\033]8;");
+    } else {
+        buf.extend_from_slice(b"\x1b]8;");
+    }
+
+    if !id.is_empty() {
+        buf.extend_from_slice(b"id=");
+        buf.extend_from_slice(id);
+        buf.push(b';');
+    } else {
+        buf.push(b';');
+    }
+
+    buf.extend_from_slice(uri);
+
+    if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
+        buf.extend_from_slice(b"\\033\\\\");
+    } else {
+        buf.extend_from_slice(b"\x1b\\");
+    }
+
+    true
+}
+
+/// Emit the ANSI escape sequences required to transition from the previous
+/// cell style (`lastgc`) to the current cell style (`gc`). Appends to `buf`
+/// without clearing it. Returns `true` if a hyperlink-open sequence was
+/// emitted — the caller is responsible for emitting the matching close.
+///
+/// `hyperlinks` is the pane-local registry used to resolve `gc.link` into
+/// an OSC-8 URI+id. Pass `None` to disable hyperlink emission entirely
+/// (also skipped implicitly when `lastgc.link == gc.link`).
+fn grid_string_cells_code(
+    lastgc: &grid_cell,
+    gc: &grid_cell,
+    buf: &mut Vec<u8>,
+    flags: grid_string_flags,
+    hl: Option<*mut hyperlinks>,
+) -> bool {
+    let mut s: Vec<c_int> = Vec::with_capacity(16);
+    let attr = gc.attr;
+    let mut lastattr = lastgc.attr;
+    let mut has_link = false;
+
+    static ATTRS: [(grid_attr, c_uint); 13] = [
+        (grid_attr::GRID_ATTR_BRIGHT, 1),
+        (grid_attr::GRID_ATTR_DIM, 2),
+        (grid_attr::GRID_ATTR_ITALICS, 3),
+        (grid_attr::GRID_ATTR_UNDERSCORE, 4),
+        (grid_attr::GRID_ATTR_BLINK, 5),
+        (grid_attr::GRID_ATTR_REVERSE, 7),
+        (grid_attr::GRID_ATTR_HIDDEN, 8),
+        (grid_attr::GRID_ATTR_STRIKETHROUGH, 9),
+        (grid_attr::GRID_ATTR_UNDERSCORE_2, 42),
+        (grid_attr::GRID_ATTR_UNDERSCORE_3, 43),
+        (grid_attr::GRID_ATTR_UNDERSCORE_4, 44),
+        (grid_attr::GRID_ATTR_UNDERSCORE_5, 45),
+        (grid_attr::GRID_ATTR_OVERLINE, 53),
+    ];
+
+    // If any attribute is removed, begin with 0
+    for &(mask, _) in &ATTRS {
+        if !attr.intersects(mask) && lastattr.intersects(mask)
+            || (lastgc.us != 8 && gc.us == 8)
         {
-            return; // no reset and colour unchanged
+            s.push(0);
+            lastattr &= grid_attr::GRID_ATTR_CHARSET;
+            break;
         }
-        if reset && (*newc == 49 || *newc == 39) {
-            return; // reset and colour default
-        }
+    }
 
+    // For each attribute that is newly set, add its code
+    for &(mask, code) in &ATTRS {
+        if attr.intersects(mask) && !lastattr.intersects(mask) {
+            s.push(code as c_int);
+        }
+    }
+
+    // Write the attributes
+    if !s.is_empty() {
         if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
-            strlcat(buf, c!("\\033["), len);
+            buf.extend_from_slice(b"\\033[");
         } else {
-            strlcat(buf, c!("\x1b["), len);
+            buf.extend_from_slice(b"\x1b[");
         }
 
-        for i in 0..nnewc {
-            if i + 1 < nnewc {
-                _ = xsnprintf_!(tmp.as_mut_ptr(), tmp.len(), "{};", *newc.add(i));
+        use std::io::Write;
+        for (i, &v) in s.iter().enumerate() {
+            // Values <10 are emitted as plain digits; ≥10 are split as
+            // `high:low` to match the original xsnprintf_ formatting.
+            if v < 10 {
+                let _ = write!(buf, "{v}");
             } else {
-                _ = xsnprintf_!(tmp.as_mut_ptr(), tmp.len(), "{}", *newc.add(i));
+                let _ = write!(buf, "{}:{}", v / 10, v % 10);
             }
-            strlcat(buf, tmp.as_ptr(), len);
+            if i + 1 < s.len() {
+                buf.push(b';');
+            }
         }
-        strlcat(buf, c!("m"), len);
+        buf.push(b'm');
     }
-}
 
-unsafe fn grid_string_cells_add_hyperlink(
-    buf: *mut u8,
-    len: usize,
-    id: *const u8,
-    uri: *const u8,
-    flags: grid_string_flags,
-) -> bool {
-    unsafe {
-        if strlen(uri) + strlen(id) + 17 >= len {
-            return false;
-        }
+    let n = s.len() as c_uint;
 
+    // If the foreground colour changed, write its parameters
+    let newc = grid_string_cells_fg(gc);
+    let oldc = grid_string_cells_fg(lastgc);
+    grid_string_cells_add_code(buf, n, &s, &newc, &oldc, flags);
+
+    // If the background colour changed, append its parameters
+    let newc = grid_string_cells_bg(gc);
+    let oldc = grid_string_cells_bg(lastgc);
+    grid_string_cells_add_code(buf, n, &s, &newc, &oldc, flags);
+
+    // If the underscore colour changed, append its parameters
+    let newc = grid_string_cells_us(gc);
+    let oldc = grid_string_cells_us(lastgc);
+    grid_string_cells_add_code(buf, n, &s, &newc, &oldc, flags);
+
+    // Append shift in/shift out if needed
+    if attr.intersects(grid_attr::GRID_ATTR_CHARSET)
+        && !lastattr.intersects(grid_attr::GRID_ATTR_CHARSET)
+    {
         if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
-            strlcat(buf, c!("\\033]8;"), len);
+            buf.extend_from_slice(b"\\016"); // SO
         } else {
-            strlcat(buf, c!("\x1b]8;"), len);
+            buf.push(0x0e); // SO
         }
-
-        if *id != 0 {
-            let tmp = format_nul!("id={};", _s(id));
-            strlcat(buf, tmp, len);
-            free_(tmp);
-        } else {
-            strlcat(buf, c!(";"), len);
-        }
-
-        strlcat(buf, uri, len);
-
-        if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
-            strlcat(buf, c!("\\033\\\\"), len);
-        } else {
-            strlcat(buf, c!("\x1b\\"), len);
-        }
-
-        true
     }
-}
+    if !attr.intersects(grid_attr::GRID_ATTR_CHARSET)
+        && lastattr.intersects(grid_attr::GRID_ATTR_CHARSET)
+    {
+        if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
+            buf.extend_from_slice(b"\\017"); // SI
+        } else {
+            buf.push(0x0f); // SI
+        }
+    }
 
-/// Returns ANSI code to set particular attributes (colour, bold and so on) given a current state.
-unsafe fn grid_string_cells_code(
-    lastgc: *const grid_cell,
-    gc: *const grid_cell,
-    buf: *mut u8,
-    len: usize,
-    flags: grid_string_flags,
-    sc: *mut screen,
-) -> bool {
-    unsafe {
-        let mut oldc: [c_int; 64] = [0; 64];
-        let mut newc: [c_int; 64] = [0; 64];
-        let mut s: [c_int; 128] = [0; 128];
-        let mut noldc: usize;
-        let mut nnewc: usize;
-        let mut n: u32 = 0;
-        let attr = (*gc).attr;
-        let mut lastattr = (*lastgc).attr;
-        let mut tmp: [u8; 64] = [0; 64];
+    // Add hyperlink if changed. The registry hands back NUL-terminated
+    // C strings (raw pointers); we convert to byte slices locally.
+    if let Some(hl) = hl
+        && lastgc.link != gc.link
+    {
         let mut uri: *const u8 = null();
         let mut id: *const u8 = null();
-        let mut has_link = false;
-
-        static ATTRS: [(grid_attr, c_uint); 13] = [
-            (grid_attr::GRID_ATTR_BRIGHT, 1),
-            (grid_attr::GRID_ATTR_DIM, 2),
-            (grid_attr::GRID_ATTR_ITALICS, 3),
-            (grid_attr::GRID_ATTR_UNDERSCORE, 4),
-            (grid_attr::GRID_ATTR_BLINK, 5),
-            (grid_attr::GRID_ATTR_REVERSE, 7),
-            (grid_attr::GRID_ATTR_HIDDEN, 8),
-            (grid_attr::GRID_ATTR_STRIKETHROUGH, 9),
-            (grid_attr::GRID_ATTR_UNDERSCORE_2, 42),
-            (grid_attr::GRID_ATTR_UNDERSCORE_3, 43),
-            (grid_attr::GRID_ATTR_UNDERSCORE_4, 44),
-            (grid_attr::GRID_ATTR_UNDERSCORE_5, 45),
-            (grid_attr::GRID_ATTR_OVERLINE, 53),
-        ];
-
-        // If any attribute is removed, begin with 0
-        for &(mask, _) in &ATTRS {
-            if !attr.intersects(mask) && lastattr.intersects(mask)
-                || ((*lastgc).us != 8 && (*gc).us == 8)
-            {
-                s[n as usize] = 0;
-                n += 1;
-                lastattr &= grid_attr::GRID_ATTR_CHARSET;
-                break;
-            }
+        // SAFETY: `hl` is a live `*mut hyperlinks` owned by the caller's
+        // pane/screen; the out-pointers point into fields of the registry
+        // entry which remains valid at least until the caller drops the
+        // registry. We convert to &[u8] for the duration of the call.
+        let ok = unsafe {
+            hyperlinks_get(hl, gc.link, &raw mut uri, &raw mut id, null_mut())
+        };
+        if ok {
+            let uri_slice = unsafe { cstr_bytes(uri) };
+            let id_slice = unsafe { cstr_bytes(id) };
+            has_link = grid_string_cells_add_hyperlink(buf, id_slice, uri_slice, flags);
+        } else if has_link {
+            grid_string_cells_add_hyperlink(buf, b"", b"", flags);
+            has_link = false;
         }
-
-        // For each attribute that is newly set, add its code
-        for &(mask, code) in &ATTRS {
-            if attr.intersects(mask) && !lastattr.intersects(mask) {
-                s[n as usize] = code as c_int;
-                n += 1;
-            }
-        }
-
-        // Write the attributes
-        *buf = 0;
-        if n > 0 {
-            if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
-                strlcat(buf, c!("\\033["), len);
-            } else {
-                strlcat(buf, c!("\x1b["), len);
-            }
-
-            for i in 0..n {
-                if s[i as usize] < 10 {
-                    _ = xsnprintf_!(tmp.as_mut_ptr(), tmp.len(), "{}", s[i as usize],);
-                } else {
-                    _ = xsnprintf_!(
-                        tmp.as_mut_ptr(),
-                        tmp.len(),
-                        "{}:{}",
-                        s[i as usize] / 10,
-                        s[i as usize] % 10,
-                    );
-                }
-                strlcat(buf, tmp.as_ptr(), len);
-                if i + 1 < n {
-                    strlcat(buf, c!(";"), len);
-                }
-            }
-            strlcat(buf, c!("m"), len);
-        }
-
-        // If the foreground colour changed, write its parameters
-        nnewc = grid_string_cells_fg(gc, newc.as_mut_ptr());
-        noldc = grid_string_cells_fg(lastgc, oldc.as_mut_ptr());
-        grid_string_cells_add_code(
-            buf,
-            len,
-            n,
-            s.as_mut_ptr(),
-            newc.as_mut_ptr(),
-            oldc.as_mut_ptr(),
-            nnewc,
-            noldc,
-            flags,
-        );
-
-        // If the background colour changed, append its parameters
-        nnewc = grid_string_cells_bg(gc, newc.as_mut_ptr());
-        noldc = grid_string_cells_bg(lastgc, oldc.as_mut_ptr());
-        grid_string_cells_add_code(
-            buf,
-            len,
-            n,
-            s.as_mut_ptr(),
-            newc.as_mut_ptr(),
-            oldc.as_mut_ptr(),
-            nnewc,
-            noldc,
-            flags,
-        );
-
-        // If the underscore colour changed, append its parameters
-        nnewc = grid_string_cells_us(gc, newc.as_mut_ptr());
-        noldc = grid_string_cells_us(lastgc, oldc.as_mut_ptr());
-        grid_string_cells_add_code(
-            buf,
-            len,
-            n,
-            s.as_mut_ptr(),
-            newc.as_mut_ptr(),
-            oldc.as_mut_ptr(),
-            nnewc,
-            noldc,
-            flags,
-        );
-
-        // Append shift in/shift out if needed
-        if attr.intersects(grid_attr::GRID_ATTR_CHARSET)
-            && !lastattr.intersects(grid_attr::GRID_ATTR_CHARSET)
-        {
-            if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
-                strlcat(buf, c!("\\016"), len); // SO
-            } else {
-                strlcat(buf, c!("\x0e"), len); // SO
-            }
-        }
-        if !attr.intersects(grid_attr::GRID_ATTR_CHARSET)
-            && lastattr.intersects(grid_attr::GRID_ATTR_CHARSET)
-        {
-            if flags.intersects(grid_string_flags::GRID_STRING_ESCAPE_SEQUENCES) {
-                strlcat(buf, c!("\\017"), len); // SI
-            } else {
-                strlcat(buf, c!("\x0f"), len); // SI
-            }
-        }
-
-        // Add hyperlink if changed
-        if !sc.is_null() && (*sc).hyperlinks.is_some() && (*lastgc).link != (*gc).link {
-            if hyperlinks_get(
-                (*sc).hyperlinks.unwrap_or(null_mut()),
-                (*gc).link,
-                &raw mut uri,
-                &raw mut id,
-                null_mut(),
-            ) {
-                has_link = grid_string_cells_add_hyperlink(buf, len, id, uri, flags);
-            } else if has_link {
-                grid_string_cells_add_hyperlink(buf, len, c!(""), c!(""), flags);
-                has_link = false;
-            }
-        }
-        has_link
     }
+    has_link
+}
+
+/// Convert a NUL-terminated C string pointer to a byte slice (NUL excluded).
+/// Returns an empty slice on null input. Used to interoperate with the
+/// hyperlinks registry, which still stores `*const u8` internal strings.
+///
+/// # Safety
+/// `ptr` must be null or point to a NUL-terminated run of bytes valid for
+/// reading at least until the returned slice is dropped.
+unsafe fn cstr_bytes<'a>(ptr: *const u8) -> &'a [u8] {
+    if ptr.is_null() {
+        return b"";
+    }
+    // SAFETY: caller upholds the NUL-termination + validity invariant.
+    unsafe { std::slice::from_raw_parts(ptr, strlen(ptr)) }
 }
 
 /// Mark line as dead. Caller must ensure the line's Vec fields have already
@@ -2285,50 +2169,23 @@ mod tests {
     #[test]
     fn grid_string_cells_empty_line() {
         let mut gd = grid_create(80, 24, 0);
-        unsafe {
-            let mut lastgc: *mut grid_cell = null_mut();
-            let buf = gd.string_cells(
-                0,
-                0,
-                80,
-                &mut lastgc,
-                grid_string_flags::empty(),
-                null_mut(),
-            );
-            assert!(!buf.is_null());
-            // Empty line should produce empty string.
-            assert_eq!(*buf, 0);
-            free_(buf);
-            drop(gd);
-        }
+        let mut lastgc = None;
+        let buf = gd.string_cells(0, 0, 80, &mut lastgc, grid_string_flags::empty(), None);
+        // Empty line should produce empty output.
+        assert!(buf.is_empty(), "expected empty buf, got {buf:?}");
     }
 
     #[test]
     fn grid_string_cells_with_content() {
         let mut gd = grid_create(80, 24, 0);
-        unsafe {
-            let cell_h = make_cell(b'H', 8, 8);
-            let cell_i = make_cell(b'i', 8, 8);
-            gd.set_cell(0, 0, &cell_h);
-            gd.set_cell(1, 0, &cell_i);
+        let cell_h = make_cell(b'H', 8, 8);
+        let cell_i = make_cell(b'i', 8, 8);
+        gd.set_cell(0, 0, &cell_h);
+        gd.set_cell(1, 0, &cell_i);
 
-            let mut lastgc: *mut grid_cell = null_mut();
-            let buf = gd.string_cells(
-                0,
-                0,
-                80,
-                &mut lastgc,
-                grid_string_flags::empty(),
-                null_mut(),
-            );
-            assert!(!buf.is_null());
-
-            let s = std::ffi::CStr::from_ptr(buf as *const i8);
-            assert_eq!(s.to_str().unwrap(), "Hi");
-
-            free_(buf);
-            drop(gd);
-        }
+        let mut lastgc = None;
+        let buf = gd.string_cells(0, 0, 80, &mut lastgc, grid_string_flags::empty(), None);
+        assert_eq!(buf, b"Hi");
     }
 
     // ---------------------------------------------------------------
@@ -3030,33 +2887,18 @@ mod tests {
     #[test]
     fn grid_string_cells_with_wide_chars() {
         let mut gd = grid_create(80, 24, 0);
-        unsafe {
-            let wide = make_wide_cell();
-            gd.set_cell(0, 0, &wide);
-            gd.set_padding(1, 0);
-            let ascii = make_cell(b'!', 8, 8);
-            gd.set_cell(2, 0, &ascii);
+        let wide = make_wide_cell();
+        gd.set_cell(0, 0, &wide);
+        gd.set_padding(1, 0);
+        let ascii = make_cell(b'!', 8, 8);
+        gd.set_cell(2, 0, &ascii);
 
-            let mut lastgc: *mut grid_cell = null_mut();
-            let buf = gd.string_cells(
-                0,
-                0,
-                80,
-                &mut lastgc,
-                grid_string_flags::empty(),
-                null_mut(),
-            );
-            assert!(!buf.is_null());
-
-            let s = std::ffi::CStr::from_ptr(buf as *const i8);
-            let s = s.to_str().unwrap();
-            // Should contain the UTF-8 bytes of '世' followed by '!'.
-            assert!(s.contains('世'), "expected '世' in output, got: {s}");
-            assert!(s.ends_with('!'), "expected trailing '!' in output, got: {s}");
-
-            free_(buf);
-            drop(gd);
-        }
+        let mut lastgc = None;
+        let buf = gd.string_cells(0, 0, 80, &mut lastgc, grid_string_flags::empty(), None);
+        let s = std::str::from_utf8(&buf).unwrap();
+        // Should contain the UTF-8 bytes of '世' followed by '!'.
+        assert!(s.contains('世'), "expected '世' in output, got: {s}");
+        assert!(s.ends_with('!'), "expected trailing '!' in output, got: {s}");
     }
 
     #[test]
@@ -3199,13 +3041,9 @@ mod tests {
     }
 
     /// Helper: extract a string from the view at row py, columns 0..nx.
-    unsafe fn view_row_string(gd: *mut grid, py: u32, nx: u32) -> String {
-        unsafe {
-            let ptr = (*gd).view_string_cells(0, py, nx);
-            let s = CStr::from_ptr(ptr.cast()).to_str().unwrap().to_string();
-            free_(ptr);
-            s
-        }
+    fn view_row_string(gd: &mut grid, py: u32, nx: u32) -> String {
+        let bytes = gd.view_string_cells(0, py, nx);
+        String::from_utf8(bytes).unwrap()
     }
 
     #[test]
@@ -3313,7 +3151,7 @@ mod tests {
                 (*gd_ptr).view_set_cell(i as u32, 0, &gc);
             }
 
-            let s = view_row_string(gd_ptr, 0, 5);
+            let s = view_row_string(&mut *gd_ptr, 0, 5);
             assert_eq!(s, "Hello");
 
             drop(gd);
@@ -3342,7 +3180,7 @@ mod tests {
             }
 
             // View should show Line1, not Line0.
-            let s = view_row_string(gd_ptr, 0, 5);
+            let s = view_row_string(&mut *gd_ptr, 0, 5);
             assert_eq!(s, "Line1");
 
             drop(gd);

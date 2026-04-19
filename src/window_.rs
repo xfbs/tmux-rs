@@ -14,7 +14,7 @@
 use crate::compat::HOST_NAME_MAX;
 use crate::libc::{
     FIONREAD, FNM_CASEFOLD, TIOCSWINSZ, close, fnmatch, free, gethostname, gettimeofday, ioctl,
-    isspace, memset, regcomp, regex_t, regexec, regfree, strlen, winsize,
+    isspace, memset, regcomp, regex_t, regexec, regfree, winsize,
 };
 #[cfg(feature = "utempter")]
 use crate::utempter::utempter_remove_record;
@@ -1819,21 +1819,25 @@ pub unsafe fn window_pane_search(
         for j in 0..screen_size_y(s) {
             i = j;
 
-            let line = (*s).grid.view_string_cells(0, i, screen_size_x(s));
-            for n in (1..=strlen(line)).rev() {
-                if isspace(line.add(n - 1) as c_uchar as c_int) == 0 {
+            // Strip trailing whitespace from the row's text, then NUL-terminate
+            // via CString for the C match functions. view_string_cells returns
+            // an owned Vec<u8>; the CString takes ownership and drops at end
+            // of scope (no manual free).
+            let mut line = (*s).grid.view_string_cells(0, i, screen_size_x(s));
+            while let Some(&b) = line.last() {
+                if isspace(b as c_int) == 0 {
                     break;
                 }
-                *line.add(n - 1) = b'\0' as _;
+                line.pop();
             }
 
-            log_debug!("{}: {}", "window_pane_search", _s(line));
+            let cline = CString::new(line).unwrap_or_default();
+            log_debug!("{}: {}", "window_pane_search", _s(cline.as_ptr() as *const u8));
             let found = if regex == 0 {
-                fnmatch(new, line, flags) == 0
+                fnmatch(new, cline.as_ptr().cast(), flags) == 0
             } else {
-                regexec(&r, line, 0, null_mut(), 0) == 0
+                regexec(&r, cline.as_ptr().cast(), 0, null_mut(), 0) == 0
             };
-            free(line as _);
 
             if found {
                 break;
