@@ -414,7 +414,7 @@ pub unsafe fn status_redraw(c: *mut client) -> i32 {
         if !COLOUR_DEFAULT(bg) {
             gc.bg = bg;
         }
-        if !grid_cells_equal(&raw const gc, &raw const (*sl).style) {
+        if !grid_cells_equal(&gc, &(*sl).style) {
             force = true;
             memcpy__(&raw mut (*sl).style, &raw mut gc);
         }
@@ -641,7 +641,7 @@ pub unsafe fn status_message_redraw(c: *mut client) -> i32 {
         }
         screen_write_stop(&raw mut ctx);
 
-        if grid_compare(&raw mut *(*(*sl).active).grid, &raw mut *old_grid) == 0 {
+        if grid_compare(&(*(*sl).active).grid, &old_grid) {
             return 0;
         }
         1
@@ -923,7 +923,7 @@ pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
         // finished:
         screen_write_stop(&raw mut ctx);
 
-        if grid_compare(&raw mut *(*(*sl).active).grid, &raw mut *old_grid) == 0 {
+        if grid_compare(&(*(*sl).active).grid, &old_grid) {
             return 0;
         }
         1

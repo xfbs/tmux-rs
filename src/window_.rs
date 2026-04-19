@@ -945,7 +945,7 @@ pub unsafe fn window_redraw_active_switch(w: *mut window, mut wp: *mut window_pa
             // need to redraw the panes.
             let gc1 = &raw mut (*wp).cached_gc;
             let gc2 = &raw mut (*wp).cached_active_gc;
-            if grid_cells_look_equal(gc1, gc2) == 0 {
+            if !grid_cells_look_equal(&*gc1, &*gc2) {
                 (*wp).flags |= window_pane_flags::PANE_REDRAW;
             } else {
                 let mut c1 = window_pane_get_palette(ptr_to_ref(wp), (*gc1).fg);

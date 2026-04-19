@@ -495,7 +495,7 @@ pub unsafe fn screen_redraw_make_pane_status(
         free_(expanded);
         format_free(ft);
 
-        if grid_compare(&raw mut *(*wp).status_screen.grid, &raw mut *old_grid) == 0 {
+        if grid_compare(&(*wp).status_screen.grid, &old_grid) {
             return 0;
         }
         1

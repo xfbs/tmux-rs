@@ -273,46 +273,31 @@ fn grid_check_y(gd: &grid, from: *const u8, py: c_uint) -> c_int {
     0
 }
 
-/// Return 1 if two cells have the same *visible style* (foreground, background,
-/// attribute bitset, flags, and hyperlink id), 0 otherwise. The cell data
+/// Return `true` if two cells have the same *visible style* (foreground,
+/// background, attribute bitset, flags, and hyperlink id). The cell data
 /// (character and width) is **not** compared — use [`grid_cells_equal`] for
 /// that. Used by the renderer to detect when a terminal attribute change can
 /// be skipped between adjacent cells.
-pub unsafe fn grid_cells_look_equal(gc1: *const grid_cell, gc2: *const grid_cell) -> c_int {
-    unsafe {
-        if (*gc1).fg != (*gc2).fg || (*gc1).bg != (*gc2).bg {
-            return 0;
-        }
-        if (*gc1).attr != (*gc2).attr || (*gc1).flags != (*gc2).flags {
-            return 0;
-        }
-        if (*gc1).link != (*gc2).link {
-            return 0;
-        }
-        1
-    }
+pub fn grid_cells_look_equal(gc1: &grid_cell, gc2: &grid_cell) -> bool {
+    gc1.fg == gc2.fg
+        && gc1.bg == gc2.bg
+        && gc1.attr == gc2.attr
+        && gc1.flags == gc2.flags
+        && gc1.link == gc2.link
 }
 
 /// Full-equality comparison: same style as [`grid_cells_look_equal`], plus
 /// matching UTF-8 data (width, size, and byte contents). Returns `true` if
 /// the cells are structurally identical.
-pub unsafe fn grid_cells_equal(gc1: *const grid_cell, gc2: *const grid_cell) -> bool {
-    unsafe {
-        if grid_cells_look_equal(gc1, gc2) == 0 {
-            return false;
-        }
-        if (*gc1).data.width != (*gc2).data.width {
-            return false;
-        }
-        if (*gc1).data.size != (*gc2).data.size {
-            return false;
-        }
-        libc::memcmp(
-            (*gc1).data.data.as_ptr().cast(),
-            (*gc2).data.data.as_ptr().cast(),
-            (*gc1).data.size as usize,
-        ) == 0
+pub fn grid_cells_equal(gc1: &grid_cell, gc2: &grid_cell) -> bool {
+    if !grid_cells_look_equal(gc1, gc2) {
+        return false;
     }
+    if gc1.data.width != gc2.data.width || gc1.data.size != gc2.data.size {
+        return false;
+    }
+    let n = gc1.data.size as usize;
+    gc1.data.data[..n] == gc2.data.data[..n]
 }
 
 /// Free one line.
@@ -352,36 +337,34 @@ pub fn grid_create(sx: u32, sy: u32, hlimit: u32) -> Box<grid> {
 // grid_destroy removed — Grid is now Box<grid>, Drop handles cleanup.
 
 /// Compare two grids for full-content equality across the visible region
-/// (`sy` rows). Returns 0 if every corresponding cell is equal by
-/// [`grid_cells_equal`] (style + UTF-8 data) and lines are the same length,
-/// 1 otherwise. Used by the integration-test harness to diff server output
-/// against the C tmux baseline.
-pub unsafe fn grid_compare(ga: *mut grid, gb: *mut grid) -> c_int {
-    unsafe {
-        if (*ga).sx != (*gb).sx || (*ga).sy != (*gb).sy {
-            return 1;
-        }
-
-        for yy in 0..(*ga).sy {
-            let gla = &(&(*ga).linedata)[yy as usize];
-            let glb = &(&(*gb).linedata)[yy as usize];
-
-            if gla.celldata.len() != glb.celldata.len() {
-                return 1;
-            }
-
-            for xx in 0..gla.celldata.len() as u32 {
-                let gca = (*ga).get_cell(xx, yy);
-                let gcb = (*gb).get_cell(xx, yy);
-
-                if !grid_cells_equal(&gca, &gcb) {
-                    return 1;
-                }
-            }
-        }
-
-        0
+/// (`sy` rows). Returns `true` if every corresponding cell is equal by
+/// [`grid_cells_equal`] (style + UTF-8 data) and lines are the same length.
+/// Used by the renderer and the integration-test harness to decide whether
+/// a redraw is needed.
+pub fn grid_compare(ga: &grid, gb: &grid) -> bool {
+    if ga.sx != gb.sx || ga.sy != gb.sy {
+        return false;
     }
+
+    for yy in 0..ga.sy {
+        let gla = &ga.linedata[yy as usize];
+        let glb = &gb.linedata[yy as usize];
+
+        if gla.celldata.len() != glb.celldata.len() {
+            return false;
+        }
+
+        for xx in 0..gla.celldata.len() as u32 {
+            let gca = ga.get_cell(xx, yy);
+            let gcb = gb.get_cell(xx, yy);
+
+            if !grid_cells_equal(&gca, &gcb) {
+                return false;
+            }
+        }
+    }
+
+    true
 }
 
 /// Trim lines from the history.
@@ -2077,35 +2060,35 @@ mod tests {
     fn grid_cells_equal_identical() {
         let a = make_cell(b'Z', 8, 8);
         let b = make_cell(b'Z', 8, 8);
-        assert!(unsafe { grid_cells_equal(&a, &b) });
+        assert!(grid_cells_equal(&a, &b));
     }
 
     #[test]
     fn grid_cells_equal_different_char() {
         let a = make_cell(b'A', 8, 8);
         let b = make_cell(b'B', 8, 8);
-        assert!(!unsafe { grid_cells_equal(&a, &b) });
+        assert!(!grid_cells_equal(&a, &b));
     }
 
     #[test]
     fn grid_cells_equal_different_fg() {
         let a = make_cell(b'A', 1, 8);
         let b = make_cell(b'A', 2, 8);
-        assert!(!unsafe { grid_cells_equal(&a, &b) });
+        assert!(!grid_cells_equal(&a, &b));
     }
 
     #[test]
     fn grid_cells_look_equal_same() {
         let a = make_cell(b'A', 8, 8);
         let b = make_cell(b'A', 8, 8);
-        assert_eq!(unsafe { grid_cells_look_equal(&a, &b) }, 1);
+        assert!(grid_cells_look_equal(&a, &b));
     }
 
     #[test]
     fn grid_cells_look_equal_different_fg() {
         let a = make_cell(b'A', 1, 8);
         let b = make_cell(b'A', 2, 8);
-        assert_eq!(unsafe { grid_cells_look_equal(&a, &b) }, 0);
+        assert!(!grid_cells_look_equal(&a, &b));
     }
 
     #[test]
@@ -2113,7 +2096,7 @@ mod tests {
         // look_equal only compares style, not data content
         let a = make_cell(b'A', 8, 8);
         let b = make_cell(b'B', 8, 8);
-        assert_eq!(unsafe { grid_cells_look_equal(&a, &b) }, 1);
+        assert!(grid_cells_look_equal(&a, &b));
     }
 
     // ---------------------------------------------------------------
@@ -2213,52 +2196,36 @@ mod tests {
 
     #[test]
     fn grid_compare_equal_grids() {
-        let mut g1 = grid_create(80, 24, 0);
-        let mut g2 = grid_create(80, 24, 0);
-        unsafe {
-            assert_eq!(grid_compare(&raw mut *g1, &raw mut *g2), 0);
-            drop(g1);
-            drop(g2);
-        }
+        let g1 = grid_create(80, 24, 0);
+        let g2 = grid_create(80, 24, 0);
+        assert!(grid_compare(&g1, &g2));
     }
 
     #[test]
     fn grid_compare_different_dimensions() {
-        let mut g1 = grid_create(80, 24, 0);
-        let mut g2 = grid_create(40, 24, 0);
-        unsafe {
-            assert_ne!(grid_compare(&raw mut *g1, &raw mut *g2), 0);
-            drop(g1);
-            drop(g2);
-        }
+        let g1 = grid_create(80, 24, 0);
+        let g2 = grid_create(40, 24, 0);
+        assert!(!grid_compare(&g1, &g2));
     }
 
     #[test]
     fn grid_compare_different_content() {
         let mut g1 = grid_create(80, 24, 0);
-        let mut g2 = grid_create(80, 24, 0);
-        unsafe {
-            let cell = make_cell(b'A', 8, 8);
-            g1.set_cell(0, 0, &cell);
-            // g2 has no cell set at (0,0), so they differ.
-            assert_ne!(grid_compare(&raw mut *g1, &raw mut *g2), 0);
-            drop(g1);
-            drop(g2);
-        }
+        let g2 = grid_create(80, 24, 0);
+        let cell = make_cell(b'A', 8, 8);
+        g1.set_cell(0, 0, &cell);
+        // g2 has no cell set at (0,0), so they differ.
+        assert!(!grid_compare(&g1, &g2));
     }
 
     #[test]
     fn grid_compare_same_content() {
         let mut g1 = grid_create(80, 24, 0);
         let mut g2 = grid_create(80, 24, 0);
-        unsafe {
-            let cell = make_cell(b'Q', 8, 8);
-            g1.set_cell(3, 2, &cell);
-            g2.set_cell(3, 2, &cell);
-            assert_eq!(grid_compare(&raw mut *g1, &raw mut *g2), 0);
-            drop(g1);
-            drop(g2);
-        }
+        let cell = make_cell(b'Q', 8, 8);
+        g1.set_cell(3, 2, &cell);
+        g2.set_cell(3, 2, &cell);
+        assert!(grid_compare(&g1, &g2));
     }
 
     #[test]
@@ -2386,7 +2353,7 @@ mod tests {
 
             dst.duplicate_lines(0, &raw mut *src, 0, 5);
 
-            assert_eq!(grid_compare(&raw mut *src, &raw mut *dst), 0);
+            assert!(grid_compare(&src, &dst));
 
             drop(src);
             drop(dst);
@@ -3169,21 +3136,16 @@ mod tests {
     fn grid_compare_with_extended_cells() {
         let mut g1 = grid_create(80, 5, 0);
         let mut g2 = grid_create(80, 5, 0);
-        unsafe {
-            let extended = make_rgb_fg_cell(b'E', 128, 64, 32);
-            g1.set_cell(0, 0, &extended);
-            g2.set_cell(0, 0, &extended);
+        let extended = make_rgb_fg_cell(b'E', 128, 64, 32);
+        g1.set_cell(0, 0, &extended);
+        g2.set_cell(0, 0, &extended);
 
-            assert_eq!(grid_compare(&raw mut *g1, &raw mut *g2), 0);
+        assert!(grid_compare(&g1, &g2));
 
-            // Change one — should differ.
-            let other = make_rgb_fg_cell(b'E', 128, 64, 33);
-            g2.set_cell(0, 0, &other);
-            assert_ne!(grid_compare(&raw mut *g1, &raw mut *g2), 0);
-
-            drop(g1);
-            drop(g2);
-        }
+        // Change one — should differ.
+        let other = make_rgb_fg_cell(b'E', 128, 64, 33);
+        g2.set_cell(0, 0, &other);
+        assert!(!grid_compare(&g1, &g2));
     }
 
     #[test]

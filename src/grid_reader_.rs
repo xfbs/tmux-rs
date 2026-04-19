@@ -401,91 +401,77 @@ impl<'a> grid_reader<'a> {
     }
 
     /// Jump forward to the next occurrence of character `jc` on the current logical
-    /// line (vi `f` behavior). Returns 1 if found, 0 if not. Does not cross
+    /// line (vi `f` behavior). Returns `true` if found. Does not cross
     /// non-wrapped line boundaries.
-    pub unsafe fn cursor_jump(&mut self, jc: *const utf8_data) -> i32 {
-        unsafe {
-            let mut px = self.cx;
-            let yy = self.gd.hsize + self.gd.sy - 1;
+    pub fn cursor_jump(&mut self, jc: &utf8_data) -> bool {
+        let mut px = self.cx;
+        let yy = self.gd.hsize + self.gd.sy - 1;
 
-            let mut py = self.cy;
-            while py <= yy {
-                let xx = self.gd.line_length(py);
-                while px < xx {
-                    let gc = self.gd.get_cell(px, py);
-                    if !gc.flags.intersects(grid_flag::PADDING)
-                        && gc.data.size == (*jc).size
-                        && memcmp(
-                            gc.data.data.as_ptr().cast(),
-                            (*jc).data.as_ptr().cast(),
-                            gc.data.size as usize,
-                        ) == 0
-                    {
-                        self.cx = px;
-                        self.cy = py;
-                        return 1;
-                    }
-                    px += 1;
-                }
+        let target_size = jc.size as usize;
+        let target = &jc.data[..target_size];
 
-                if py == yy
-                    || !self
-                        .gd
-                        .line(py)
-                        .flags
-                        .intersects(grid_line_flag::WRAPPED)
+        let mut py = self.cy;
+        while py <= yy {
+            let xx = self.gd.line_length(py);
+            while px < xx {
+                let gc = self.gd.get_cell(px, py);
+                if !gc.flags.intersects(grid_flag::PADDING)
+                    && gc.data.size as usize == target_size
+                    && &gc.data.data[..target_size] == target
                 {
-                    return 0;
+                    self.cx = px;
+                    self.cy = py;
+                    return true;
                 }
-                px = 0;
-                py += 1;
+                px += 1;
             }
+
+            if py == yy
+                || !self.gd.line(py).flags.intersects(grid_line_flag::WRAPPED)
+            {
+                return false;
+            }
+            px = 0;
+            py += 1;
         }
-        0
+        false
     }
 
     /// Jump backward to the previous occurrence of character `jc` on the current
-    /// logical line (vi `F` behavior). Returns 1 if found, 0 if not. Does not
+    /// logical line (vi `F` behavior). Returns `true` if found. Does not
     /// cross non-wrapped line boundaries.
-    pub unsafe fn cursor_jump_back(&mut self, jc: *mut utf8_data) -> i32 {
-        unsafe {
-            let mut xx = self.cx + 1;
+    pub fn cursor_jump_back(&mut self, jc: &utf8_data) -> bool {
+        let mut xx = self.cx + 1;
 
-            let mut py = self.cy + 1;
-            let mut px;
-            while py > 0 {
-                px = xx;
-                while px > 0 {
-                    let gc = self.gd.get_cell(px - 1, py - 1);
-                    if !gc.flags.intersects(grid_flag::PADDING)
-                        && gc.data.size == (*jc).size
-                        && memcmp(
-                            gc.data.data.as_ptr().cast(),
-                            (*jc).data.as_ptr().cast(),
-                            gc.data.size as usize,
-                        ) == 0
-                    {
-                        self.cx = px - 1;
-                        self.cy = py - 1;
-                        return 1;
-                    }
-                    px -= 1;
-                }
+        let target_size = jc.size as usize;
+        let target = &jc.data[..target_size];
 
-                if py == 1
-                    || !self
-                        .gd
-                        .line(py - 2)
-                        .flags
-                        .intersects(grid_line_flag::WRAPPED)
+        let mut py = self.cy + 1;
+        let mut px;
+        while py > 0 {
+            px = xx;
+            while px > 0 {
+                let gc = self.gd.get_cell(px - 1, py - 1);
+                if !gc.flags.intersects(grid_flag::PADDING)
+                    && gc.data.size as usize == target_size
+                    && &gc.data.data[..target_size] == target
                 {
-                    return 0;
+                    self.cx = px - 1;
+                    self.cy = py - 1;
+                    return true;
                 }
-                xx = self.gd.line_length(py - 2);
-                py -= 1;
+                px -= 1;
             }
+
+            if py == 1
+                || !self.gd.line(py - 2).flags.intersects(grid_line_flag::WRAPPED)
+            {
+                return false;
+            }
+            xx = self.gd.line_length(py - 2);
+            py -= 1;
         }
-        0
+        false
     }
 
     /// Move the cursor to the first non-space character on the current logical line.
@@ -524,7 +510,7 @@ mod tests {
     use super::*;
 
     /// Helper: create a grid and fill lines with ASCII text.
-    unsafe fn make_grid_with_text(lines: &[&str], width: u32) -> Box<grid> {
+    fn make_grid_with_text(lines: &[&str], width: u32) -> Box<grid> {
         let mut gd = grid_create(width, lines.len() as u32, 0);
         for (y, line) in lines.iter().enumerate() {
             for (x, &ch) in line.as_bytes().iter().enumerate() {
@@ -661,85 +647,66 @@ mod tests {
 
     #[test]
     fn jump_forward_finds_character() {
-        unsafe {
-            let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-            let mut gr = grid_reader::new(&mut *gd, 0, 0);
-            let jc = make_utf8_char(b'e');
-            assert_eq!(gr.cursor_jump(&jc), 1);
-            assert_eq!(gr.cx, 4);
-            drop(gd);
-        }
+        let mut gd = make_grid_with_text(&["abcdefghij"], 80);
+        let mut gr = grid_reader::new(&mut *gd, 0, 0);
+        let jc = make_utf8_char(b'e');
+        assert!(gr.cursor_jump(&jc));
+        assert_eq!(gr.cx, 4);
     }
 
     #[test]
     fn jump_forward_not_found() {
-        unsafe {
-            let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-            let mut gr = grid_reader::new(&mut *gd, 0, 0);
-            let jc = make_utf8_char(b'z');
-            assert_eq!(gr.cursor_jump(&jc), 0);
-            assert_eq!(gr.cx, 0);
-            drop(gd);
-        }
+        let mut gd = make_grid_with_text(&["abcdefghij"], 80);
+        let mut gr = grid_reader::new(&mut *gd, 0, 0);
+        let jc = make_utf8_char(b'z');
+        assert!(!gr.cursor_jump(&jc));
+        assert_eq!(gr.cx, 0);
     }
 
     #[test]
     fn jump_forward_from_middle() {
-        unsafe {
-            let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-            let mut gr = grid_reader::new(&mut *gd, 5, 0);
-            let jc = make_utf8_char(b'i');
-            assert_eq!(gr.cursor_jump(&jc), 1);
-            assert_eq!(gr.cx, 8);
-            drop(gd);
-        }
+        let mut gd = make_grid_with_text(&["abcdefghij"], 80);
+        let mut gr = grid_reader::new(&mut *gd, 5, 0);
+        let jc = make_utf8_char(b'i');
+        assert!(gr.cursor_jump(&jc));
+        assert_eq!(gr.cx, 8);
     }
 
     #[test]
     fn jump_backward_finds_character() {
-        unsafe {
-            let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-            let mut gr = grid_reader::new(&mut *gd, 9, 0);
-            let mut jc = make_utf8_char(b'c');
-            assert_eq!(gr.cursor_jump_back(&mut jc), 1);
-            assert_eq!(gr.cx, 2);
-            drop(gd);
-        }
+        let mut gd = make_grid_with_text(&["abcdefghij"], 80);
+        let mut gr = grid_reader::new(&mut *gd, 9, 0);
+        let jc = make_utf8_char(b'c');
+        assert!(gr.cursor_jump_back(&jc));
+        assert_eq!(gr.cx, 2);
     }
 
     #[test]
     fn jump_backward_not_found() {
-        unsafe {
-            let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-            let mut gr = grid_reader::new(&mut *gd, 9, 0);
-            let mut jc = make_utf8_char(b'z');
-            assert_eq!(gr.cursor_jump_back(&mut jc), 0);
-            assert_eq!(gr.cx, 9);
-            drop(gd);
-        }
+        let mut gd = make_grid_with_text(&["abcdefghij"], 80);
+        let mut gr = grid_reader::new(&mut *gd, 9, 0);
+        let jc = make_utf8_char(b'z');
+        assert!(!gr.cursor_jump_back(&jc));
+        assert_eq!(gr.cx, 9);
     }
 
     #[test]
     fn jump_backward_finds_all_occurrences() {
-        unsafe {
-            // "abcaefaghi" has 'a' at 0, 3, 6
-            let mut gd = make_grid_with_text(&["abcaefaghi"], 80);
-            let mut jc = make_utf8_char(b'a');
+        // "abcaefaghi" has 'a' at 0, 3, 6
+        let mut gd = make_grid_with_text(&["abcaefaghi"], 80);
+        let jc = make_utf8_char(b'a');
 
-            let mut gr = grid_reader::new(&mut *gd, 9, 0);
-            assert_eq!(gr.cursor_jump_back(&mut jc), 1);
-            assert_eq!(gr.cx, 6);
+        let mut gr = grid_reader::new(&mut *gd, 9, 0);
+        assert!(gr.cursor_jump_back(&jc));
+        assert_eq!(gr.cx, 6);
 
-            let mut gr = grid_reader::new(&mut *gd, 5, 0);
-            assert_eq!(gr.cursor_jump_back(&mut jc), 1);
-            assert_eq!(gr.cx, 3);
+        let mut gr = grid_reader::new(&mut *gd, 5, 0);
+        assert!(gr.cursor_jump_back(&jc));
+        assert_eq!(gr.cx, 3);
 
-            let mut gr = grid_reader::new(&mut *gd, 2, 0);
-            assert_eq!(gr.cursor_jump_back(&mut jc), 1);
-            assert_eq!(gr.cx, 0);
-
-            drop(gd);
-        }
+        let mut gr = grid_reader::new(&mut *gd, 2, 0);
+        assert!(gr.cursor_jump_back(&jc));
+        assert_eq!(gr.cx, 0);
     }
 
     // ---------------------------------------------------------------

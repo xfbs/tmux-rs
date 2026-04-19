@@ -2210,7 +2210,7 @@ pub unsafe fn screen_write_cell(ctx: *mut screen_write_ctx, gc: *const grid_cell
         // If no change, do not draw.
         if skip {
             if (*s).cx as usize >= (*gl).celldata.len() {
-                skip = grid_cells_equal(gc, &GRID_DEFAULT_CELL);
+                skip = grid_cells_equal(&*gc, &GRID_DEFAULT_CELL);
             } else {
                 gce = (*gl).celldata.as_mut_ptr().add((*s).cx as usize);
                 if (*gce).flags.intersects(grid_flag::EXTENDED)
