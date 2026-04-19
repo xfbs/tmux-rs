@@ -12,6 +12,10 @@
 
 #![allow(non_camel_case_types)]
 
+mod colour;
 mod grid_flags;
+mod utf8;
 
+pub use colour::*;
 pub use grid_flags::*;
+pub use utf8::*;

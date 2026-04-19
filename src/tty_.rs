@@ -14,7 +14,8 @@
 use std::time::Duration;
 
 use crate::*;
-use crate::{colour::colour_split_rgb, compat::b64::b64_ntop};
+use crate::colour_split_rgb;
+use crate::compat::b64::b64_ntop;
 use crate::options_::*;
 
 static mut TTY_LOG_FD: i32 = -1;

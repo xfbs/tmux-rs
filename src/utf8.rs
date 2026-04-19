@@ -29,49 +29,10 @@ unsafe extern "C" {
     fn utf8proc_wctomb(_: *mut char, _: wchar_t) -> i32;
 }
 
-// A single UTF-8 character.
-pub(crate) type utf8_char = c_uint;
-
-// An expanded UTF-8 character. UTF8_SIZE must be big enough to hold combining
-// characters as well. It can't be more than 32 bytes without changes to how
-// characters are stored.
-pub(crate) const UTF8_SIZE: usize = 21;
-
-#[derive(Copy, Clone)]
-pub(crate) struct utf8_data {
-    pub(crate) data: [u8; UTF8_SIZE], /* TODO if we make this private we can only expose the initialized part */
-
-    pub(crate) have: u8,
-    pub(crate) size: u8, /* TODO check the codebase for things checking if size == 0, which is the sentinal value */
-    /// 0xff if invalid
-    pub(crate) width: u8,
-}
-
-impl utf8_data {
-    pub(crate) const fn new<const N: usize>(data: [u8; N], have: u8, size: u8, width: u8) -> Self {
-        if N >= UTF8_SIZE {
-            panic!("invalid size");
-        }
-
-        let mut padded_data = [0u8; UTF8_SIZE];
-        let mut i = 0usize;
-        while i < N {
-            padded_data[i] = data[i];
-            i += 1;
-        }
-
-        Self {
-            data: padded_data,
-            have,
-            size,
-            width,
-        }
-    }
-
-    pub(crate) fn initialized_slice(&self) -> &[u8] {
-        &self.data[..self.size as usize]
-    }
-}
+// `utf8_char`, `utf8_data`, and `UTF8_SIZE` moved to the `tmux-types`
+// crate. Re-exported here so existing `use crate::{utf8_data, ...}` call
+// sites throughout tmux-rs keep resolving.
+pub(crate) use tmux_types::{UTF8_SIZE, utf8_char, utf8_data};
 
 #[repr(i32)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]

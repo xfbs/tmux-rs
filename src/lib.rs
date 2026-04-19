@@ -694,24 +694,14 @@ const MOUSE_PARAM_UTF8_MAX: u32 = 0x7ff;
 const MOUSE_PARAM_BTN_OFF: u32 = 0x20;
 const MOUSE_PARAM_POS_OFF: u32 = 0x21;
 
-// Colour flags.
-const COLOUR_FLAG_256: i32 = 0x01000000;
-const COLOUR_FLAG_RGB: i32 = 0x02000000;
-
-/// Special colours.
-#[expect(non_snake_case)]
-#[inline]
-fn COLOUR_DEFAULT(c: i32) -> bool {
-    c == 8 || c == 9
-}
-
-// Re-export grid bitflag families from `tmux-types`. These types were
-// previously defined here; the `pub use` keeps every call site in the
-// tmux-rs tree working unchanged (`use crate::{grid_attr, ...}`), while
-// future extracted crates (tmux-grid) can import them directly from
-// tmux-types without a tmux-rs dependency.
+// Re-export shared types from `tmux-types`. These items were previously
+// defined here; the `pub use` keeps every call site in the tmux-rs tree
+// working unchanged (`use crate::{grid_attr, ...}`), while future
+// extracted crates (tmux-grid) can import them directly from tmux-types
+// without a tmux-rs dependency.
 pub use tmux_types::{
-    GRID_ATTR_ALL_UNDERSCORE, grid_attr, grid_flag, grid_line_flag, grid_string_flags,
+    COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, GRID_ATTR_ALL_UNDERSCORE,
+    colour_join_rgb, colour_split_rgb, grid_attr, grid_flag, grid_line_flag, grid_string_flags,
 };
 
 /// Cell positions.

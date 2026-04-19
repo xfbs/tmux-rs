@@ -17,9 +17,6 @@ use std::borrow::Cow;
 use crate::*;
 use crate::options_::{options, options_array_item_index, options_array_item_value, options_array_items, options_get};
 
-const COLOUR_FLAG_256: i32 = 0x01000000;
-const COLOUR_FLAG_RGB: i32 = 0x02000000;
-
 fn colour_dist_sq(r1: i32, g1: i32, b1: i32, r2: i32, g2: i32, b2: i32) -> i32 {
     (r1 - r2) * (r1 - r2) + (g1 - g2) * (g1 - g2) + (b1 - b2) * (b1 - b2)
 }
@@ -83,21 +80,6 @@ pub fn colour_find_rgb(r: u8, g: u8, b: u8) -> i32 {
     };
 
     idx | COLOUR_FLAG_256
-}
-
-/// Join RGB into a colour.
-pub fn colour_join_rgb(r: u8, g: u8, b: u8) -> i32 {
-    (((r as i32) << 16) | ((g as i32) << 8) | (b as i32)) | COLOUR_FLAG_RGB
-}
-
-/// Split colour into RGB.
-#[inline]
-pub fn colour_split_rgb(c: i32) -> (u8 /* red */, u8 /* green */, u8 /* blue */) {
-    (
-        ((c >> 16) & 0xff) as u8,
-        ((c >> 8) & 0xff) as u8,
-        (c & 0xff) as u8,
-    )
 }
 
 /// Force colour to RGB if not already.
