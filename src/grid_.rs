@@ -469,6 +469,12 @@ unsafe fn grid_get_cell1(gl: &grid_line, px: c_uint, gc: *mut grid_cell) {
 }
 
 impl grid {
+    /// Borrow the line at absolute row `line` for reading. Panics if `line`
+    /// is out of bounds — callers must validate `line < hsize + sy`.
+    pub fn line(&self, line: c_uint) -> &grid_line {
+        &self.linedata[line as usize]
+    }
+
     /// Borrow the line at absolute row `line` for mutation. Panics if `line`
     /// is out of bounds — callers must validate `line < hsize + sy`.
     pub fn get_line(&mut self, line: c_uint) -> &mut grid_line {
@@ -498,8 +504,8 @@ impl grid {
     /// the last non-space, non-padding cell. Used by word-movement, copy
     /// mode, and rendering to avoid walking trailing blank cells. Clamps to
     /// `sx` even if the line was over-expanded.
-    pub fn line_length(&mut self, py: u32) -> u32 {
-        let mut px = self.get_line(py).celldata.len() as u32;
+    pub fn line_length(&self, py: u32) -> u32 {
+        let mut px = self.line(py).celldata.len() as u32;
         if px > self.sx {
             px = self.sx;
         }

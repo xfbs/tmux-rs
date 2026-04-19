@@ -54,7 +54,7 @@ impl<'a> grid_reader<'a> {
     }
 
     /// Return the length of the current line (number of non-default cells from the left).
-    pub fn line_length(&mut self) -> u32 {
+    pub fn line_length(&self) -> u32 {
         self.gd.line_length(self.cy)
     }
 
@@ -100,7 +100,7 @@ impl<'a> grid_reader<'a> {
             && (wrap != 0
                 || self
                     .gd
-                    .get_line(self.cy - 1)
+                    .line(self.cy - 1)
                     .flags
                     .intersects(grid_line_flag::WRAPPED))
         {
@@ -147,7 +147,7 @@ impl<'a> grid_reader<'a> {
             while self.cy > 0
                 && self
                     .gd
-                    .get_line(self.cy - 1)
+                    .line(self.cy - 1)
                     .flags
                     .intersects(grid_line_flag::WRAPPED)
             {
@@ -166,7 +166,7 @@ impl<'a> grid_reader<'a> {
             while self.cy < yy
                 && self
                     .gd
-                    .get_line(self.cy)
+                    .line(self.cy)
                     .flags
                     .intersects(grid_line_flag::WRAPPED)
             {
@@ -194,7 +194,7 @@ impl<'a> grid_reader<'a> {
 
             if self
                 .gd
-                .get_line(self.cy)
+                .line(self.cy)
                 .flags
                 .intersects(grid_line_flag::WRAPPED)
             {
@@ -225,7 +225,7 @@ impl<'a> grid_reader<'a> {
         // Do not break up wrapped words.
         let mut xx = if self
             .gd
-            .get_line(self.cy)
+            .line(self.cy)
             .flags
             .intersects(grid_line_flag::WRAPPED)
         {
@@ -279,7 +279,7 @@ impl<'a> grid_reader<'a> {
         // Do not break up wrapped words.
         let mut xx = if self
             .gd
-            .get_line(self.cy)
+            .line(self.cy)
             .flags
             .intersects(grid_line_flag::WRAPPED)
         {
@@ -378,7 +378,7 @@ impl<'a> grid_reader<'a> {
                     if self.cy == 0
                         || (!self
                             .gd
-                            .get_line(self.cy - 1)
+                            .line(self.cy - 1)
                             .flags
                             .intersects(grid_line_flag::WRAPPED))
                     {
@@ -431,7 +431,7 @@ impl<'a> grid_reader<'a> {
                 if py == yy
                     || !self
                         .gd
-                        .get_line(py)
+                        .line(py)
                         .flags
                         .intersects(grid_line_flag::WRAPPED)
                 {
@@ -475,7 +475,7 @@ impl<'a> grid_reader<'a> {
                 if py == 1
                     || !self
                         .gd
-                        .get_line(py - 2)
+                        .line(py - 2)
                         .flags
                         .intersects(grid_line_flag::WRAPPED)
                 {
@@ -507,7 +507,7 @@ impl<'a> grid_reader<'a> {
             }
             if !self
                 .gd
-                .get_line(py)
+                .line(py)
                 .flags
                 .intersects(grid_line_flag::WRAPPED)
             {
