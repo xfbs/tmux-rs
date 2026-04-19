@@ -209,7 +209,7 @@ impl<'a> grid_reader<'a> {
     /// Check whether the character at the current cursor position is in the given
     /// character set. Returns false for PADDING cells. Used to classify characters
     /// as whitespace, separators, or word characters during word movement.
-    pub unsafe fn in_set(&mut self, set: *const u8) -> bool {
+    pub unsafe fn in_set(&self, set: *const u8) -> bool {
         let mut gc = self.gd.get_cell(self.cx, self.cy);
         if gc.flags.intersects(grid_flag::PADDING) {
             return false;
