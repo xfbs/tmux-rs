@@ -48,12 +48,9 @@ impl<'a> grid_reader<'a> {
         Self { gd, cx, cy }
     }
 
-    /// Read the current cursor position.
-    pub unsafe fn get_cursor(&self, cx: *mut u32, cy: *mut u32) {
-        unsafe {
-            *cx = self.cx;
-            *cy = self.cy;
-        }
+    /// Read the current cursor position as `(cx, cy)`.
+    pub fn cursor(&self) -> (u32, u32) {
+        (self.cx, self.cy)
     }
 
     /// Return the length of the current line (number of non-default cells from the left).
@@ -184,26 +181,26 @@ impl<'a> grid_reader<'a> {
     }
 
     /// Handle line wrapping during forward iteration. If the cursor has moved past
-    /// the end of the current line (`cx > xx`), advances to the next line (following
-    /// WRAPPED flags). Updates `xx` and `yy` to reflect the new line boundaries.
+    /// the end of the current line (`cx > *xx`), advances to the next line (following
+    /// WRAPPED flags). Updates `*xx` and `*yy` to reflect the new line boundaries.
     /// Returns 0 if the cursor cannot advance further (reached the last line).
-    pub unsafe fn handle_wrap(&mut self, xx: *mut u32, yy: *mut u32) -> i32 {
-        unsafe {
-            while self.cx > *xx {
-                if self.cy == *yy {
-                    return 0;
-                }
-                self.cursor_start_of_line(0);
-                self.cursor_down();
+    pub fn handle_wrap(&mut self, xx: &mut u32, yy: &mut u32) -> i32 {
+        while self.cx > *xx {
+            if self.cy == *yy {
+                return 0;
+            }
+            self.cursor_start_of_line(0);
+            self.cursor_down();
 
-                if self.gd.get_line(self.cy)
-                    .flags
-                    .intersects(grid_line_flag::WRAPPED)
-                {
-                    *xx = self.gd.sx - 1;
-                } else {
-                    *xx = self.line_length();
-                }
+            if self
+                .gd
+                .get_line(self.cy)
+                .flags
+                .intersects(grid_line_flag::WRAPPED)
+            {
+                *xx = self.gd.sx - 1;
+            } else {
+                *xx = self.line_length();
             }
         }
         1
@@ -225,27 +222,29 @@ impl<'a> grid_reader<'a> {
     /// Skips over the current token (word or separator run), then skips whitespace,
     /// landing on the first character of the next word. Handles line wrapping.
     pub unsafe fn cursor_next_word(&mut self, separators: *const u8) {
-        unsafe {
-            // Do not break up wrapped words.
-            let mut xx = if self.gd.get_line(self.cy)
-                .flags
-                .intersects(grid_line_flag::WRAPPED)
-            {
-                self.gd.sx - 1
-            } else {
-                self.line_length()
-            };
-            let mut yy = self.gd.hsize + self.gd.sy - 1;
+        // Do not break up wrapped words.
+        let mut xx = if self
+            .gd
+            .get_line(self.cy)
+            .flags
+            .intersects(grid_line_flag::WRAPPED)
+        {
+            self.gd.sx - 1
+        } else {
+            self.line_length()
+        };
+        let mut yy = self.gd.hsize + self.gd.sy - 1;
 
-            if self.handle_wrap(&raw mut xx, &raw mut yy) == 0 {
-                return;
-            }
+        if self.handle_wrap(&mut xx, &mut yy) == 0 {
+            return;
+        }
+        unsafe {
             if !self.in_set(WHITESPACE) {
                 if self.in_set(separators) {
                     loop {
                         self.cx += 1;
 
-                        if !(self.handle_wrap(&raw mut xx, &raw mut yy) != 0
+                        if !(self.handle_wrap(&mut xx, &mut yy) != 0
                             && self.in_set(separators)
                             && !self.in_set(WHITESPACE))
                         {
@@ -256,7 +255,7 @@ impl<'a> grid_reader<'a> {
                     loop {
                         self.cx += 1;
                         // Skip word characters: stop at separator or whitespace.
-                        if !(self.handle_wrap(&raw mut xx, &raw mut yy) != 0
+                        if !(self.handle_wrap(&mut xx, &mut yy) != 0
                             && !self.in_set(separators)
                             && !self.in_set(WHITESPACE))
                         {
@@ -265,7 +264,7 @@ impl<'a> grid_reader<'a> {
                     }
                 }
             }
-            while self.handle_wrap(&raw mut xx, &raw mut yy) != 0 && self.in_set(WHITESPACE) {
+            while self.handle_wrap(&mut xx, &mut yy) != 0 && self.in_set(WHITESPACE) {
                 self.cx += 1;
             }
         }
@@ -277,26 +276,28 @@ impl<'a> grid_reader<'a> {
     /// end. If inside a word, advances to the end of that word. If on a separator,
     /// advances to the end of the separator run.
     pub unsafe fn cursor_next_word_end(&mut self, separators: *const u8) {
-        unsafe {
-            // Do not break up wrapped words.
-            let mut xx = if self.gd.get_line(self.cy)
-                .flags
-                .intersects(grid_line_flag::WRAPPED)
-            {
-                self.gd.sx - 1
-            } else {
-                self.line_length()
-            };
-            let mut yy = self.gd.hsize + self.gd.sy - 1;
+        // Do not break up wrapped words.
+        let mut xx = if self
+            .gd
+            .get_line(self.cy)
+            .flags
+            .intersects(grid_line_flag::WRAPPED)
+        {
+            self.gd.sx - 1
+        } else {
+            self.line_length()
+        };
+        let mut yy = self.gd.hsize + self.gd.sy - 1;
 
-            while self.handle_wrap(&raw mut xx, &raw mut yy) != 0 {
+        unsafe {
+            while self.handle_wrap(&mut xx, &mut yy) != 0 {
                 if self.in_set(WHITESPACE) {
                     self.cx += 1;
                 } else if self.in_set(separators) {
                     loop {
                         self.cx += 1;
 
-                        if !(self.handle_wrap(&raw mut xx, &raw mut yy) != 0
+                        if !(self.handle_wrap(&mut xx, &mut yy) != 0
                             && self.in_set(separators)
                             && !self.in_set(WHITESPACE))
                         {
@@ -308,7 +309,7 @@ impl<'a> grid_reader<'a> {
                     loop {
                         self.cx += 1;
 
-                        if !(self.handle_wrap(&raw mut xx, &raw mut yy) != 0
+                        if !(self.handle_wrap(&mut xx, &mut yy) != 0
                             && !(self.in_set(WHITESPACE) || self.in_set(separators)))
                         {
                             break;
@@ -375,7 +376,9 @@ impl<'a> grid_reader<'a> {
                 oldy = self.cy;
                 if self.cx == 0 {
                     if self.cy == 0
-                        || (!self.gd.get_line(self.cy - 1)
+                        || (!self
+                            .gd
+                            .get_line(self.cy - 1)
                             .flags
                             .intersects(grid_line_flag::WRAPPED))
                     {

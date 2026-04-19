@@ -2140,7 +2140,7 @@ type MessageLog = Vec<MessageEntry>;
 /// owns its allocation via `CString`; the commands variant carries a refcounted
 /// `*mut cmd_list` and a lazily-populated cached printable form.
 enum args_value {
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     None,
     String {
         string: std::ffi::CString,

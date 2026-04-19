@@ -5710,7 +5710,7 @@ pub unsafe fn window_copy_cursor_start_of_line(wme: *mut window_mode_entry) {
 
         let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_start_of_line(1);
-        gr.get_cursor(&raw mut px, &raw mut py);
+        (px, py) = gr.cursor();
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
     }
 }
@@ -5727,7 +5727,7 @@ pub unsafe fn window_copy_cursor_back_to_indentation(wme: *mut window_mode_entry
 
         let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_back_to_indentation();
-        gr.get_cursor(&raw mut px, &raw mut py);
+        (px, py) = gr.cursor();
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
     }
 }
@@ -5748,7 +5748,7 @@ pub unsafe fn window_copy_cursor_end_of_line(wme: *mut window_mode_entry) {
         } else {
             gr.cursor_end_of_line(1, 0);
         }
-        gr.get_cursor(&raw mut px, &raw mut py);
+        (px, py) = gr.cursor();
         window_copy_acquire_cursor_down(
             wme,
             hsize,
@@ -5827,7 +5827,7 @@ pub unsafe fn window_copy_cursor_left(wme: *mut window_mode_entry) {
 
         let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_left(1);
-        gr.get_cursor(&raw mut px, &raw mut py);
+        (px, py) = gr.cursor();
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
     }
 }
@@ -5844,7 +5844,7 @@ pub unsafe fn window_copy_cursor_right(wme: *mut window_mode_entry, all: i32) {
 
         let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_right(1, all);
-        gr.get_cursor(&raw mut px, &raw mut py);
+        (px, py) = gr.cursor();
         window_copy_acquire_cursor_down(
             wme,
             hsize,
@@ -6016,7 +6016,7 @@ pub unsafe fn window_copy_cursor_jump(wme: *mut window_mode_entry) {
 
         let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         if gr.cursor_jump((*data).jumpchar) != 0 {
-            gr.get_cursor(&raw mut px, &raw mut py);
+            (px, py) = gr.cursor();
             window_copy_acquire_cursor_down(
                 wme,
                 hsize,
@@ -6044,7 +6044,7 @@ pub unsafe fn window_copy_cursor_jump_back(wme: *mut window_mode_entry) {
         let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_left(0);
         if gr.cursor_jump_back((*data).jumpchar) != 0 {
-            gr.get_cursor(&raw mut px, &raw mut py);
+            (px, py) = gr.cursor();
             window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
         }
     }
@@ -6063,7 +6063,7 @@ pub unsafe fn window_copy_cursor_jump_to(wme: *mut window_mode_entry) {
         let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         if gr.cursor_jump((*data).jumpchar) != 0 {
             gr.cursor_left(1);
-            gr.get_cursor(&raw mut px, &raw mut py);
+            (px, py) = gr.cursor();
             window_copy_acquire_cursor_down(
                 wme,
                 hsize,
@@ -6093,7 +6093,7 @@ pub unsafe fn window_copy_cursor_jump_to_back(wme: *mut window_mode_entry) {
         gr.cursor_left(0);
         if gr.cursor_jump_back((*data).jumpchar) != 0 {
             gr.cursor_right(1, 0);
-            gr.get_cursor(&raw mut px, &raw mut py);
+            (px, py) = gr.cursor();
             window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
         }
     }
@@ -6111,7 +6111,7 @@ pub unsafe fn window_copy_cursor_next_word(wme: *mut window_mode_entry, separato
 
         let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_next_word(separators);
-        gr.get_cursor(&raw mut px, &raw mut py);
+        (px, py) = gr.cursor();
         window_copy_acquire_cursor_down(
             wme,
             hsize,
@@ -6153,7 +6153,7 @@ pub unsafe fn window_copy_cursor_next_word_end_pos(
         } else {
             gr.cursor_next_word_end(separators);
         }
-        gr.get_cursor(&raw mut px, &raw mut py);
+        (px, py) = gr.cursor();
         *ppx = px;
         *ppy = py;
     }
@@ -6187,7 +6187,7 @@ pub unsafe fn window_copy_cursor_next_word_end(
         } else {
             gr.cursor_next_word_end(separators);
         }
-        gr.get_cursor(&raw mut px, &raw mut py);
+        (px, py) = gr.cursor();
         window_copy_acquire_cursor_down(
             wme,
             hsize,
@@ -6224,7 +6224,7 @@ pub unsafe fn window_copy_cursor_previous_word_pos(
             // stop_at_eol=
             true,
         );
-        gr.get_cursor(&raw mut px, &raw mut py);
+        (px, py) = gr.cursor();
         *ppx = px;
         *ppy = py;
     }
@@ -6250,7 +6250,7 @@ pub unsafe fn window_copy_cursor_previous_word(
 
         let mut gr = grid_reader::new(&mut *(*back_s).grid, px, py);
         gr.cursor_previous_word(separators, already, stop_at_eol);
-        gr.get_cursor(&raw mut px, &raw mut py);
+        (px, py) = gr.cursor();
         window_copy_acquire_cursor_up(wme, hsize, (*data).oy, oldy, px, py);
     }
 }

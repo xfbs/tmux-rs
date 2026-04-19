@@ -153,33 +153,35 @@ unsafe fn grid_extended_cell(
 }
 
 /// Free up unused extended cells.
-unsafe fn grid_compact_line(gl: &mut grid_line) {
-    unsafe {
-        if gl.extddata.is_empty() {
-            return;
-        }
-
-        // Count extended cells
-        let new_extdsize = gl.celldata.iter()
-            .filter(|gce| gce.flags.contains(grid_flag::EXTENDED))
-            .count();
-
-        if new_extdsize == 0 {
-            gl.extddata.clear();
-            return;
-        }
-
-        // Build new extddata, remapping offsets
-        let mut new_extddata = Vec::with_capacity(new_extdsize);
-        for gce in &mut gl.celldata {
-            if gce.flags.contains(grid_flag::EXTENDED) {
-                new_extddata.push(gl.extddata[gce.union_.offset as usize]);
-                gce.union_.offset = (new_extddata.len() - 1) as u32;
-            }
-        }
-
-        gl.extddata = new_extddata;
+fn grid_compact_line(gl: &mut grid_line) {
+    if gl.extddata.is_empty() {
+        return;
     }
+
+    // Count extended cells
+    let new_extdsize = gl
+        .celldata
+        .iter()
+        .filter(|gce| gce.flags.contains(grid_flag::EXTENDED))
+        .count();
+
+    if new_extdsize == 0 {
+        gl.extddata.clear();
+        return;
+    }
+
+    // Build new extddata, remapping offsets
+    let mut new_extddata = Vec::with_capacity(new_extdsize);
+    for gce in &mut gl.celldata {
+        if gce.flags.contains(grid_flag::EXTENDED) {
+            // SAFETY: union field read is safe when EXTENDED flag is set (the
+            // entry is the `offset` variant).
+            new_extddata.push(gl.extddata[unsafe { gce.union_.offset } as usize]);
+            gce.union_.offset = (new_extddata.len() - 1) as u32;
+        }
+    }
+
+    gl.extddata = new_extddata;
 }
 
 /// Copy default into a cell.
@@ -549,20 +551,20 @@ impl grid {
     }
 
     /// Scroll the entire visible screen, moving one line into the history.
-    pub unsafe fn scroll_history(&mut self, bg: c_uint) {
-        unsafe {
-            let yy = self.hsize + self.sy;
-            self.linedata.push(grid_line::new());
+    pub fn scroll_history(&mut self, bg: c_uint) {
+        let yy = self.hsize + self.sy;
+        self.linedata.push(grid_line::new());
 
-            self.empty_line(yy, bg);
+        self.empty_line(yy, bg);
 
-            self.hscrolled += 1;
-            let hsize = self.hsize as usize;
-            let gl = self.linedata.as_mut_ptr().add(hsize);
-            grid_compact_line(&mut *gl);
-            (*gl).time = CURRENT_TIME;
-            self.hsize += 1;
-        }
+        self.hscrolled += 1;
+        let hsize = self.hsize as usize;
+        let gl = &mut self.linedata[hsize];
+        grid_compact_line(gl);
+        // SAFETY: CURRENT_TIME is a process-global time_t updated once per
+        // event-loop tick; a racy read of a POD is fine here.
+        gl.time = unsafe { CURRENT_TIME };
+        self.hsize += 1;
     }
 
     /// Clear the history.
@@ -576,31 +578,30 @@ impl grid {
     }
 
     /// Scroll a region up, moving the top line into the history.
-    pub unsafe fn scroll_history_region(&mut self, upper: c_uint, lower: c_uint, bg: c_uint) {
-        unsafe {
-            // Indices are relative to the visible screen; adjust for hsize.
-            let hsize = self.hsize as usize;
-            let upper_abs = hsize + upper as usize;
-            let lower_abs = hsize + lower as usize;
+    pub fn scroll_history_region(&mut self, upper: c_uint, lower: c_uint, bg: c_uint) {
+        // Indices are relative to the visible screen; adjust for hsize.
+        let hsize = self.hsize as usize;
+        let upper_abs = hsize + upper as usize;
+        let lower_abs = hsize + lower as usize;
 
-            // Remove the upper line from its position (this shifts everything above down).
-            let upper_line = self.linedata.remove(upper_abs);
+        // Remove the upper line from its position (this shifts everything above down).
+        let upper_line = self.linedata.remove(upper_abs);
 
-            // Insert it at the history position (hsize), pushing visible lines down.
-            self.linedata.insert(hsize, upper_line);
-            self.linedata[hsize].time = CURRENT_TIME;
+        // Insert it at the history position (hsize), pushing visible lines down.
+        self.linedata.insert(hsize, upper_line);
+        // SAFETY: see scroll_history for CURRENT_TIME rationale.
+        self.linedata[hsize].time = unsafe { CURRENT_TIME };
 
-            // The region shifted up by one. Insert a new empty line at the lower position.
-            self.linedata.insert(lower_abs + 1, grid_line::new());
-            if !COLOUR_DEFAULT(bg as i32) {
-                let sx = self.sx;
-                grid_expand_line(self, (lower_abs + 1) as u32, sx, bg);
-            }
-
-            // Move history offset down
-            self.hscrolled += 1;
-            self.hsize += 1;
+        // The region shifted up by one. Insert a new empty line at the lower position.
+        self.linedata.insert(lower_abs + 1, grid_line::new());
+        if !COLOUR_DEFAULT(bg as i32) {
+            let sx = self.sx;
+            grid_expand_line(self, (lower_abs + 1) as u32, sx, bg);
         }
+
+        // Move history offset down
+        self.hscrolled += 1;
+        self.hsize += 1;
     }
 
     /// Clear a rectangular area.
@@ -1073,30 +1074,28 @@ impl grid {
 
     /// Move all visible content into history and clear the screen.
     /// Only moves lines up to the last non-empty line.
-    pub unsafe fn view_clear_history(&mut self, bg: u32) {
-        unsafe {
-            let mut last = 0u32;
+    pub fn view_clear_history(&mut self, bg: u32) {
+        let mut last = 0u32;
 
-            for yy in 0..self.sy {
-                let gl = self.get_line(self.hsize + yy);
-                if (*gl).cellused != 0 {
-                    last = yy + 1;
-                }
+        for yy in 0..self.sy {
+            let gl = self.get_line(self.hsize + yy);
+            if gl.cellused != 0 {
+                last = yy + 1;
             }
-            if last == 0 {
-                self.view_clear(0, 0, self.sx, self.sy, bg);
-                return;
-            }
-
-            for _ in 0..self.sy {
-                self.collect_history();
-                self.scroll_history(bg);
-            }
-            if last < self.sy {
-                self.view_clear(0, 0, self.sx, self.sy - last, bg);
-            }
-            self.hscrolled = 0;
         }
+        if last == 0 {
+            self.view_clear(0, 0, self.sx, self.sy, bg);
+            return;
+        }
+
+        for _ in 0..self.sy {
+            self.collect_history();
+            self.scroll_history(bg);
+        }
+        if last < self.sy {
+            self.view_clear(0, 0, self.sx, self.sy - last, bg);
+        }
+        self.hscrolled = 0;
     }
 
     /// Clear a rectangular region in view coordinates.
@@ -1975,26 +1974,22 @@ mod tests {
     #[test]
     fn grid_line_length_on_empty_line() {
         let mut gd = grid_create(80, 24, 0);
-        unsafe {
-            let len = gd.line_length(0);
-            assert_eq!(len, 0);
-            drop(gd);
-        }
+        let len = gd.line_length(0);
+        assert_eq!(len, 0);
+        drop(gd);
     }
 
     #[test]
     fn grid_line_length_after_set_cell() {
         let mut gd = grid_create(80, 24, 0);
-        unsafe {
-            let cell = make_cell(b'A', 8, 8);
-            gd.set_cell(0, 0, &cell);
-            gd.set_cell(4, 0, &cell);
+        let cell = make_cell(b'A', 8, 8);
+        gd.set_cell(0, 0, &cell);
+        gd.set_cell(4, 0, &cell);
 
-            // Line length should be 5 (positions 0..=4, trailing spaces trimmed).
-            let len = gd.line_length(0);
-            assert_eq!(len, 5);
-            drop(gd);
-        }
+        // Line length should be 5 (positions 0..=4, trailing spaces trimmed).
+        let len = gd.line_length(0);
+        assert_eq!(len, 5);
+        drop(gd);
     }
 
     #[test]
@@ -2138,23 +2133,21 @@ mod tests {
     #[test]
     fn grid_wrap_unwrap_position_roundtrip() {
         let mut gd = grid_create(80, 10, 0);
-        unsafe {
-            // Place content so that cellused > px for the lines we test.
-            let cell = make_cell(b'.', 8, 8);
-            for y in 0..4 {
-                for x in 0..10 {
-                    gd.set_cell(x, y, &cell);
-                }
+        // Place content so that cellused > px for the lines we test.
+        let cell = make_cell(b'.', 8, 8);
+        for y in 0..4 {
+            for x in 0..10 {
+                gd.set_cell(x, y, &cell);
             }
-
-            let (wx, wy) = gd.wrap_position(5, 3);
-            let (px, py) = gd.unwrap_position(wx, wy);
-
-            assert_eq!(px, 5);
-            assert_eq!(py, 3);
-
-            drop(gd);
         }
+
+        let (wx, wy) = gd.wrap_position(5, 3);
+        let (px, py) = gd.unwrap_position(wx, wy);
+
+        assert_eq!(px, 5);
+        assert_eq!(py, 3);
+
+        drop(gd);
     }
 
     #[test]
@@ -2515,16 +2508,14 @@ mod tests {
     #[test]
     fn grid_set_padding_after_wide_char() {
         let mut gd = grid_create(80, 24, 0);
-        unsafe {
-            let wide = make_wide_cell();
-            gd.set_cell(0, 0, &wide);
-            gd.set_padding(1, 0);
+        let wide = make_wide_cell();
+        gd.set_cell(0, 0, &wide);
+        gd.set_padding(1, 0);
 
-            let gc: grid_cell;
-            gc = gd.get_cell(1, 0);
-            assert!(gc.flags.intersects(grid_flag::PADDING));
-            drop(gd);
-        }
+        let gc: grid_cell;
+        gc = gd.get_cell(1, 0);
+        assert!(gc.flags.intersects(grid_flag::PADDING));
+        drop(gd);
     }
 
     #[test]
@@ -2558,38 +2549,34 @@ mod tests {
     #[test]
     fn grid_expand_line_grows_cellsize() {
         let mut gd = grid_create(80, 5, 0);
-        unsafe {
-            let gl = gd.get_line(0);
-            assert_eq!((*gl).celldata.len() as u32, 0);
+        let gl = gd.get_line(0);
+        assert_eq!((*gl).celldata.len() as u32, 0);
 
-            // Setting a cell at position 10 should expand the line.
-            let cell = make_cell(b'X', 8, 8);
-            gd.set_cell(10, 0, &cell);
+        // Setting a cell at position 10 should expand the line.
+        let cell = make_cell(b'X', 8, 8);
+        gd.set_cell(10, 0, &cell);
 
-            let gl = gd.get_line(0);
-            assert!((*gl).celldata.len() as u32 >= 11);
-            assert_eq!((*gl).cellused, 11);
-            drop(gd);
-        }
+        let gl = gd.get_line(0);
+        assert!((*gl).celldata.len() as u32 >= 11);
+        assert_eq!((*gl).cellused, 11);
+        drop(gd);
     }
 
     #[test]
     fn grid_expand_line_minimum_quarter_sx() {
         // grid_expand_line rounds up to sx/4 for small expansions.
         let mut gd = grid_create(80, 5, 0);
-        unsafe {
-            let cell = make_cell(b'X', 8, 8);
-            // Request expansion to column 2 — should round up to sx/4 = 20.
-            gd.set_cell(1, 0, &cell);
+        let cell = make_cell(b'X', 8, 8);
+        // Request expansion to column 2 — should round up to sx/4 = 20.
+        gd.set_cell(1, 0, &cell);
 
-            let gl = gd.get_line(0);
-            assert!(
-                (*gl).celldata.len() as u32 >= 20,
-                "cellsize {} should be >= sx/4 = 20",
-                (*gl).celldata.len() as u32
-            );
-            drop(gd);
-        }
+        let gl = gd.get_line(0);
+        assert!(
+            (*gl).celldata.len() as u32 >= 20,
+            "cellsize {} should be >= sx/4 = 20",
+            (*gl).celldata.len() as u32
+        );
+        drop(gd);
     }
 
     #[test]
@@ -2663,110 +2650,100 @@ mod tests {
     #[test]
     fn grid_scroll_history_multiple_times() {
         let mut gd = grid_create(80, 3, 1000);
-        unsafe {
-            // Fill 3 visible lines.
-            for y in 0..3u32 {
-                let cell = make_cell(b'0' + y as u8, 8, 8);
-                gd.set_cell(0, y, &cell);
-            }
-
-            // Scroll twice.
-            gd.scroll_history(8);
-            gd.scroll_history(8);
-            assert_eq!(gd.hsize, 2);
-
-            // History lines should contain '0' and '1'.
-            let mut gc: grid_cell;
-            gc = gd.get_cell(0, 0);
-            assert_eq!(gc.data.data[0], b'0');
-            gc = gd.get_cell(0, 1);
-            assert_eq!(gc.data.data[0], b'1');
-
-            drop(gd);
+        // Fill 3 visible lines.
+        for y in 0..3u32 {
+            let cell = make_cell(b'0' + y as u8, 8, 8);
+            gd.set_cell(0, y, &cell);
         }
+
+        // Scroll twice.
+        gd.scroll_history(8);
+        gd.scroll_history(8);
+        assert_eq!(gd.hsize, 2);
+
+        // History lines should contain '0' and '1'.
+        let mut gc: grid_cell;
+        gc = gd.get_cell(0, 0);
+        assert_eq!(gc.data.data[0], b'0');
+        gc = gd.get_cell(0, 1);
+        assert_eq!(gc.data.data[0], b'1');
+
+        drop(gd);
     }
 
     #[test]
     fn grid_scroll_history_region_moves_upper_to_history() {
         let mut gd = grid_create(80, 5, 1000);
-        unsafe {
-            // Fill lines with distinct characters.
-            for y in 0..5u32 {
-                let cell = make_cell(b'A' + y as u8, 8, 8);
-                gd.set_cell(0, y, &cell);
-            }
-
-            // Scroll region [1..3] — line at upper=1 moves to history.
-            gd.scroll_history_region(1, 3, 8);
-            assert_eq!(gd.hsize, 1);
-
-            // History line 0 should be line that had 'B'.
-            let gc: grid_cell;
-            gc = gd.get_cell(0, 0);
-            assert_eq!(gc.data.data[0], b'B');
-
-            drop(gd);
+        // Fill lines with distinct characters.
+        for y in 0..5u32 {
+            let cell = make_cell(b'A' + y as u8, 8, 8);
+            gd.set_cell(0, y, &cell);
         }
+
+        // Scroll region [1..3] — line at upper=1 moves to history.
+        gd.scroll_history_region(1, 3, 8);
+        assert_eq!(gd.hsize, 1);
+
+        // History line 0 should be line that had 'B'.
+        let gc: grid_cell;
+        gc = gd.get_cell(0, 0);
+        assert_eq!(gc.data.data[0], b'B');
+
+        drop(gd);
     }
 
     #[test]
     fn grid_clear_history_removes_all_history() {
         let mut gd = grid_create(80, 3, 1000);
-        unsafe {
-            let cell = make_cell(b'H', 8, 8);
-            gd.set_cell(0, 0, &cell);
+        let cell = make_cell(b'H', 8, 8);
+        gd.set_cell(0, 0, &cell);
 
-            gd.scroll_history(8);
-            gd.scroll_history(8);
-            assert_eq!(gd.hsize, 2);
+        gd.scroll_history(8);
+        gd.scroll_history(8);
+        assert_eq!(gd.hsize, 2);
 
-            gd.clear_history();
-            assert_eq!(gd.hsize, 0);
-            assert_eq!(gd.hscrolled, 0);
-            drop(gd);
-        }
+        gd.clear_history();
+        assert_eq!(gd.hsize, 0);
+        assert_eq!(gd.hscrolled, 0);
+        drop(gd);
     }
 
     #[test]
     fn grid_collect_history_trims_oldest() {
         // hlimit=10, fill 10 history lines, collect should trim ~10%.
         let mut gd = grid_create(80, 3, 10);
-        unsafe {
-            for _ in 0..10 {
-                let cell = make_cell(b'.', 8, 8);
-                gd.set_cell(0, gd.hsize, &cell);
-                gd.scroll_history(8);
-            }
-            assert_eq!(gd.hsize, 10);
-
-            gd.collect_history();
-            // Should have trimmed 1 line (10% of 10, minimum 1).
-            assert_eq!(gd.hsize, 9);
-            drop(gd);
+        for _ in 0..10 {
+            let cell = make_cell(b'.', 8, 8);
+            gd.set_cell(0, gd.hsize, &cell);
+            gd.scroll_history(8);
         }
+        assert_eq!(gd.hsize, 10);
+
+        gd.collect_history();
+        // Should have trimmed 1 line (10% of 10, minimum 1).
+        assert_eq!(gd.hsize, 9);
+        drop(gd);
     }
 
     #[test]
     fn grid_remove_history_removes_from_bottom() {
         let mut gd = grid_create(80, 3, 1000);
-        unsafe {
-            for y in 0..3u32 {
-                let cell = make_cell(b'0' + y as u8, 8, 8);
-                gd.set_cell(0, y, &cell);
-            }
-            gd.scroll_history(8);
-            gd.scroll_history(8);
-            assert_eq!(gd.hsize, 2);
-
-            gd.remove_history(1);
-            assert_eq!(gd.hsize, 1);
-
-            // Remaining history line should be the oldest ('0').
-            let gc: grid_cell;
-            gc = gd.get_cell(0, 0);
-            assert_eq!(gc.data.data[0], b'0');
-            drop(gd);
+        for y in 0..3u32 {
+            let cell = make_cell(b'0' + y as u8, 8, 8);
+            gd.set_cell(0, y, &cell);
         }
+        gd.scroll_history(8);
+        gd.scroll_history(8);
+        assert_eq!(gd.hsize, 2);
+
+        gd.remove_history(1);
+        assert_eq!(gd.hsize, 1);
+
+        // Remaining history line should be the oldest ('0').
+        let gc: grid_cell;
+        gc = gd.get_cell(0, 0);
+        assert_eq!(gc.data.data[0], b'0');
+        drop(gd);
     }
 
     // ---------------------------------------------------------------
@@ -2976,19 +2953,17 @@ mod tests {
     #[test]
     fn grid_line_length_with_trailing_spaces_and_extended() {
         let mut gd = grid_create(80, 5, 0);
-        unsafe {
-            let extended = make_rgb_fg_cell(b' ', 255, 0, 0);
-            let cell = make_cell(b'A', 8, 8);
+        let extended = make_rgb_fg_cell(b' ', 255, 0, 0);
+        let cell = make_cell(b'A', 8, 8);
 
-            gd.set_cell(0, 0, &cell);
-            // Trailing spaces (even with color) count as spaces for length trimming.
-            gd.set_cell(1, 0, &extended);
+        gd.set_cell(0, 0, &cell);
+        // Trailing spaces (even with color) count as spaces for length trimming.
+        gd.set_cell(1, 0, &extended);
 
-            let len = gd.line_length(0);
-            // grid_line_length trims trailing spaces regardless of style.
-            assert_eq!(len, 1);
-            drop(gd);
-        }
+        let len = gd.line_length(0);
+        // grid_line_length trims trailing spaces regardless of style.
+        assert_eq!(len, 1);
+        drop(gd);
     }
 
     // ---------------------------------------------------------------
@@ -3056,22 +3031,20 @@ mod tests {
     #[test]
     fn grid_clear_with_non_default_bg() {
         let mut gd = grid_create(80, 5, 0);
-        unsafe {
-            let cell = make_cell(b'X', 8, 8);
-            for x in 0..10 {
-                gd.set_cell(x, 0, &cell);
-            }
-
-            // Clear with a non-default background (256 color).
-            let bg = (COLOUR_FLAG_256 | 42) as u32;
-            gd.clear(2, 0, 3, 1, bg);
-
-            // Cleared cells should have a non-default bg.
-            let gc: grid_cell;
-            gc = gd.get_cell(2, 0);
-            assert!(gc.flags.intersects(grid_flag::CLEARED));
-            drop(gd);
+        let cell = make_cell(b'X', 8, 8);
+        for x in 0..10 {
+            gd.set_cell(x, 0, &cell);
         }
+
+        // Clear with a non-default background (256 color).
+        let bg = (COLOUR_FLAG_256 | 42) as u32;
+        gd.clear(2, 0, 3, 1, bg);
+
+        // Cleared cells should have a non-default bg.
+        let gc: grid_cell;
+        gc = gd.get_cell(2, 0);
+        assert!(gc.flags.intersects(grid_flag::CLEARED));
+        drop(gd);
     }
 
     #[test]
