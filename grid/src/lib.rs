@@ -74,8 +74,6 @@ mod cell;
 mod flags;
 mod line;
 pub mod reader;
-#[cfg(test)]
-mod test_support;
 
 pub use cell::*;
 pub use flags::*;
@@ -93,15 +91,12 @@ pub const GRID_HISTORY: i32 = 0x1;
 /// call `codec().cstr_has(WHITESPACE, ...)` to classify cells.
 pub const WHITESPACE: *const u8 = b" \0".as_ptr();
 
-use tmux_types::{
-    COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, colour_split_rgb,
-    Utf8Char, Utf8Data,
-};
+use tmux_types::{COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, colour_split_rgb};
+use tmux_utf8::{Utf8Char, Utf8Data};
 
 use std::ffi::{c_int, c_uchar, c_uint};
 use std::mem::{MaybeUninit, zeroed};
 use std::ptr::null_mut;
-use std::sync::OnceLock;
 
 /// Entire Grid of cells.
 ///
@@ -133,113 +128,11 @@ pub struct GridReader<'a> {
     pub(crate) cy: u32,
 }
 
-// ---------------------------------------------------------------
-// UTF-8 codec — pluggable integration point
-//
-// The Grid needs to round-trip Utf8Data ↔ Utf8Char for its extended-
-// cell storage. That conversion uses an interning table kept in the
-// top-level tmux-rs crate. Rather than pull the whole intern machinery
-// down here, we define a trait the host crate implements, register it
-// once at startup via `set_codec`, and call through the global.
-// ---------------------------------------------------------------
-
-/// Result of encoding a [`Utf8Data`] into a [`Utf8Char`]. Mirrors
-/// tmux-rs's `utf8_state` enum.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-#[repr(i32)]
-pub enum Utf8State {
-    More,
-    Done,
-    Error,
-}
-
-/// Pluggable encode/decode for the UTF-8 intern table. The Grid crate
-/// doesn't own the intern storage (it lives in tmux-rs's `utf8` module
-/// to share across the parser, tty, and format subsystems), so it asks
-/// the host via this trait.
-///
-/// Register the implementation exactly once — typically at process
-/// startup — via [`set_codec`]. After registration, Grid code calls
-/// `codec()` to reach the impl. Unregistered calls panic with a
-/// clear message (the register-once-at-startup pattern makes this a
-/// configuration bug rather than a runtime edge case).
-pub trait Utf8Codec: Send + Sync {
-    /// Encode an expanded cell into the packed u32 form. Stores the
-    /// result in `uc`; returns `Done` on success, `Error` on an
-    /// unrepresentable input (Grid callers substitute a replacement).
-    ///
-    /// # Safety
-    /// `ud` and `uc` must point to valid reads/writes of their types
-    /// respectively. The same call-site contract as the underlying
-    /// C-era `utf8_from_data`.
-    unsafe fn from_data(&self, ud: *const Utf8Data, uc: *mut Utf8Char) -> Utf8State;
-
-    /// Decode a packed u32 back into an expanded cell.
-    fn to_data(&self, uc: Utf8Char) -> Utf8Data;
-
-    /// Return `true` if the character described by `ud` appears anywhere
-    /// in the NUL-terminated byte `set`. Used by the reader's word-set
-    /// classification (whitespace vs separator vs word char).
-    ///
-    /// # Safety
-    /// `set` must be a valid NUL-terminated byte string and `ud` a valid
-    /// pointer for reading. The Grid passes a freshly-copied cell's
-    /// `data` field so aliasing is trivial.
-    unsafe fn cstr_has(&self, set: *const u8, ud: *const Utf8Data) -> bool;
-}
-
-static CODEC: OnceLock<&'static dyn Utf8Codec> = OnceLock::new();
-
-/// Install the UTF-8 codec. Idempotent — subsequent calls are ignored
-/// (the `OnceLock::set` error is discarded). tmux-rs calls this during
-/// startup alongside the log-crate adapter.
-pub fn set_codec(codec: &'static dyn Utf8Codec) {
-    let _ = CODEC.set(codec);
-}
-
-/// Retrieve the registered codec. Panics if [`set_codec`] has not been
-/// called — this is a program-startup invariant, not a recoverable
-/// condition.
-fn codec() -> &'static dyn Utf8Codec {
-    *CODEC
-        .get()
-        .expect("tmux_grid::set_codec must be called before Grid operations")
-}
-
-/// Inline replacement for tmux-rs's `utf8_build_one`: pack an ASCII byte
-/// into the packed cell form (`size=1`, `width=1`, payload `ch`).
-/// Matches the bit layout of `tmux_rs::utf8`'s `utf8_set_size` /
-/// `utf8_set_width` / data combine.
-#[inline]
-fn utf8_build_one(ch: c_uchar) -> u32 {
-    // size=1 → 1 << 24; width=1 → (1+1) << 29 = 2 << 29
-    (1u32 << 24) | (2u32 << 29) | ch as u32
-}
-
-/// Inline replacement for `utf8_set`: initialize a `Utf8Data` slot
-/// with a single ASCII byte and size/width = 1.
-#[inline]
-unsafe fn utf8_set(ud: *mut Utf8Data, ch: c_uchar) {
-    unsafe {
-        (*ud).have = 1;
-        (*ud).size = 1;
-        (*ud).width = 1;
-        (*ud).data.fill(0);
-        (*ud).data[0] = ch;
-    }
-}
-
-/// Wrapper over the installed codec's `from_data`.
-#[inline]
-unsafe fn utf8_from_data(ud: *const Utf8Data, uc: *mut Utf8Char) -> Utf8State {
-    unsafe { codec().from_data(ud, uc) }
-}
-
-/// Wrapper over the installed codec's `to_data`.
-#[inline]
-fn utf8_to_data(uc: Utf8Char) -> Utf8Data {
-    codec().to_data(uc)
-}
+// UTF-8 interop: grid pulls its codec straight from `tmux-utf8`. The
+// previous Utf8Codec trait + OnceLock registration is gone — an earlier
+// necessity of the circular-dep workaround, now unnecessary since
+// `tmux-utf8` is a sibling crate.
+use tmux_utf8::{utf8_build_one, utf8_from_data, utf8_set, utf8_to_data};
 
 /// An OSC-8 hyperlink resolved from a [`GridCell::link`] id. Returned
 /// by [`HyperlinkLookup::hyperlink`] when the id is present in the
@@ -1996,14 +1889,12 @@ unsafe fn grid_reflow_split(target: *mut Grid, gd: *mut Grid, sx: u32, yy: u32, 
 mod tests {
     use super::*;
     use crate::grid_create;
-    use crate::test_support::install_test_codec;
     use tmux_types::colour_join_rgb;
 
     /// Helper: create a GridCell with a single ASCII character.
     /// Registers the test codec as a side effect so downstream Grid
     /// operations (extended cells, interning) don't panic on unset codec.
     fn make_cell(ch: u8, fg: i32, bg: i32) -> GridCell {
-        install_test_codec();
         GridCell::new(
             Utf8Data::new([ch], 0, 1, 1),
             GridAttr::empty(),
@@ -2422,7 +2313,6 @@ mod tests {
     /// Helper: create a GridCell with an RGB foreground color.
     /// RGB colors force the EXTENDED code path in Grid storage.
     fn make_rgb_fg_cell(ch: u8, r: u8, g: u8, b: u8) -> GridCell {
-        install_test_codec();
         GridCell::new(
             Utf8Data::new([ch], 0, 1, 1),
             GridAttr::empty(),
@@ -2436,7 +2326,6 @@ mod tests {
 
     /// Helper: create a GridCell with an RGB background color.
     fn make_rgb_bg_cell(ch: u8, r: u8, g: u8, b: u8) -> GridCell {
-        install_test_codec();
         GridCell::new(
             Utf8Data::new([ch], 0, 1, 1),
             GridAttr::empty(),
@@ -2451,7 +2340,6 @@ mod tests {
     /// Helper: create a wide (width=2) cell. The multi-byte UTF-8 data
     /// and width > 1 both force the EXTENDED path.
     fn make_wide_cell() -> GridCell {
-        install_test_codec();
         GridCell::new(
             Utf8Data::new([0xE4, 0xB8, 0x96], 0, 3, 2),
             GridAttr::empty(),
@@ -2465,7 +2353,6 @@ mod tests {
 
     /// Helper: create a cell with underscore color (forces EXTENDED).
     fn make_us_cell(ch: u8, us: i32) -> GridCell {
-        install_test_codec();
         GridCell::new(
             Utf8Data::new([ch], 0, 1, 1),
             GridAttr::empty(),
@@ -2546,7 +2433,6 @@ mod tests {
 
     #[test]
     fn grid_extended_cell_with_attributes() {
-        install_test_codec();
         let mut gd = grid_create(80, 24, 0);
         unsafe {
             // attr > 0xff forces EXTENDED path.

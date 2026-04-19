@@ -37,8 +37,8 @@
 //! Cursor movement functions skip over PADDING cells to avoid landing in the
 //! middle of a wide character.
 
-use tmux_types::Utf8Data;
-use crate::{GridFlag, GridLineFlag, Grid, GridReader, WHITESPACE, codec};
+use tmux_utf8::{Utf8Data, utf8_cstrhas};
+use crate::{GridFlag, GridLineFlag, Grid, GridReader, WHITESPACE};
 
 impl<'a> GridReader<'a> {
     /// Create a Grid reader at the given position over the given Grid.
@@ -215,7 +215,7 @@ impl<'a> GridReader<'a> {
         if gc.flags.intersects(GridFlag::PADDING) {
             return false;
         }
-        unsafe { codec().cstr_has(set, &raw const gc.data) }
+        unsafe { utf8_cstrhas(set, &raw const gc.data) }
     }
 
     /// Move cursor forward to the start of the next word (vi `w` behavior).
@@ -510,7 +510,6 @@ impl<'a> GridReader<'a> {
 mod tests {
     use super::*;
     use crate::grid_create;
-    use crate::test_support::install_test_codec;
     use crate::{GridAttr, GridCell};
 
     /// Tiny C-literal helper — `c!("foo")` yields a NUL-terminated
@@ -526,7 +525,6 @@ mod tests {
     /// the test codec so `in_set` / `cursor_next_word` / etc. can run
     /// without the tmux-rs utf8 machinery.
     fn make_grid_with_text(lines: &[&str], width: u32) -> Box<Grid> {
-        install_test_codec();
         let mut gd = grid_create(width, lines.len() as u32, 0);
         for (y, line) in lines.iter().enumerate() {
             for (x, &ch) in line.as_bytes().iter().enumerate() {

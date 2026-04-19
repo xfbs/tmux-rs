@@ -14,7 +14,7 @@
 //! the types without pulling the whole tmux-rs crate.
 
 use crate::{GridAttr, GridFlag};
-use tmux_types::{Utf8Char, Utf8Data};
+use tmux_utf8::{Utf8Char, Utf8Data};
 
 /// Primary in-memory representation of a styled terminal cell.
 ///

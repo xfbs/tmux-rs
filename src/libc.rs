@@ -151,29 +151,11 @@ macro_rules! errno {
 }
 pub(crate) use errno;
 
-#[cfg(target_os = "linux")]
-#[expect(non_snake_case)]
-#[inline]
-pub fn MB_CUR_MAX() -> usize {
-    unsafe extern "C" {
-        unsafe fn __ctype_get_mb_cur_max() -> usize;
-    }
-    unsafe { __ctype_get_mb_cur_max() }
-}
-
-#[cfg(target_os = "macos")]
-#[expect(non_snake_case)]
-#[inline]
-pub fn MB_CUR_MAX() -> usize {
-    unsafe extern "C" {
-        unsafe fn ___mb_cur_max() -> i32;
-    }
-    unsafe { ___mb_cur_max() as usize }
-}
-
+// `MB_CUR_MAX`, `wcwidth`, `mbtowc` moved to the `tmux-utf8` crate
+// (where they're used for width lookup and streaming decode). `wctomb`
+// remains here because it's still used by cmd_parse and key_string
+// for UTF-8 encoding short sequences.
 unsafe extern "C" {
-    pub fn wcwidth(c: wchar_t) -> i32;
-    pub fn mbtowc(pwc: *mut wchar_t, s: *const u8, n: usize) -> i32;
     pub fn wctomb(s: *mut u8, wc: wchar_t) -> i32;
 }
 

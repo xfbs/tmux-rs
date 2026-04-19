@@ -738,8 +738,8 @@ pub use tmux_grid::{
     GRID_ATTR_ALL_UNDERSCORE, GRID_CLEARED_CELL, GRID_CLEARED_ENTRY, GRID_DEFAULT_CELL,
     GRID_HISTORY, GRID_PADDING_CELL, Grid, GridAttr, GridCell, GridCellEntry, GridCellEntryData,
     GridCellEntryUnion, GridExtdEntry, GridFlag, GridLine, GridLineFlag, GridReader,
-    GridStringFlags, Hyperlink, HyperlinkLookup, Utf8Codec, Utf8State, WHITESPACE,
-    grid_cells_equal, grid_cells_look_equal, grid_compare, grid_create,
+    GridStringFlags, Hyperlink, HyperlinkLookup, WHITESPACE, grid_cells_equal,
+    grid_cells_look_equal, grid_compare, grid_create,
 };
 
 /// Style alignment.
@@ -2885,28 +2885,6 @@ macro_rules! c {
     }};
 }
 pub(crate) use c;
-
-macro_rules! impl_ord {
-    ($ty:ty as $func:ident) => {
-        impl Ord for $ty {
-            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-                $func(&self, &other)
-            }
-        }
-        impl PartialEq for $ty {
-            fn eq(&self, other: &Self) -> bool {
-                self.cmp(other).is_eq()
-            }
-        }
-        impl Eq for $ty {}
-        impl PartialOrd for $ty {
-            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-                Some(self.cmp(other))
-            }
-        }
-    };
-}
-pub(crate) use impl_ord;
 
 macro_rules! const_unwrap_result {
     ($e:expr) => {

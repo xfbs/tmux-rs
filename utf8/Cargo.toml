@@ -1,0 +1,12 @@
+[package]
+name         = "tmux-utf8"
+version      = "0.0.1"
+edition      = "2024"
+license      = "ISC"
+description  = "UTF-8 cell codec, interning, and width lookup for tmux-rs."
+
+[dependencies]
+libc           = { version = "0.2.174" }
+log            = { version = "0.4" }
+unicode-width  = { version = "0.2" }
+tmux-types     = { path = "../types" }
