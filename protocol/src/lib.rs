@@ -1,18 +1,33 @@
 //! Client/server IPC protocol for tmux-rs.
 //!
-//! This crate defines the wire format used between the tmux server and
-//! its clients: the [`msgtype`] enum of recognized message kinds, the
-//! `msg_*` payload structs that accompany them, and the
-//! [`PROTOCOL_VERSION`] constant that gates handshake compatibility.
+//! Three concerns live here:
 //!
-//! The imsg framing and fd-passing helpers will move in as follow-up
-//! extraction steps; for now this crate holds the type vocabulary only.
+//! 1. **Message vocabulary** — the [`msgtype`] enum of recognized
+//!    message kinds, the `msg_*` payload structs that accompany them,
+//!    and the [`PROTOCOL_VERSION`] constant that gates handshake
+//!    compatibility.
+//! 2. **Wire framing** — the [`imsg`] module owns `imsgbuf`, the
+//!    per-connection state (read buffer + write queue + received-fd
+//!    queue) and the `imsg_read` / `imsg_get` / `imsg_compose*` /
+//!    `imsg_flush` lifecycle. Messages are length-prefixed with an
+//!    `imsg_hdr`, optionally carry a file descriptor via `SCM_RIGHTS`,
+//!    and are capped at `MAX_IMSGSIZE` bytes.
+//! 3. **Buffer primitives** — the [`imsg_buffer`] module holds the
+//!    `ibuf` byte-buffer and `msgbuf` output-queue types, plus the
+//!    `ibuf_add_*` / `ibuf_get_*` accessors used to marshal
+//!    fixed-width integers with explicit endianness.
 //!
-//! Consumers (tmux-rs) re-export these through `crate::tmux_protocol`
-//! so existing `use crate::msgtype` style call sites keep resolving.
+//! The current surface is C-shaped (free functions over raw pointers)
+//! to keep the call sites in `src/proc.rs` and the former
+//! `src/compat/imsg*.rs` working unchanged. A safer Rust-idiomatic API
+//! can layer on top later.
 
 // Names mirror the upstream tmux C header wire definitions.
 #![allow(non_camel_case_types)]
+
+mod compat;
+pub mod imsg;
+pub mod imsg_buffer;
 
 /// Wire-format version. Bumped when a breaking change lands in
 /// [`msgtype`] variants or `msg_*` payload shapes. The client and

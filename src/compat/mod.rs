@@ -1,6 +1,5 @@
 pub mod b64;
 pub mod fdforkpty;
-pub mod getdtablecount;
 pub mod getopt;
 pub mod getprogname;
 pub mod imsg;
@@ -10,7 +9,6 @@ pub mod recallocarray;
 pub mod systemd;
 
 mod closefrom;
-mod freezero;
 mod getpeereid;
 mod setproctitle;
 mod strlcat;
@@ -20,7 +18,6 @@ mod unvis;
 mod vis;
 
 pub use closefrom::closefrom;
-pub use freezero::freezero;
 pub use getpeereid::getpeereid;
 pub use setproctitle::setproctitle_;
 pub use strlcat::{strlcat, strlcat_};
