@@ -2068,8 +2068,10 @@ pub unsafe fn screen_write_collect_end(ctx: *mut screen_write_ctx) {
             (*s).cx,
             (*s).cy,
             &(*ci).gc,
-            (*s).write_list.as_ref().unwrap()[(*s).cy as usize].data.add((*ci).x as usize),
-            (*ci).used as usize,
+            std::slice::from_raw_parts(
+                (*s).write_list.as_ref().unwrap()[(*s).cy as usize].data.add((*ci).x as usize),
+                (*ci).used as usize,
+            ),
         );
         screen_write_set_cursor(ctx, ((*s).cx + (*ci).used) as i32, -1);
 

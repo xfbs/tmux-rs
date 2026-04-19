@@ -557,38 +557,36 @@ impl grid {
         self.set_cell(px, py, &GRID_PADDING_CELL)
     }
 
-    /// Write a run of `slen` ASCII bytes starting at `(px, py)`, each with
-    /// style copied from `gc`. A fast path for string emission (used by
+    /// Write a run of ASCII bytes starting at `(px, py)`, each with style
+    /// copied from `gc`. A fast path for string emission (used by
     /// `screen_write` during input processing) that skips per-cell extended
-    /// style promotion. `s` must be valid for `slen` bytes; the call is
-    /// `unsafe` because `s` is a raw pointer.
-    pub unsafe fn set_cells(
-        &mut self,
-        px: u32,
-        py: u32,
-        gc: *const grid_cell,
-        s: *const u8,
-        slen: usize,
-    ) {
+    /// style promotion.
+    pub fn set_cells(&mut self, px: u32, py: u32, gc: &grid_cell, s: &[u8]) {
+        let slen = s.len();
+        if grid_check_y(self, c!("grid_set_cells"), py) != 0 {
+            return;
+        }
+
+        grid_expand_line(self, py, px + slen as c_uint, 8);
+
+        // SAFETY: grid_need_extended_cell / grid_extended_cell / grid_store_cell
+        // are translated-from-C helpers that still take raw pointers. They do
+        // not escape references beyond the call; indices are in bounds after
+        // grid_expand_line above.
         unsafe {
-            if grid_check_y(self, c!("grid_set_cells"), py) != 0 {
-                return;
-            }
-
-            grid_expand_line(self, py, px + slen as c_uint, 8);
-
             let gl = self.linedata.as_mut_ptr().add(py as usize);
             if px + slen as c_uint > (*gl).cellused {
                 (*gl).cellused = px + slen as c_uint;
             }
 
-            for i in 0..slen {
+            let gc_ptr = gc as *const grid_cell;
+            for (i, &byte) in s.iter().enumerate() {
                 let gce = (*gl).celldata.as_mut_ptr().add((px + i as c_uint) as usize);
-                if grid_need_extended_cell(gce, gc) {
-                    let gee = grid_extended_cell(gl, gce, gc);
-                    (*gee).data = utf8_build_one(*s.add(i));
+                if grid_need_extended_cell(gce, gc_ptr) {
+                    let gee = grid_extended_cell(gl, gce, gc_ptr);
+                    (*gee).data = utf8_build_one(byte);
                 } else {
-                    grid_store_cell(gce, gc, *s.add(i));
+                    grid_store_cell(gce, gc_ptr, byte);
                 }
             }
         }
@@ -1188,17 +1186,8 @@ impl grid {
     }
 
     /// Set a run of cells in the visible area starting at (px, py).
-    pub unsafe fn view_set_cells(
-        &mut self,
-        px: u32,
-        py: u32,
-        gc: *const grid_cell,
-        s: *const u8,
-        slen: usize,
-    ) {
-        unsafe {
-            self.set_cells(px, self.hsize + py, gc, s, slen);
-        }
+    pub fn view_set_cells(&mut self, px: u32, py: u32, gc: &grid_cell, s: &[u8]) {
+        self.set_cells(px, self.hsize + py, gc, s);
     }
 
     /// Move all visible content into history and clear the screen.
@@ -2729,17 +2718,13 @@ mod tests {
     #[test]
     fn grid_set_cells_bulk_write() {
         let mut gd = grid_create(80, 5, 0);
-        unsafe {
-            let gc = make_cell(b'A', 8, 8);
-            let data = b"Hello";
-            gd.set_cells(0, 0, &gc, data.as_ptr(), data.len());
+        let gc = make_cell(b'A', 8, 8);
+        let data = b"Hello";
+        gd.set_cells(0, 0, &gc, data);
 
-            let mut out: grid_cell;
-            for (i, &ch) in data.iter().enumerate() {
-                out = gd.get_cell(i as u32, 0);
-                assert_eq!(out.data.data[0], ch, "mismatch at i={i}");
-            }
-            drop(gd);
+        for (i, &ch) in data.iter().enumerate() {
+            let out = gd.get_cell(i as u32, 0);
+            assert_eq!(out.data.data[0], ch, "mismatch at i={i}");
         }
     }
 
