@@ -48,7 +48,7 @@ pub fn screen_placeholder() -> screen {
         title: CString::default(),
         path: None,
         titles: Vec::new(),
-        grid: grid_create(0, 0, 0),
+        grid: Box::new(Grid::new(0, 0, 0)),
         cx: 0,
         cy: 0,
         cstyle: screen_cursor_style::SCREEN_CURSOR_DEFAULT,
@@ -83,7 +83,7 @@ pub unsafe fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u32) {
         std::ptr::write(
             s,
             screen {
-                grid: grid_create(sx, sy, hlimit),
+                grid: Box::new(Grid::new(sx, sy, hlimit)),
                 saved_grid: None,
 
                 title: CString::default(),
@@ -691,7 +691,7 @@ pub unsafe fn screen_alternate_on(s: *mut screen, gc: *mut GridCell, cursor: i32
         let sx = screen_size_x(s);
         let sy = screen_size_y(s);
 
-        (*s).saved_grid = Some(grid_create(sx, sy, 0));
+        (*s).saved_grid = Some(Box::new(Grid::new(sx, sy, 0)));
         let sg: *mut Grid = &raw mut **(*s).saved_grid.as_mut().unwrap();
         (*sg).duplicate_lines(0, &raw mut *(*s).grid, screen_hsize(s), sy);
         if cursor != 0 {

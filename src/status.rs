@@ -584,7 +584,7 @@ pub unsafe fn status_message_redraw(c: *mut client) -> i32 {
             return 0;
         }
         // Snapshot the old Grid before reinit overwrites it.
-        let old_grid = std::mem::replace(&mut (*(*sl).active).grid, grid_create(0, 0, 0));
+        let old_grid = std::mem::replace(&mut (*(*sl).active).grid, Box::new(Grid::new(0, 0, 0)));
 
         let mut lines = status_line_size(c);
         if lines <= 1 {
@@ -641,7 +641,7 @@ pub unsafe fn status_message_redraw(c: *mut client) -> i32 {
         }
         screen_write_stop(&raw mut ctx);
 
-        if grid_compare(&(*(*sl).active).grid, &old_grid) {
+        if (*(*sl).active).grid.same_as(&old_grid) {
             return 0;
         }
         1
@@ -816,7 +816,7 @@ pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
                 return 0;
             }
             // Snapshot the old Grid before reinit overwrites it.
-            old_grid = std::mem::replace(&mut (*(*sl).active).grid, grid_create(0, 0, 0));
+            old_grid = std::mem::replace(&mut (*(*sl).active).grid, Box::new(Grid::new(0, 0, 0)));
 
             let mut lines = status_line_size(c);
             if lines <= 1 {
@@ -923,7 +923,7 @@ pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
         // finished:
         screen_write_stop(&raw mut ctx);
 
-        if grid_compare(&(*(*sl).active).grid, &old_grid) {
+        if (*(*sl).active).grid.same_as(&old_grid) {
             return 0;
         }
         1

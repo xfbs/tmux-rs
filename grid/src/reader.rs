@@ -509,7 +509,6 @@ impl<'a> GridReader<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::grid_create;
     use crate::{GridAttr, GridCell};
 
     /// Tiny C-literal helper — `c!("foo")` yields a NUL-terminated
@@ -524,8 +523,8 @@ mod tests {
     /// Helper: create a Grid and fill lines with ASCII text. Registers
     /// the test codec so `in_set` / `cursor_next_word` / etc. can run
     /// without the tmux-rs utf8 machinery.
-    fn make_grid_with_text(lines: &[&str], width: u32) -> Box<Grid> {
-        let mut gd = grid_create(width, lines.len() as u32, 0);
+    fn make_grid_with_text(lines: &[&str], width: u32) -> Grid {
+        let mut gd = Grid::new(width, lines.len() as u32, 0);
         for (y, line) in lines.iter().enumerate() {
             for (x, &ch) in line.as_bytes().iter().enumerate() {
                 let cell = GridCell::new(
@@ -553,7 +552,7 @@ mod tests {
     fn start_sets_cursor_position() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let gr = GridReader::new(&mut *gd, 3, 0);
+            let gr = GridReader::new(&mut gd, 3, 0);
             assert_eq!(gr.cx, 3);
             assert_eq!(gr.cy, 0);
             drop(gd);
@@ -564,7 +563,7 @@ mod tests {
     fn cursor_right_advances() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr = GridReader::new(&mut *gd, 0, 0);
+            let mut gr = GridReader::new(&mut gd, 0, 0);
             gr.cursor_right(0, 0);
             assert_eq!(gr.cx, 1);
             drop(gd);
@@ -575,7 +574,7 @@ mod tests {
     fn cursor_left_retreats() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr = GridReader::new(&mut *gd, 3, 0);
+            let mut gr = GridReader::new(&mut gd, 3, 0);
             gr.cursor_left(0);
             assert_eq!(gr.cx, 2);
             drop(gd);
@@ -586,7 +585,7 @@ mod tests {
     fn cursor_left_at_zero_stays() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr = GridReader::new(&mut *gd, 0, 0);
+            let mut gr = GridReader::new(&mut gd, 0, 0);
             gr.cursor_left(0);
             assert_eq!(gr.cx, 0);
             assert_eq!(gr.cy, 0);
@@ -598,7 +597,7 @@ mod tests {
     fn cursor_down_advances_row() {
         unsafe {
             let mut gd = make_grid_with_text(&["line1", "line2"], 80);
-            let mut gr = GridReader::new(&mut *gd, 2, 0);
+            let mut gr = GridReader::new(&mut gd, 2, 0);
             gr.cursor_down();
             assert_eq!(gr.cy, 1);
             assert_eq!(gr.cx, 2);
@@ -610,7 +609,7 @@ mod tests {
     fn cursor_up_retreats_row() {
         unsafe {
             let mut gd = make_grid_with_text(&["line1", "line2"], 80);
-            let mut gr = GridReader::new(&mut *gd, 2, 1);
+            let mut gr = GridReader::new(&mut gd, 2, 1);
             gr.cursor_up();
             assert_eq!(gr.cy, 0);
             assert_eq!(gr.cx, 2);
@@ -622,7 +621,7 @@ mod tests {
     fn cursor_up_at_top_stays() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr = GridReader::new(&mut *gd, 0, 0);
+            let mut gr = GridReader::new(&mut gd, 0, 0);
             gr.cursor_up();
             assert_eq!(gr.cy, 0);
             drop(gd);
@@ -637,7 +636,7 @@ mod tests {
     fn start_of_line_moves_to_column_zero() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello world"], 80);
-            let mut gr = GridReader::new(&mut *gd, 5, 0);
+            let mut gr = GridReader::new(&mut gd, 5, 0);
             gr.cursor_start_of_line(0);
             assert_eq!(gr.cx, 0);
             drop(gd);
@@ -648,7 +647,7 @@ mod tests {
     fn end_of_line_moves_to_line_length() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr = GridReader::new(&mut *gd, 0, 0);
+            let mut gr = GridReader::new(&mut gd, 0, 0);
             gr.cursor_end_of_line(0, 0);
             assert_eq!(gr.cx, 5);
             drop(gd);
@@ -662,7 +661,7 @@ mod tests {
     #[test]
     fn jump_forward_finds_character() {
         let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-        let mut gr = GridReader::new(&mut *gd, 0, 0);
+        let mut gr = GridReader::new(&mut gd, 0, 0);
         let jc = make_utf8_char(b'e');
         assert!(gr.cursor_jump(&jc));
         assert_eq!(gr.cx, 4);
@@ -671,7 +670,7 @@ mod tests {
     #[test]
     fn jump_forward_not_found() {
         let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-        let mut gr = GridReader::new(&mut *gd, 0, 0);
+        let mut gr = GridReader::new(&mut gd, 0, 0);
         let jc = make_utf8_char(b'z');
         assert!(!gr.cursor_jump(&jc));
         assert_eq!(gr.cx, 0);
@@ -680,7 +679,7 @@ mod tests {
     #[test]
     fn jump_forward_from_middle() {
         let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-        let mut gr = GridReader::new(&mut *gd, 5, 0);
+        let mut gr = GridReader::new(&mut gd, 5, 0);
         let jc = make_utf8_char(b'i');
         assert!(gr.cursor_jump(&jc));
         assert_eq!(gr.cx, 8);
@@ -689,7 +688,7 @@ mod tests {
     #[test]
     fn jump_backward_finds_character() {
         let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-        let mut gr = GridReader::new(&mut *gd, 9, 0);
+        let mut gr = GridReader::new(&mut gd, 9, 0);
         let jc = make_utf8_char(b'c');
         assert!(gr.cursor_jump_back(&jc));
         assert_eq!(gr.cx, 2);
@@ -698,7 +697,7 @@ mod tests {
     #[test]
     fn jump_backward_not_found() {
         let mut gd = make_grid_with_text(&["abcdefghij"], 80);
-        let mut gr = GridReader::new(&mut *gd, 9, 0);
+        let mut gr = GridReader::new(&mut gd, 9, 0);
         let jc = make_utf8_char(b'z');
         assert!(!gr.cursor_jump_back(&jc));
         assert_eq!(gr.cx, 9);
@@ -710,15 +709,15 @@ mod tests {
         let mut gd = make_grid_with_text(&["abcaefaghi"], 80);
         let jc = make_utf8_char(b'a');
 
-        let mut gr = GridReader::new(&mut *gd, 9, 0);
+        let mut gr = GridReader::new(&mut gd, 9, 0);
         assert!(gr.cursor_jump_back(&jc));
         assert_eq!(gr.cx, 6);
 
-        let mut gr = GridReader::new(&mut *gd, 5, 0);
+        let mut gr = GridReader::new(&mut gd, 5, 0);
         assert!(gr.cursor_jump_back(&jc));
         assert_eq!(gr.cx, 3);
 
-        let mut gr = GridReader::new(&mut *gd, 2, 0);
+        let mut gr = GridReader::new(&mut gd, 2, 0);
         assert!(gr.cursor_jump_back(&jc));
         assert_eq!(gr.cx, 0);
     }
@@ -731,7 +730,7 @@ mod tests {
     fn next_word_moves_to_next_word_start() {
         unsafe {
             let mut gd = make_grid_with_text(&["one two three"], 80);
-            let mut gr = GridReader::new(&mut *gd, 0, 0);
+            let mut gr = GridReader::new(&mut gd, 0, 0);
 
             gr.cursor_next_word(c!(""));
             assert_eq!(gr.cx, 4, "should land on 'two'");
@@ -747,7 +746,7 @@ mod tests {
     fn next_word_from_whitespace() {
         unsafe {
             let mut gd = make_grid_with_text(&["  hello world"], 80);
-            let mut gr = GridReader::new(&mut *gd, 0, 0);
+            let mut gr = GridReader::new(&mut gd, 0, 0);
 
             gr.cursor_next_word(c!(""));
             assert_eq!(gr.cx, 2, "should skip leading spaces to 'hello'");
@@ -760,7 +759,7 @@ mod tests {
     fn next_word_with_separators() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello.world end"], 80);
-            let mut gr = GridReader::new(&mut *gd, 0, 0);
+            let mut gr = GridReader::new(&mut gd, 0, 0);
 
             gr.cursor_next_word(c!("."));
             assert_eq!(gr.cx, 5, "should stop at separator '.'");
@@ -776,7 +775,7 @@ mod tests {
     fn next_word_end_moves_to_end_of_word() {
         unsafe {
             let mut gd = make_grid_with_text(&["one two three"], 80);
-            let mut gr = GridReader::new(&mut *gd, 0, 0);
+            let mut gr = GridReader::new(&mut gd, 0, 0);
 
             gr.cursor_next_word_end(c!(""));
             assert_eq!(gr.cx, 3, "should land on 'e' of 'one'");
@@ -791,7 +790,7 @@ mod tests {
             let mut gd = make_grid_with_text(&["one   two"], 80);
             // Start at 'e' of "one" (col 2). Cursor is inside the word,
             // so next-word-end advances past the remaining word chars.
-            let mut gr = GridReader::new(&mut *gd, 2, 0);
+            let mut gr = GridReader::new(&mut gd, 2, 0);
 
             gr.cursor_next_word_end(c!(""));
             assert_eq!(gr.cx, 3, "should advance past end of current word");
@@ -807,15 +806,15 @@ mod tests {
 
             // Verify the Grid is set up correctly
             {
-                let mut gr = GridReader::new(&mut *gd, 8, 0);
+                let mut gr = GridReader::new(&mut gd, 8, 0);
                 assert!(gr.in_set(WHITESPACE) == false, "col 8 should be 't'");
             }
             {
-                let mut gr = GridReader::new(&mut *gd, 3, 0);
+                let mut gr = GridReader::new(&mut gd, 3, 0);
                 assert!(gr.in_set(WHITESPACE) == true, "col 3 should be space");
             }
 
-            let mut gr = GridReader::new(&mut *gd, 8, 0);
+            let mut gr = GridReader::new(&mut gd, 8, 0);
             // Use already=1, matching how tmux's previous-word command calls this.
             gr.cursor_previous_word(c!(""), 1, false);
             assert_eq!((gr.cx, gr.cy), (4, 0), "should land on 'two'");
@@ -831,7 +830,7 @@ mod tests {
     fn previous_word_from_middle_of_word() {
         unsafe {
             let mut gd = make_grid_with_text(&["one two three"], 80);
-            let mut gr = GridReader::new(&mut *gd, 5, 0);
+            let mut gr = GridReader::new(&mut gd, 5, 0);
 
             gr.cursor_previous_word(c!(""), 1, false);
             assert_eq!(gr.cx, 4, "should land on start of 'two'");
@@ -848,7 +847,7 @@ mod tests {
     fn back_to_indentation_skips_spaces() {
         unsafe {
             let mut gd = make_grid_with_text(&["    indented"], 80);
-            let mut gr = GridReader::new(&mut *gd, 8, 0);
+            let mut gr = GridReader::new(&mut gd, 8, 0);
 
             gr.cursor_back_to_indentation();
             assert_eq!(gr.cx, 4, "should skip 4 leading spaces");
@@ -860,7 +859,7 @@ mod tests {
     fn back_to_indentation_no_indent() {
         unsafe {
             let mut gd = make_grid_with_text(&["hello"], 80);
-            let mut gr = GridReader::new(&mut *gd, 3, 0);
+            let mut gr = GridReader::new(&mut gd, 3, 0);
 
             gr.cursor_back_to_indentation();
             assert_eq!(gr.cx, 0, "no indent means column 0");
@@ -872,7 +871,7 @@ mod tests {
     fn back_to_indentation_all_spaces_stays() {
         unsafe {
             let mut gd = make_grid_with_text(&["     "], 80);
-            let mut gr = GridReader::new(&mut *gd, 3, 0);
+            let mut gr = GridReader::new(&mut gd, 3, 0);
 
             gr.cursor_back_to_indentation();
             assert_eq!(gr.cx, 3, "all spaces — should stay at original position");
@@ -888,7 +887,7 @@ mod tests {
     fn in_set_detects_whitespace() {
         unsafe {
             let mut gd = make_grid_with_text(&["a b"], 80);
-            let mut gr = GridReader::new(&mut *gd, 0, 0);
+            let mut gr = GridReader::new(&mut gd, 0, 0);
             assert!(!gr.in_set(WHITESPACE));
 
             gr.cx = 1;
@@ -905,7 +904,7 @@ mod tests {
     fn in_set_detects_separators() {
         unsafe {
             let mut gd = make_grid_with_text(&["a.b"], 80);
-            let mut gr = GridReader::new(&mut *gd, 0, 0);
+            let mut gr = GridReader::new(&mut gd, 0, 0);
             assert!(!gr.in_set(c!(".")));
 
             gr.cx = 1;

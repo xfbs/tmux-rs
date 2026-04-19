@@ -461,7 +461,7 @@ pub unsafe fn screen_redraw_make_pane_status(
             width = (*wp).sx - 4;
         }
 
-        old_grid = std::mem::replace(&mut (*wp).status_screen.grid, grid_create(0, 0, 0));
+        old_grid = std::mem::replace(&mut (*wp).status_screen.grid, Box::new(Grid::new(0, 0, 0)));
         screen_init(&raw mut (*wp).status_screen, width, 1, 0);
         (*wp).status_screen.mode = mode_flag::empty();
 
@@ -494,7 +494,7 @@ pub unsafe fn screen_redraw_make_pane_status(
         free_(expanded);
         format_free(ft);
 
-        if grid_compare(&(*wp).status_screen.grid, &old_grid) {
+        if (*wp).status_screen.grid.same_as(&old_grid) {
             return 0;
         }
         1

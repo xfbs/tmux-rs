@@ -738,7 +738,7 @@ pub use tmux_grid::{
     GRID_PADDING_CELL, Grid, GridAttr, GridCell, GridCellEntry, GridCellEntryData,
     GridCellEntryUnion, GridExtdEntry, GridFlag, GridFlags, GridLine, GridLineFlag, GridReader,
     GridStringFlags, Hyperlink, HyperlinkLookup, WHITESPACE, grid_cells_equal,
-    grid_cells_look_equal, grid_compare, grid_create,
+    grid_cells_look_equal,
 };
 
 /// Style alignment.
