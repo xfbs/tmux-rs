@@ -70,11 +70,13 @@
 // otherwise require wrapping every single op.
 #![allow(unsafe_op_in_unsafe_fn)]
 
+mod attributes;
 mod cell;
 mod flags;
 mod line;
 pub mod reader;
 
+pub use attributes::*;
 pub use cell::*;
 pub use flags::*;
 pub use line::*;

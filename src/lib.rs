@@ -55,7 +55,6 @@ macro_rules! cfg_pub_mods {
 cfg_pub_mods! {
     mod alerts;
     mod arguments;
-    mod attributes;
     mod bitstr;
     mod cfg_;
     mod client_;
@@ -145,7 +144,6 @@ pub use crate::tmux::tmux_main;
 use crate::{
     alerts::*,
     arguments::*,
-    attributes::*,
     bitstr::*,
     cfg_::*,
     client_::*,
@@ -737,8 +735,8 @@ pub use tmux_grid::{
     GRID_ATTR_ALL_UNDERSCORE, GRID_CLEARED_CELL, GRID_CLEARED_ENTRY, GRID_DEFAULT_CELL,
     GRID_PADDING_CELL, Grid, GridAttr, GridCell, GridCellEntry, GridCellEntryData,
     GridCellEntryUnion, GridExtdEntry, GridFlag, GridFlags, GridLine, GridLineFlag, GridReader,
-    GridStringFlags, Hyperlink, HyperlinkLookup, WHITESPACE, grid_cells_equal,
-    grid_cells_look_equal,
+    GridStringFlags, Hyperlink, HyperlinkLookup, WHITESPACE, attributes_fromstring,
+    attributes_tostring, grid_cells_equal, grid_cells_look_equal,
 };
 
 /// Style alignment.

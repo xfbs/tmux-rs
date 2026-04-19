@@ -67,28 +67,28 @@ pub fn attributes_tostring(attr: GridAttr) -> Cow<'static, str> {
 /// or contains an unrecognized attribute name.
 /// Note: `"bold"` is an alias for `"bright"`.
 pub fn attributes_fromstring(str: &str) -> Result<GridAttr, ()> {
-    struct table_entry {
+    struct TableEntry {
         name: &'static str,
         attr: GridAttr,
     }
 
     #[rustfmt::skip]
-    const TABLE: [table_entry; 15] = [
-        table_entry { name: "acs", attr: GridAttr::GRID_ATTR_CHARSET, },
-        table_entry { name: "bright", attr: GridAttr::GRID_ATTR_BRIGHT, },
-        table_entry { name: "bold", attr: GridAttr::GRID_ATTR_BRIGHT, },
-        table_entry { name: "dim", attr: GridAttr::GRID_ATTR_DIM, },
-        table_entry { name: "underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE, },
-        table_entry { name: "blink", attr: GridAttr::GRID_ATTR_BLINK, },
-        table_entry { name: "reverse", attr: GridAttr::GRID_ATTR_REVERSE, },
-        table_entry { name: "hidden", attr: GridAttr::GRID_ATTR_HIDDEN, },
-        table_entry { name: "italics", attr: GridAttr::GRID_ATTR_ITALICS, },
-        table_entry { name: "strikethrough", attr: GridAttr::GRID_ATTR_STRIKETHROUGH, },
-        table_entry { name: "double-underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE_2, },
-        table_entry { name: "curly-underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE_3, },
-        table_entry { name: "dotted-underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE_4, },
-        table_entry { name: "dashed-underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE_5, },
-        table_entry { name: "overline", attr: GridAttr::GRID_ATTR_OVERLINE, },
+    const TABLE: [TableEntry; 15] = [
+        TableEntry { name: "acs", attr: GridAttr::GRID_ATTR_CHARSET, },
+        TableEntry { name: "bright", attr: GridAttr::GRID_ATTR_BRIGHT, },
+        TableEntry { name: "bold", attr: GridAttr::GRID_ATTR_BRIGHT, },
+        TableEntry { name: "dim", attr: GridAttr::GRID_ATTR_DIM, },
+        TableEntry { name: "underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE, },
+        TableEntry { name: "blink", attr: GridAttr::GRID_ATTR_BLINK, },
+        TableEntry { name: "reverse", attr: GridAttr::GRID_ATTR_REVERSE, },
+        TableEntry { name: "hidden", attr: GridAttr::GRID_ATTR_HIDDEN, },
+        TableEntry { name: "italics", attr: GridAttr::GRID_ATTR_ITALICS, },
+        TableEntry { name: "strikethrough", attr: GridAttr::GRID_ATTR_STRIKETHROUGH, },
+        TableEntry { name: "double-underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE_2, },
+        TableEntry { name: "curly-underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE_3, },
+        TableEntry { name: "dotted-underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE_4, },
+        TableEntry { name: "dashed-underscore", attr: GridAttr::GRID_ATTR_UNDERSCORE_5, },
+        TableEntry { name: "overline", attr: GridAttr::GRID_ATTR_OVERLINE, },
     ];
 
     let delimiters = &[' ', ',', '|'];
