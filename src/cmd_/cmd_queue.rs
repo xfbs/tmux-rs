@@ -917,8 +917,11 @@ pub unsafe fn cmdq_error_(item: *mut cmdq_item, args: std::fmt::Arguments) {
             server_add_message!("{} message: {}", _s((*c).name), _s(msg));
             if !(*c).flags.intersects(client_flag::UTF8) {
                 let tmp = msg;
-                msg = utf8_sanitize(tmp);
+                let sanitized = utf8_sanitize(tmp);
                 free_(tmp);
+                msg = CString::new(sanitized).map_or(null_mut(), |cs| {
+                    xstrdup(cs.as_ptr().cast()).as_ptr()
+                });
             }
             if (*c).flags.intersects(client_flag::CONTROL) {
                 control_write!(c, "{}", _s(msg));

@@ -133,45 +133,49 @@ pub unsafe fn utf8_stravisx(src: *const u8, srclen: usize, flag: vis_flags) -> V
     utf8_stravis_(bytes, flag)
 }
 
-pub unsafe fn utf8_sanitize(mut src: *const u8) -> *mut u8 {
-    unsafe {
-        let mut dst: *mut u8 = null_mut();
-        let mut n: usize = 0;
-        let mut ud: Utf8Data = zeroed();
-
-        while *src != b'\0' {
-            dst = xreallocarray_(dst, n + 1).as_ptr();
-            let mut more = utf8_open(&raw mut ud, *src);
-            if more == UTF8_MORE {
-                while {
-                    src = src.add(1);
-                    *src != b'\0' && more == UTF8_MORE
-                } {
-                    more = utf8_append(&raw mut ud, *src);
-                }
-                if more == UTF8_DONE {
-                    dst = xreallocarray_(dst, n + ud.width as usize).as_ptr();
-                    for _ in 0..ud.width {
-                        *dst.add(n) = b'_';
-                        n += 1;
-                    }
-                    continue;
-                }
-                src = src.sub(ud.have as usize);
+/// Replace every non-printable byte (and every non-ASCII UTF-8
+/// character) in `src` with ASCII underscores. Multi-byte characters
+/// collapse to `width` underscores so column layout is preserved.
+/// Printable ASCII (0x20..=0x7e) passes through unchanged.
+pub fn utf8_sanitize_(src: &[u8]) -> Vec<u8> {
+    let mut dst: Vec<u8> = Vec::with_capacity(src.len());
+    let mut ud: Utf8Data = Utf8Data::empty();
+    let mut i = 0;
+    while i < src.len() {
+        let byte = src[i];
+        let mut more = ud.open(byte);
+        if more == Utf8State::More {
+            let mut j = i + 1;
+            while j < src.len() && more == Utf8State::More {
+                more = ud.append(src[j]);
+                j += 1;
             }
-            if *src > 0x1f && *src < 0x7f {
-                *dst.add(n) = *src;
-                n += 1;
-            } else {
-                *dst.add(n) = b'_';
-                n += 1;
+            if more == Utf8State::Done {
+                for _ in 0..ud.width {
+                    dst.push(b'_');
+                }
+                i = j;
+                continue;
             }
-            src = src.add(1);
+            // Decode failed — fall through and handle `src[i]` byte-at-a-time.
         }
-        dst = xreallocarray_(dst, n + 1).as_ptr();
-        *dst.add(n) = b'\0';
-        dst
+        if byte > 0x1f && byte < 0x7f {
+            dst.push(byte);
+        } else {
+            dst.push(b'_');
+        }
+        i += 1;
     }
+    dst
+}
+
+/// C-string-pointer wrapper around [`utf8_sanitize_`].
+///
+/// # Safety
+/// `src` must be a valid NUL-terminated byte string.
+pub unsafe fn utf8_sanitize(src: *const u8) -> Vec<u8> {
+    let bytes = unsafe { CStr::from_ptr(src.cast()).to_bytes() };
+    utf8_sanitize_(bytes)
 }
 
 // ---------------------------------------------------------------
@@ -277,33 +281,45 @@ pub fn utf8_to_string(src: &[Utf8Data]) -> String {
     String::from_utf8(dst).unwrap()
 }
 
-pub unsafe fn utf8_cstrwidth(mut s: *const u8) -> u32 {
-    unsafe {
-        let mut tmp: Utf8Data = zeroed();
-
-        let mut width: u32 = 0;
-        while *s != b'\0' {
-            let mut more = utf8_open(&raw mut tmp, *s);
-            if more == UTF8_MORE {
-                while {
-                    s = s.add(1);
-                    *s != b'\0' && more == UTF8_MORE
-                } {
-                    more = utf8_append(&raw mut tmp, *s);
-                }
-                if more == UTF8_DONE {
-                    width += tmp.width as u32;
-                    continue;
-                }
-                s = s.sub(tmp.have as usize);
+/// Compute the display width (in terminal columns) of a byte slice,
+/// treating complete UTF-8 sequences as their intrinsic width and
+/// counting every other printable ASCII byte as 1. Malformed sequences
+/// and control bytes (0x00..=0x1f, 0x7f) contribute 0.
+pub fn utf8_cstrwidth_(s: &[u8]) -> u32 {
+    let mut tmp: Utf8Data = Utf8Data::empty();
+    let mut width: u32 = 0;
+    let mut i = 0;
+    while i < s.len() {
+        let byte = s[i];
+        let mut more = tmp.open(byte);
+        if more == Utf8State::More {
+            let mut j = i + 1;
+            while j < s.len() && more == Utf8State::More {
+                more = tmp.append(s[j]);
+                j += 1;
             }
-            if *s > 0x1f && *s != 0x7f {
-                width += 1;
+            if more == Utf8State::Done {
+                width += tmp.width as u32;
+                i = j;
+                continue;
             }
-            s = s.add(1);
+            // Decode failed — fall through and treat `s[i]` singly.
         }
-        width
+        if byte > 0x1f && byte != 0x7f {
+            width += 1;
+        }
+        i += 1;
     }
+    width
+}
+
+/// Unsafe C-string wrapper over [`utf8_cstrwidth_`].
+///
+/// # Safety
+/// `s` must be a valid NUL-terminated byte string.
+pub unsafe fn utf8_cstrwidth(s: *const u8) -> u32 {
+    let bytes = unsafe { CStr::from_ptr(s.cast()).to_bytes() };
+    utf8_cstrwidth_(bytes)
 }
 
 pub unsafe fn utf8_padcstr(s: *const u8, width: u32) -> *mut u8 {

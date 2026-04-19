@@ -3554,12 +3554,12 @@ pub unsafe fn server_client_print(c: *mut client, parse: i32, evb: *mut evbuffer
             if client_get_session(c).is_null() || (*c).flags.intersects(client_flag::CONTROL) {
                 if !(*c).flags.intersects(client_flag::UTF8) {
                     let sanitized = utf8_sanitize(msg);
+                    let cs = CString::new(sanitized).unwrap_or_default();
                     if (*c).flags.intersects(client_flag::CONTROL) {
-                        control_write!(c, "{}", _s(sanitized));
+                        control_write!(c, "{}", _s(cs.as_ptr().cast::<u8>()));
                     } else {
-                        file_print!(c, "{}\n", _s(sanitized));
+                        file_print!(c, "{}\n", _s(cs.as_ptr().cast::<u8>()));
                     }
-                    free_(sanitized);
                 } else if (*c).flags.intersects(client_flag::CONTROL) {
                     control_write!(c, "{}", _s(msg));
                 } else {
