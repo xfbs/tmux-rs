@@ -1,0 +1,9 @@
+[package]
+name         = "tmux-protocol"
+version      = "0.0.1"
+edition      = "2024"
+license      = "ISC"
+description  = "Client/server IPC protocol for tmux-rs: message types, wire framing, fd-passing."
+
+[dependencies]
+libc       = { version = "0.2.174" }
