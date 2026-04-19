@@ -79,12 +79,6 @@ pub use cell::*;
 pub use flags::*;
 pub use line::*;
 
-/// Grid-level flag: this Grid retains scrollback history. Passed to
-/// [`grid_create`] when the caller wants scrollback; omitted for
-/// ephemeral screens (popups, menus, alternate screen). Bit `0x1` in
-/// `Grid.flags`.
-pub const GRID_HISTORY: i32 = 0x1;
-
 /// NUL-terminated byte set representing whitespace for the reader's
 /// word-boundary logic. Kept here rather than in tmux-types because
 /// it's specifically a reader input — `cursor_next_word` and friends
@@ -105,7 +99,7 @@ use std::ptr::null_mut;
 /// methods defined later in this module; direct field access is kept
 /// within the crate.
 pub struct Grid {
-    pub flags: i32,
+    pub flags: GridFlags,
 
     pub sx: u32,
     pub sy: u32,
@@ -421,7 +415,7 @@ pub fn grid_create(sx: u32, sy: u32, hlimit: u32) -> Box<Grid> {
     Box::new(Grid {
         sx,
         sy,
-        flags: if hlimit != 0 { GRID_HISTORY } else { 0 },
+        flags: if hlimit != 0 { GridFlags::HISTORY } else { GridFlags::empty() },
         hscrolled: 0,
         hsize: 0,
         hlimit,
@@ -1281,7 +1275,7 @@ impl Grid {
     /// scrollback via [`scroll_history`](Self::scroll_history) and
     /// timestamped with `now`.
     pub fn view_scroll_region_up(&mut self, rupper: u32, rlower: u32, bg: u32, now: libc::time_t) {
-        if self.flags & GRID_HISTORY != 0 {
+        if self.flags.contains(GridFlags::HISTORY) {
             self.collect_history();
             if rupper == 0 && rlower == self.sy - 1 {
                 self.scroll_history(bg, now);

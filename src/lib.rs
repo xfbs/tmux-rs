@@ -730,14 +730,13 @@ const SIMPLE_BORDERS: [u8; 13] = [
 const PADDED_BORDERS: [u8; 13] = [b' '; 13];
 
 // All Grid* types — the Grid struct, GridReader, the per-cell and
-// per-line data types, the bitflag families, and the GRID_HISTORY
-// constant — live in the `tmux-grid` crate. Re-exported here so existing
-// `use crate::{Grid, GridCell, ...}` call sites throughout tmux-rs keep
-// resolving.
+// per-line data types, and the bitflag families — live in the
+// `tmux-grid` crate. Re-exported here so existing `use crate::{Grid,
+// GridCell, ...}` call sites throughout tmux-rs keep resolving.
 pub use tmux_grid::{
     GRID_ATTR_ALL_UNDERSCORE, GRID_CLEARED_CELL, GRID_CLEARED_ENTRY, GRID_DEFAULT_CELL,
-    GRID_HISTORY, GRID_PADDING_CELL, Grid, GridAttr, GridCell, GridCellEntry, GridCellEntryData,
-    GridCellEntryUnion, GridExtdEntry, GridFlag, GridLine, GridLineFlag, GridReader,
+    GRID_PADDING_CELL, Grid, GridAttr, GridCell, GridCellEntry, GridCellEntryData,
+    GridCellEntryUnion, GridExtdEntry, GridFlag, GridFlags, GridLine, GridLineFlag, GridReader,
     GridStringFlags, Hyperlink, HyperlinkLookup, WHITESPACE, grid_cells_equal,
     grid_cells_look_equal, grid_compare, grid_create,
 };
@@ -874,7 +873,7 @@ struct screen {
     saved_cy: u32,
     saved_grid: Option<Box<Grid>>,
     saved_cell: GridCell,
-    saved_flags: i32,
+    saved_flags: GridFlags,
 
     tabs: Option<Rc<RefCell<BitStr>>>,
     sel: Option<Box<screen_sel>>,

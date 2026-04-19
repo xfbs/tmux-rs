@@ -1731,7 +1731,7 @@ pub unsafe fn screen_write_clearendofscreen(ctx: *mut screen_write_ctx, bg: u32)
         // Scroll into history if it is enabled and clearing entire screen.
         if (*s).cx == 0
             && (*s).cy == 0
-            && ((*gd).flags & GRID_HISTORY != 0)
+            && (*gd).flags.contains(GridFlags::HISTORY)
             && !ctx_wp(ctx).is_null()
             && options_get_number_((*ctx_wp(ctx)).options, "scroll-on-clear") != 0
         {
@@ -1800,7 +1800,7 @@ pub unsafe fn screen_write_clearscreen(ctx: *mut screen_write_ctx, bg: u32) {
         ttyctx.bg = bg;
 
         // Scroll into history if it is enabled.
-        if ((*(*s).grid).flags & GRID_HISTORY != 0)
+        if (*(*s).grid).flags.contains(GridFlags::HISTORY)
             && !ctx_wp(ctx).is_null()
             && options_get_number_((*ctx_wp(ctx)).options, "scroll-on-clear") != 0
         {

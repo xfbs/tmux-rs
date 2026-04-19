@@ -284,7 +284,7 @@ pub unsafe fn window_copy_clone_screen(
 
         // Ensure history is on for the backing Grid so lines are not deleted
         // during resizing.
-        (*(*dst).grid).flags |= GRID_HISTORY;
+        (*(*dst).grid).flags.insert(GridFlags::HISTORY);
         (*(*dst).grid).duplicate_lines(0, &raw mut *(*src).grid, 0, sy);
 
         (*(*dst).grid).sy = sy - screen_hsize(src);

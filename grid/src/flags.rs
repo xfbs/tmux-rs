@@ -81,3 +81,14 @@ bitflags::bitflags! {
         const GRID_STRING_EMPTY_CELLS = 0x10;
     }
 }
+
+bitflags::bitflags! {
+    /// Grid-level flags. Currently only `HISTORY` — set when the Grid
+    /// retains scrollback history. Omitted for ephemeral screens
+    /// (popups, menus, alternate-screen mode).
+    #[repr(transparent)]
+    #[derive(Copy, Clone, Eq, PartialEq)]
+    pub struct GridFlags: i32 {
+        const HISTORY = 0x1;
+    }
+}

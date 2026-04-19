@@ -63,7 +63,7 @@ pub fn screen_placeholder() -> screen {
         saved_cy: 0,
         saved_grid: None,
         saved_cell: unsafe { zeroed() },
-        saved_flags: 0,
+        saved_flags: GridFlags::empty(),
         tabs: None,
         sel: None,
         #[cfg(feature = "sixel")]
@@ -107,7 +107,7 @@ pub unsafe fn screen_init(s: *mut screen, sx: u32, sy: u32, hlimit: u32) {
                 saved_cx: 0,
                 saved_cy: 0,
                 saved_cell: zeroed(),
-                saved_flags: 0,
+                saved_flags: GridFlags::empty(),
 
                 tabs: None,
                 sel: None,
@@ -415,7 +415,7 @@ unsafe fn screen_resize_y(s: *mut screen, sy: u32, eat_empty: i32, cy: *mut u32)
             // over the lines which are left. If history is off, delete
             // lines from the top.
             let mut available = (*s).cy;
-            if (*gd).flags & GRID_HISTORY != 0 {
+            if (*gd).flags.contains(GridFlags::HISTORY) {
                 (*gd).hscrolled += needed;
                 (*gd).hsize += needed;
             } else if needed > 0 && available > 0 {
@@ -437,7 +437,7 @@ unsafe fn screen_resize_y(s: *mut screen, sy: u32, eat_empty: i32, cy: *mut u32)
             // Try to pull as much as possible out of scrolled history, if
             // it is enabled.
             let mut available = (*gd).hscrolled;
-            if (*gd).flags & GRID_HISTORY != 0 && available > 0 {
+            if (*gd).flags.contains(GridFlags::HISTORY) && available > 0 {
                 if available > needed {
                     available = needed;
                 }
@@ -703,7 +703,7 @@ pub unsafe fn screen_alternate_on(s: *mut screen, gc: *mut GridCell, cursor: i32
         (*s).grid.view_clear(0, 0, sx, sy, 8);
 
         (*s).saved_flags = (*s).grid.flags;
-        (*s).grid.flags &= !GRID_HISTORY;
+        (*s).grid.flags.remove(GridFlags::HISTORY);
     }
 }
 
@@ -753,8 +753,8 @@ pub unsafe fn screen_alternate_off(s: *mut screen, gc: *mut GridCell, cursor: i3
 
         // Turn history back on (so resize can use it) and then resize back to
         // the current size.
-        if (*s).saved_flags & GRID_HISTORY != 0 {
-            (*s).grid.flags |= GRID_HISTORY;
+        if (*s).saved_flags.contains(GridFlags::HISTORY) {
+            (*s).grid.flags.insert(GridFlags::HISTORY);
         }
         screen_resize(s, sx, sy, 1);
 
