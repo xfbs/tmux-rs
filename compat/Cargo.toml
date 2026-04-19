@@ -1,0 +1,13 @@
+[package]
+name         = "tmux-compat"
+version      = "0.0.1"
+edition      = "2024"
+license      = "ISC"
+description  = "BSD/libc compatibility helpers used by tmux-rs: b64, vis/unvis, strlcat/strlcpy, reallocarray, etc."
+
+[dependencies]
+bitflags = { version = "2.9.1" }
+libc     = { version = "0.2.174" }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fuzzing)'] }

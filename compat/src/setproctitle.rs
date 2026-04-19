@@ -16,25 +16,23 @@
 // setproctitle( c!("%s (%s)"), name, socket_path);
 #[cfg(target_os = "linux")]
 pub unsafe fn setproctitle_(_fmt: *const u8, name: *const u8, socket_path: *const u8) {
-    use crate::libc;
-
     unsafe {
         let mut title: [u8; 16] = [0; 16];
 
         let used = libc::snprintf(
-            &raw mut title as _,
+            (&raw mut title).cast(),
             title.len(),
             c"tmux: %s (%s)".as_ptr(),
             name,
             socket_path,
         );
         if used >= title.len() as i32 {
-            let cp = libc::strrchr(&raw const title as *const u8, b' ' as i32);
+            let cp: *mut u8 = libc::strrchr((&raw const title).cast(), b' ' as i32).cast();
             if !cp.is_null() {
                 *cp = b'\0';
             }
         }
-        libc::prctl(libc::PR_SET_NAME, &raw const title as *const u8);
+        libc::prctl(libc::PR_SET_NAME, (&raw const title) as *const u8);
     }
 }
 

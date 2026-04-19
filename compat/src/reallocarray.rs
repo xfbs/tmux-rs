@@ -25,7 +25,7 @@ pub unsafe fn reallocarray(
             && nmemb > 0
             && usize::MAX / nmemb < size
         {
-            crate::errno!() = libc::ENOMEM;
+            crate::errno!() = ::libc::ENOMEM;
             return core::ptr::null_mut();
         }
         libc::realloc(optr, size * nmemb)
@@ -33,4 +33,4 @@ pub unsafe fn reallocarray(
 }
 
 #[cfg(target_os = "linux")]
-pub(crate) use libc::reallocarray;
+pub use libc::reallocarray;

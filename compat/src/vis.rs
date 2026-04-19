@@ -30,7 +30,7 @@ use core::ffi::c_int;
 bitflags::bitflags! {
     #[repr(transparent)]
     #[derive(Copy, Clone, Eq, PartialEq)]
-    pub(crate) struct vis_flags: i32 {
+    pub struct vis_flags: i32 {
         /// Use a three digit octal sequence. The form is '\ddd' where each 'd' represents an octal
         /// digit.
         ///
@@ -193,7 +193,7 @@ pub unsafe fn strnvis(mut dst: *mut u8, mut src: *const u8, dlen: usize, flag: v
 
 pub unsafe fn stravis(outp: *mut *mut u8, src: *const u8, flag: vis_flags) -> i32 {
     unsafe {
-        let buf: *mut u8 = libc::calloc(4, crate::libc::strlen(src) + 1).cast();
+        let buf: *mut u8 = libc::calloc(4, libc::strlen(src.cast()) + 1).cast();
         if buf.is_null() {
             return -1;
         }
@@ -248,8 +248,8 @@ mod test {
                                 c_dst_arr,
                                 rs_dst_arr,
                                 "mismatch when encoding vis(_, _, _, {ch}) => {} != {}",
-                                crate::_s(c_dst),
-                                crate::_s(rs_dst)
+                                std::ffi::CStr::from_ptr(c_dst.cast()).to_string_lossy(),
+                                std::ffi::CStr::from_ptr(rs_dst.cast()).to_string_lossy()
                             );
 
                             assert_eq!(rs_out.offset_from(rs_dst), c_out.offset_from(c_dst));

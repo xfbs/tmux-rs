@@ -1,39 +1,38 @@
-pub mod b64;
-pub mod fdforkpty;
-pub mod getopt;
-pub mod getprogname;
+//! Re-export shim for the `tmux-compat` crate.
+//!
+//! Most BSD/libc compatibility helpers (b64, vis/unvis, strlcat/strlcpy,
+//! strtonum, reallocarray, recallocarray, closefrom, getpeereid,
+//! setproctitle, getprogname, fdforkpty, ntohll, systemd) live in the
+//! `tmux-compat` workspace crate. Re-exported here so existing
+//! `use crate::compat::*` call sites resolve unchanged.
+//!
+//! Two submodules remain in-tree: `imsg` / `imsg_buffer` are thin
+//! re-exports of the `tmux-protocol` crate (see `protocol/`), and
+//! `getopt` still uses `crate::*` and is easier to leave in place for
+//! now.
+
+// Public submodules for callers that reach in via
+// `crate::compat::b64::b64_ntop`, `crate::compat::recallocarray::recallocarray`, etc.
+pub use tmux_compat::{
+    b64, fdforkpty, getprogname, reallocarray, recallocarray, systemd,
+};
+
+// Flattened function re-exports preserving the old `crate::compat::foo`
+// spellings from the pre-extraction src/compat/mod.rs.
+pub use tmux_compat::{
+    closefrom::closefrom,
+    getpeereid::getpeereid,
+    setproctitle::setproctitle_,
+    strlcat::{strlcat, strlcat_},
+    strlcpy::strlcpy,
+    strtonum::{strtonum, strtonum_},
+    unvis::strunvis,
+    vis::*,
+};
+
 pub mod imsg;
 pub mod imsg_buffer;
-pub mod reallocarray;
-pub mod recallocarray;
-pub mod systemd;
-
-mod closefrom;
-mod getpeereid;
-mod setproctitle;
-mod strlcat;
-mod strlcpy;
-mod strtonum;
-mod unvis;
-mod vis;
-
-pub use closefrom::closefrom;
-pub use getpeereid::getpeereid;
-pub use setproctitle::setproctitle_;
-pub use strlcat::{strlcat, strlcat_};
-pub use strlcpy::strlcpy;
-pub use strtonum::{strtonum, strtonum_};
-pub use unvis::strunvis;
-pub use vis::*;
-
-// #[rustfmt::skip]
-// unsafe extern "C" {
-//     pub static mut optreset: c_int;
-//     pub static mut optarg: *mut c_char;
-//     pub static mut optind: c_int;
-//     pub fn getopt(___argc: c_int, ___argv: *const *mut c_char, __shortopts: *const c_char) -> c_int;
-//     pub fn bsd_getopt(argc: c_int, argv: *const *mut c_char, shortopts: *const c_char) -> c_int;
-// }
+pub mod getopt;
 
 pub const HOST_NAME_MAX: usize = 255;
 

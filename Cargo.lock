@@ -733,6 +733,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tmux-compat"
+version = "0.0.1"
+dependencies = [
+ "bitflags",
+ "libc",
+]
+
+[[package]]
 name = "tmux-grid"
 version = "0.0.1"
 dependencies = [
@@ -766,6 +774,7 @@ dependencies = [
  "paste",
  "tempfile",
  "terminfo-lean",
+ "tmux-compat",
  "tmux-grid",
  "tmux-protocol",
  "tmux-types",
