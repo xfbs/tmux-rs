@@ -7,3 +7,4 @@ description  = "Shared data types for tmux-rs: grid cells, attributes, colours, 
 
 [dependencies]
 bitflags = { version = "2.9.1" }
+libc     = { version = "0.2.174" }

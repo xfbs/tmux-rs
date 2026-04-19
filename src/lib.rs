@@ -732,112 +732,15 @@ const SIMPLE_BORDERS: [u8; 13] = [
 ];
 const PADDED_BORDERS: [u8; 13] = [b' '; 13];
 
-/// Grid cell data.
-
-#[derive(Copy, Clone)]
-struct grid_cell {
-    data: utf8_data,
-    attr: grid_attr,
-    flags: grid_flag,
-    fg: i32,
-    bg: i32,
-    us: i32,
-    link: u32,
-}
-
-impl grid_cell {
-    const fn new(
-        data: utf8_data,
-        attr: grid_attr,
-        flags: grid_flag,
-        fg: i32,
-        bg: i32,
-        us: i32,
-        link: u32,
-    ) -> Self {
-        Self {
-            data,
-            attr,
-            flags,
-            fg,
-            bg,
-            us,
-            link,
-        }
-    }
-}
-
-/// Grid extended cell entry.
-#[derive(Copy, Clone)]
-struct grid_extd_entry {
-    data: utf8_char,
-    attr: u16,
-    flags: u8,
-    fg: i32,
-    bg: i32,
-    us: i32,
-    link: u32,
-}
-
-#[derive(Copy, Clone)]
-#[repr(C, align(4))]
-struct grid_cell_entry_data {
-    attr: u8,
-    fg: u8,
-    bg: u8,
-    data: u8,
-}
-
-
-#[derive(Copy, Clone)]
-union grid_cell_entry_union {
-    offset: u32,
-    data: grid_cell_entry_data,
-}
-
-#[derive(Copy, Clone)]
-struct grid_cell_entry {
-    union_: grid_cell_entry_union,
-    flags: grid_flag,
-}
-
-/// Grid line.
-
-struct grid_line {
-    celldata: Vec<grid_cell_entry>,
-    cellused: u32,
-
-    extddata: Vec<grid_extd_entry>,
-
-    flags: grid_line_flag,
-    time: time_t,
-}
-
-impl grid_line {
-    /// Create a new empty grid line.
-    fn new() -> Self {
-        Self {
-            celldata: Vec::new(),
-            cellused: 0,
-            extddata: Vec::new(),
-            flags: grid_line_flag::empty(),
-            time: 0,
-        }
-    }
-
-    /// Create a dead grid line (used by reflow to mark consumed lines).
-    fn new_dead() -> Self {
-        Self {
-            celldata: Vec::new(),
-            cellused: 0,
-            extddata: Vec::new(),
-            flags: grid_line_flag::DEAD,
-            time: 0,
-        }
-    }
-}
-
-const GRID_HISTORY: i32 = 0x1; // scroll lines into history
+// grid_cell / grid_extd_entry / grid_cell_entry* / grid_line /
+// GRID_HISTORY all moved to the `tmux-types` crate and re-exported at
+// crate-root via the earlier `pub use tmux_types::{...}` block. The
+// `grid` struct itself (and its many impls) stays in tmux-rs for now —
+// inherent impls must live in the crate that defines the type.
+pub use tmux_types::{
+    GRID_HISTORY, grid_cell, grid_cell_entry, grid_cell_entry_data, grid_cell_entry_union,
+    grid_extd_entry, grid_line,
+};
 
 /// Entire grid of cells.
 

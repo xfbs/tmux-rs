@@ -68,17 +68,16 @@
 // module's dependency surface is visible at a glance. This is the planned
 // crate-boundary for `tmux-grid` / `tmux-types`.
 //
-// === Moved to `tmux-types` crate ===
+// === From `tmux-types` ===
 use tmux_types::{
-    COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, colour_split_rgb,
-    grid_attr, grid_flag, grid_line_flag, grid_string_flags,
+    COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, GRID_HISTORY, colour_split_rgb,
+    grid_attr, grid_cell, grid_cell_entry, grid_cell_entry_data, grid_cell_entry_union,
+    grid_extd_entry, grid_flag, grid_line, grid_line_flag, grid_string_flags,
     utf8_char, utf8_data,
 };
-// === Types/constants still in tmux-rs (tmux-types candidates, batched by dependency) ===
+// === Remaining crate-local dependencies of grid_.rs ===
 use crate::{
-    GRID_HISTORY,
-    grid, grid_cell, grid_cell_entry, grid_cell_entry_data, grid_cell_entry_union,
-    grid_extd_entry, grid_line,
+    grid,
     utf8_build_one, utf8_from_data, utf8_set, utf8_to_data,
 };
 // === External types (would stay in tmux-rs; needs a trait/callback) ===
