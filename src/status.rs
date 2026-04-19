@@ -641,7 +641,7 @@ pub unsafe fn status_message_redraw(c: *mut client) -> i32 {
         }
         screen_write_stop(&raw mut ctx);
 
-        if (*(*sl).active).grid.same_as(&old_grid) {
+        if (*(*sl).active).grid.visible_eq(&old_grid) {
             return 0;
         }
         1
@@ -923,7 +923,7 @@ pub unsafe fn status_prompt_redraw(c: *mut client) -> i32 {
         // finished:
         screen_write_stop(&raw mut ctx);
 
-        if (*(*sl).active).grid.same_as(&old_grid) {
+        if (*(*sl).active).grid.visible_eq(&old_grid) {
             return 0;
         }
         1

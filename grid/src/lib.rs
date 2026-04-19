@@ -443,7 +443,7 @@ impl Grid {
     /// Compare two grids for full-content equality across the visible
     /// region (`sy` rows). Returns `true` iff every cell matches by
     /// [`grid_cells_equal`] (style + UTF-8 data) and line lengths agree.
-    pub fn same_as(&self, other: &Grid) -> bool {
+    pub fn visible_eq(&self, other: &Grid) -> bool {
         if self.sx != other.sx || self.sy != other.sy {
             return false;
         }
@@ -2143,14 +2143,14 @@ mod tests {
     fn grid_compare_equal_grids() {
         let g1 = Grid::new(80, 24, 0);
         let g2 = Grid::new(80, 24, 0);
-        assert!(g1.same_as(&g2));
+        assert!(g1.visible_eq(&g2));
     }
 
     #[test]
     fn grid_compare_different_dimensions() {
         let g1 = Grid::new(80, 24, 0);
         let g2 = Grid::new(40, 24, 0);
-        assert!(!g1.same_as(&g2));
+        assert!(!g1.visible_eq(&g2));
     }
 
     #[test]
@@ -2160,7 +2160,7 @@ mod tests {
         let cell = make_cell(b'A', 8, 8);
         g1.set_cell(0, 0, &cell);
         // g2 has no cell set at (0,0), so they differ.
-        assert!(!g1.same_as(&g2));
+        assert!(!g1.visible_eq(&g2));
     }
 
     #[test]
@@ -2170,7 +2170,7 @@ mod tests {
         let cell = make_cell(b'Q', 8, 8);
         g1.set_cell(3, 2, &cell);
         g2.set_cell(3, 2, &cell);
-        assert!(g1.same_as(&g2));
+        assert!(g1.visible_eq(&g2));
     }
 
     #[test]
@@ -2266,7 +2266,7 @@ mod tests {
 
             dst.duplicate_lines(0, &raw mut src, 0, 5);
 
-            assert!(src.same_as(&dst));
+            assert!(src.visible_eq(&dst));
 
             drop(src);
             drop(dst);
@@ -3028,12 +3028,12 @@ mod tests {
         g1.set_cell(0, 0, &extended);
         g2.set_cell(0, 0, &extended);
 
-        assert!(g1.same_as(&g2));
+        assert!(g1.visible_eq(&g2));
 
         // Change one — should differ.
         let other = make_rgb_fg_cell(b'E', 128, 64, 33);
         g2.set_cell(0, 0, &other);
-        assert!(!g1.same_as(&g2));
+        assert!(!g1.visible_eq(&g2));
     }
 
     #[test]
