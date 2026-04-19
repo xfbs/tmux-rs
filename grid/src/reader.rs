@@ -37,7 +37,8 @@
 //! Cursor movement functions skip over PADDING cells to avoid landing in the
 //! middle of a wide character.
 
-use tmux_utf8::{Utf8Data, utf8_cstrhas};
+use std::ffi::CStr;
+use tmux_utf8::Utf8Data;
 use crate::{GridFlag, GridLineFlag, Grid, GridReader, WHITESPACE};
 
 impl<'a> GridReader<'a> {
@@ -210,19 +211,19 @@ impl<'a> GridReader<'a> {
     /// Check whether the character at the current cursor position is in the given
     /// character set. Returns false for PADDING cells. Used to classify characters
     /// as whitespace, separators, or word characters during word movement.
-    pub unsafe fn in_set(&self, set: *const u8) -> bool {
+    pub fn in_set(&self, set: &CStr) -> bool {
         let gc = self.gd.get_cell(self.cx, self.cy);
         if gc.flags.intersects(GridFlag::PADDING) {
             return false;
         }
-        unsafe { utf8_cstrhas(set, &raw const gc.data) }
+        gc.data.in_cstr(set)
     }
 
     /// Move cursor forward to the start of the next word (vi `w` behavior).
     ///
     /// Skips over the current token (word or separator run), then skips whitespace,
     /// landing on the first character of the next word. Handles line wrapping.
-    pub unsafe fn cursor_next_word(&mut self, separators: *const u8) {
+    pub fn cursor_next_word(&mut self, separators: &CStr) {
         // Do not break up wrapped words.
         let mut xx = if self
             .gd
@@ -239,35 +240,33 @@ impl<'a> GridReader<'a> {
         if self.handle_wrap(&mut xx, &mut yy) == 0 {
             return;
         }
-        unsafe {
-            if !self.in_set(WHITESPACE) {
-                if self.in_set(separators) {
-                    loop {
-                        self.cx += 1;
+        if !self.in_set(WHITESPACE) {
+            if self.in_set(separators) {
+                loop {
+                    self.cx += 1;
 
-                        if !(self.handle_wrap(&mut xx, &mut yy) != 0
-                            && self.in_set(separators)
-                            && !self.in_set(WHITESPACE))
-                        {
-                            break;
-                        }
+                    if !(self.handle_wrap(&mut xx, &mut yy) != 0
+                        && self.in_set(separators)
+                        && !self.in_set(WHITESPACE))
+                    {
+                        break;
                     }
-                } else {
-                    loop {
-                        self.cx += 1;
-                        // Skip word characters: stop at separator or whitespace.
-                        if !(self.handle_wrap(&mut xx, &mut yy) != 0
-                            && !self.in_set(separators)
-                            && !self.in_set(WHITESPACE))
-                        {
-                            break;
-                        }
+                }
+            } else {
+                loop {
+                    self.cx += 1;
+                    // Skip word characters: stop at separator or whitespace.
+                    if !(self.handle_wrap(&mut xx, &mut yy) != 0
+                        && !self.in_set(separators)
+                        && !self.in_set(WHITESPACE))
+                    {
+                        break;
                     }
                 }
             }
-            while self.handle_wrap(&mut xx, &mut yy) != 0 && self.in_set(WHITESPACE) {
-                self.cx += 1;
-            }
+        }
+        while self.handle_wrap(&mut xx, &mut yy) != 0 && self.in_set(WHITESPACE) {
+            self.cx += 1;
         }
     }
 
@@ -276,7 +275,7 @@ impl<'a> GridReader<'a> {
     /// If on whitespace, skips to the next non-whitespace token and advances to its
     /// end. If inside a word, advances to the end of that word. If on a separator,
     /// advances to the end of the separator run.
-    pub unsafe fn cursor_next_word_end(&mut self, separators: *const u8) {
+    pub fn cursor_next_word_end(&mut self, separators: &CStr) {
         // Do not break up wrapped words.
         let mut xx = if self
             .gd
@@ -290,34 +289,32 @@ impl<'a> GridReader<'a> {
         };
         let mut yy = self.gd.hsize + self.gd.sy - 1;
 
-        unsafe {
-            while self.handle_wrap(&mut xx, &mut yy) != 0 {
-                if self.in_set(WHITESPACE) {
+        while self.handle_wrap(&mut xx, &mut yy) != 0 {
+            if self.in_set(WHITESPACE) {
+                self.cx += 1;
+            } else if self.in_set(separators) {
+                loop {
                     self.cx += 1;
-                } else if self.in_set(separators) {
-                    loop {
-                        self.cx += 1;
 
-                        if !(self.handle_wrap(&mut xx, &mut yy) != 0
-                            && self.in_set(separators)
-                            && !self.in_set(WHITESPACE))
-                        {
-                            break;
-                        }
+                    if !(self.handle_wrap(&mut xx, &mut yy) != 0
+                        && self.in_set(separators)
+                        && !self.in_set(WHITESPACE))
+                    {
+                        break;
                     }
-                    return;
-                } else {
-                    loop {
-                        self.cx += 1;
-
-                        if !(self.handle_wrap(&mut xx, &mut yy) != 0
-                            && !(self.in_set(WHITESPACE) || self.in_set(separators)))
-                        {
-                            break;
-                        }
-                    }
-                    return;
                 }
+                return;
+            } else {
+                loop {
+                    self.cx += 1;
+
+                    if !(self.handle_wrap(&mut xx, &mut yy) != 0
+                        && !(self.in_set(WHITESPACE) || self.in_set(separators)))
+                    {
+                        break;
+                    }
+                }
+                return;
             }
         }
     }
@@ -329,76 +326,74 @@ impl<'a> GridReader<'a> {
     /// find its start. The cursor lands on the first character of the word.
     ///
     /// If `stop_at_eol` is true, stops at line boundaries rather than crossing them.
-    pub unsafe fn cursor_previous_word(
+    pub fn cursor_previous_word(
         &mut self,
-        separators: *const u8,
+        separators: &CStr,
         already: i32,
         stop_at_eol: bool,
     ) {
-        unsafe {
-            let mut oldx: i32;
-            let word_is_letters;
+        let mut oldx: i32;
+        let word_is_letters;
 
-            if already != 0 || self.in_set(WHITESPACE) {
-                loop {
-                    if self.cx > 0 {
-                        self.cx -= 1;
-                        if !self.in_set(WHITESPACE) {
-                            word_is_letters = !self.in_set(separators);
-                            break;
-                        }
-                    } else {
-                        if self.cy == 0 {
-                            return;
-                        }
-                        self.cursor_up();
-                        self.cursor_end_of_line(0, 0);
-
-                        if stop_at_eol && self.cx > 0 {
-                            oldx = self.cx as i32;
-                            self.cx -= 1;
-                            let at_eol = self.in_set(WHITESPACE);
-                            self.cx = oldx as u32;
-                            if at_eol {
-                                word_is_letters = false;
-                                break;
-                            }
-                        }
-                    }
-                }
-            } else {
-                word_is_letters = !self.in_set(separators);
-            }
-
-            let mut oldx;
-            let mut oldy;
+        if already != 0 || self.in_set(WHITESPACE) {
             loop {
-                oldx = self.cx;
-                oldy = self.cy;
-                if self.cx == 0 {
-                    if self.cy == 0
-                        || (!self
-                            .gd
-                            .line(self.cy - 1)
-                            .flags
-                            .intersects(GridLineFlag::WRAPPED))
-                    {
-                        break;
-                    }
-                    self.cursor_up();
-                    self.cursor_end_of_line(0, 1);
-                }
                 if self.cx > 0 {
                     self.cx -= 1;
-                }
+                    if !self.in_set(WHITESPACE) {
+                        word_is_letters = !self.in_set(separators);
+                        break;
+                    }
+                } else {
+                    if self.cy == 0 {
+                        return;
+                    }
+                    self.cursor_up();
+                    self.cursor_end_of_line(0, 0);
 
-                if self.in_set(WHITESPACE) || word_is_letters == self.in_set(separators) {
-                    break;
+                    if stop_at_eol && self.cx > 0 {
+                        oldx = self.cx as i32;
+                        self.cx -= 1;
+                        let at_eol = self.in_set(WHITESPACE);
+                        self.cx = oldx as u32;
+                        if at_eol {
+                            word_is_letters = false;
+                            break;
+                        }
+                    }
                 }
             }
-            self.cx = oldx;
-            self.cy = oldy;
+        } else {
+            word_is_letters = !self.in_set(separators);
         }
+
+        let mut oldx;
+        let mut oldy;
+        loop {
+            oldx = self.cx;
+            oldy = self.cy;
+            if self.cx == 0 {
+                if self.cy == 0
+                    || (!self
+                        .gd
+                        .line(self.cy - 1)
+                        .flags
+                        .intersects(GridLineFlag::WRAPPED))
+                {
+                    break;
+                }
+                self.cursor_up();
+                self.cursor_end_of_line(0, 1);
+            }
+            if self.cx > 0 {
+                self.cx -= 1;
+            }
+
+            if self.in_set(WHITESPACE) || word_is_letters == self.in_set(separators) {
+                break;
+            }
+        }
+        self.cx = oldx;
+        self.cy = oldy;
     }
 
     /// Jump forward to the next occurrence of character `jc` on the current logical
@@ -511,7 +506,7 @@ mod tests {
     use super::*;
     use crate::{GridAttr, GridCell};
 
-    /// Tiny C-literal helper — `c!("foo")` yields a NUL-terminated
+    /// Tiny C-literal helper — `c"foo"` yields a NUL-terminated
     /// `*const u8`. Replaces the tmux-rs `c!` macro inside Grid's
     /// self-contained test suite.
     macro_rules! c {
@@ -732,10 +727,10 @@ mod tests {
             let mut gd = make_grid_with_text(&["one two three"], 80);
             let mut gr = GridReader::new(&mut gd, 0, 0);
 
-            gr.cursor_next_word(c!(""));
+            gr.cursor_next_word(c"");
             assert_eq!(gr.cx, 4, "should land on 'two'");
 
-            gr.cursor_next_word(c!(""));
+            gr.cursor_next_word(c"");
             assert_eq!(gr.cx, 8, "should land on 'three'");
 
             drop(gd);
@@ -748,7 +743,7 @@ mod tests {
             let mut gd = make_grid_with_text(&["  hello world"], 80);
             let mut gr = GridReader::new(&mut gd, 0, 0);
 
-            gr.cursor_next_word(c!(""));
+            gr.cursor_next_word(c"");
             assert_eq!(gr.cx, 2, "should skip leading spaces to 'hello'");
 
             drop(gd);
@@ -761,10 +756,10 @@ mod tests {
             let mut gd = make_grid_with_text(&["hello.world end"], 80);
             let mut gr = GridReader::new(&mut gd, 0, 0);
 
-            gr.cursor_next_word(c!("."));
+            gr.cursor_next_word(c".");
             assert_eq!(gr.cx, 5, "should stop at separator '.'");
 
-            gr.cursor_next_word(c!("."));
+            gr.cursor_next_word(c".");
             assert_eq!(gr.cx, 6, "should move past '.' to 'world'");
 
             drop(gd);
@@ -777,7 +772,7 @@ mod tests {
             let mut gd = make_grid_with_text(&["one two three"], 80);
             let mut gr = GridReader::new(&mut gd, 0, 0);
 
-            gr.cursor_next_word_end(c!(""));
+            gr.cursor_next_word_end(c"");
             assert_eq!(gr.cx, 3, "should land on 'e' of 'one'");
 
             drop(gd);
@@ -792,7 +787,7 @@ mod tests {
             // so next-word-end advances past the remaining word chars.
             let mut gr = GridReader::new(&mut gd, 2, 0);
 
-            gr.cursor_next_word_end(c!(""));
+            gr.cursor_next_word_end(c"");
             assert_eq!(gr.cx, 3, "should advance past end of current word");
 
             drop(gd);
@@ -816,10 +811,10 @@ mod tests {
 
             let mut gr = GridReader::new(&mut gd, 8, 0);
             // Use already=1, matching how tmux's previous-word command calls this.
-            gr.cursor_previous_word(c!(""), 1, false);
+            gr.cursor_previous_word(c"", 1, false);
             assert_eq!((gr.cx, gr.cy), (4, 0), "should land on 'two'");
 
-            gr.cursor_previous_word(c!(""), 1, false);
+            gr.cursor_previous_word(c"", 1, false);
             assert_eq!(gr.cx, 0, "should land on 'one'");
 
             drop(gd);
@@ -832,7 +827,7 @@ mod tests {
             let mut gd = make_grid_with_text(&["one two three"], 80);
             let mut gr = GridReader::new(&mut gd, 5, 0);
 
-            gr.cursor_previous_word(c!(""), 1, false);
+            gr.cursor_previous_word(c"", 1, false);
             assert_eq!(gr.cx, 4, "should land on start of 'two'");
 
             drop(gd);
@@ -905,10 +900,10 @@ mod tests {
         unsafe {
             let mut gd = make_grid_with_text(&["a.b"], 80);
             let mut gr = GridReader::new(&mut gd, 0, 0);
-            assert!(!gr.in_set(c!(".")));
+            assert!(!gr.in_set(c"."));
 
             gr.cx = 1;
-            assert!(gr.in_set(c!(".")));
+            assert!(gr.in_set(c"."));
 
             drop(gd);
         }

@@ -79,17 +79,17 @@ pub use cell::*;
 pub use flags::*;
 pub use line::*;
 
-/// NUL-terminated byte set representing whitespace for the reader's
-/// word-boundary logic. Kept here rather than in tmux-types because
-/// it's specifically a reader input — `cursor_next_word` and friends
-/// call `codec().cstr_has(WHITESPACE, ...)` to classify cells.
-pub const WHITESPACE: *const u8 = b" \0".as_ptr();
+/// Whitespace character set for the reader's word-boundary logic.
+/// `cursor_next_word` and friends call `reader.in_set(WHITESPACE)` to
+/// classify cells. Kept here rather than in tmux-types because it's
+/// specifically a reader input.
+pub const WHITESPACE: &std::ffi::CStr = c" ";
 
 use tmux_types::{COLOUR_DEFAULT, COLOUR_FLAG_256, COLOUR_FLAG_RGB, colour_split_rgb};
-use tmux_utf8::{Utf8Char, Utf8Data};
+use tmux_utf8::Utf8Data;
 
 use std::ffi::{c_int, c_uchar, c_uint};
-use std::mem::{MaybeUninit, zeroed};
+use std::mem::zeroed;
 use std::ptr::null_mut;
 
 /// Entire Grid of cells.
@@ -126,7 +126,7 @@ pub struct GridReader<'a> {
 // previous Utf8Codec trait + OnceLock registration is gone — an earlier
 // necessity of the circular-dep workaround, now unnecessary since
 // `tmux-utf8` is a sibling crate.
-use tmux_utf8::{utf8_build_one, utf8_from_data, utf8_set, utf8_to_data};
+use tmux_utf8::{utf8_build_one, utf8_set, utf8_to_data};
 
 /// An OSC-8 hyperlink resolved from a [`GridCell::link`] id. Returned
 /// by [`HyperlinkLookup::hyperlink`] when the id is present in the
@@ -203,6 +203,11 @@ pub static GRID_CLEARED_ENTRY: GridCellEntry = GridCellEntry {
 };
 
 /// Store cell in entry.
+///
+/// # Safety
+/// `gce` must be a writable `GridCellEntry`. `gc` must be readable.
+/// These pointers may alias into the same [`GridLine`]; the function
+/// only writes through `gce`.
 unsafe fn grid_store_cell(gce: *mut GridCellEntry, gc: *const GridCell, c: u8) {
     unsafe {
         (*gce).flags = (*gc).flags & !GridFlag::CLEARED;
@@ -223,6 +228,9 @@ unsafe fn grid_store_cell(gce: *mut GridCellEntry, gc: *const GridCell, c: u8) {
 }
 
 /// Check if a cell should be an extended cell.
+///
+/// # Safety
+/// `gce` and `gc` must be readable pointers.
 unsafe fn grid_need_extended_cell(gce: *const GridCellEntry, gc: *const GridCell) -> bool {
     unsafe {
         if (*gce).flags.contains(GridFlag::EXTENDED) {
@@ -248,7 +256,12 @@ unsafe fn grid_need_extended_cell(gce: *const GridCellEntry, gc: *const GridCell
     }
 }
 
-/// Get an extended cell.
+/// Allocate a new extended-cell slot on `gl` and point `gce` at it.
+///
+/// # Safety
+/// `gl` and `gce` must be writable. `gce` typically points into
+/// `gl.celldata`, so callers use raw pointers to opt out of the
+/// borrow-checker's whole-struct exclusivity check.
 unsafe fn grid_get_extended_cell(
     gl: *mut GridLine,
     gce: *mut GridCellEntry,
@@ -264,6 +277,10 @@ unsafe fn grid_get_extended_cell(
 }
 
 /// Set cell as extended.
+///
+/// # Safety
+/// `gl`, `gce`, `gc` must all be valid; `gce` typically points into
+/// `gl.celldata`.
 unsafe fn grid_extended_cell(
     gl: *mut GridLine,
     gce: *mut GridCellEntry,
@@ -279,12 +296,12 @@ unsafe fn grid_extended_cell(
         }
         (*gl).flags |= GridLineFlag::EXTENDED;
 
-        let mut uc = MaybeUninit::<Utf8Char>::uninit();
-        let uc = uc.as_mut_ptr();
-        utf8_from_data(&raw const (*gc).data, uc);
+        // Encode via the safe method API; interning failures fall back
+        // to a substitute char (see `utf8_from_data`).
+        let uc = (*gc).data.encode().unwrap_or(0);
 
         let gee = &mut (*gl).extddata.as_mut_slice()[(*gce).union_.offset as usize];
-        gee.data = *uc;
+        gee.data = uc;
         gee.attr = (*gc).attr.bits();
         gee.flags = flags.bits();
         gee.fg = (*gc).fg;
@@ -332,9 +349,10 @@ fn grid_clear_cell(gd: &mut Grid, px: c_uint, py: c_uint, bg: c_uint) {
     let gl = &mut gd.linedata[py as usize];
     gl.celldata[px as usize] = GRID_CLEARED_ENTRY;
     if bg != 8 {
-        // SAFETY: grid_get_extended_cell / grid_extended_cell take raw pointers
-        // into the same GridLine; we hand them a pointer derived from the &mut
-        // we already hold. No aliasing for the duration of the call.
+        // SAFETY: `gl_ptr` and `gce_ptr` alias into the same `gl` we
+        // already hold exclusively. The helpers mutate both
+        // `gl.extddata` and the individual `gce`; no other borrows are
+        // live across the call.
         unsafe {
             let gl_ptr: *mut GridLine = gl;
             let gce = gl.celldata.as_mut_ptr().add(px as usize);
@@ -611,10 +629,15 @@ impl Grid {
         }
 
         let gc_ptr: *const GridCell = gc;
-        let gce = &mut gl.celldata[px as usize] as *mut GridCellEntry;
+        let gl_ptr: *mut GridLine = gl;
+        // SAFETY: `gce` aliases into `gl.celldata`, so the helpers take
+        // raw pointers rather than fighting the borrow checker. `gl_ptr`
+        // and `gce_ptr` are both derived from the exclusive `&mut gl`
+        // we hold; no other borrows are live across the call.
         unsafe {
+            let gce = gl.celldata.as_mut_ptr().add(px as usize);
             if grid_need_extended_cell(gce, gc_ptr) {
-                grid_extended_cell(gl, gce, gc_ptr);
+                grid_extended_cell(gl_ptr, gce, gc_ptr);
             } else {
                 grid_store_cell(gce, gc_ptr, gc.data.data[0]);
             }
