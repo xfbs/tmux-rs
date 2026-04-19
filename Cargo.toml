@@ -17,7 +17,7 @@ description  = "A Rust port of tmux"
 autotests = false
 
 [workspace]
-members = ["tmux-types"]
+members = ["types"]
 
 # Note: most of these features are not supported yet
 # they just exist to make matching upstream's
@@ -46,7 +46,7 @@ calloop      = { version = "0.14.4", features = ["signals"] }
 lalrpop-util = { version = "0.22.2", default-features = false, features = ["unicode"] }
 libc         = { version = "0.2.174" }
 log          = { version = "0.4" }
-tmux-types   = { path = "tmux-types" }
+tmux-types   = { path = "types" }
 memchr       = { version = "2.7.6" }
 num_enum     = { version = "0.7.4" }
 paste        = { version = "1.0.15" }
