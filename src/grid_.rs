@@ -11,6 +11,59 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//! Grid — the character-cell backing store behind every [`screen`](crate::screen).
+//!
+//! A [`grid`] owns a `Vec<grid_line>`; each line owns a `Vec<grid_cell_entry>`
+//! (packed per-column state) and a `Vec<grid_extd_entry>` side-table for
+//! extended attributes (RGB color, underline color, hyperlinks).
+//!
+//! # Coordinate system
+//!
+//! The grid stores both **scrollback history** and the **visible screen**
+//! in one flat array of lines:
+//!
+//! ```text
+//!  y =      0  ──┐
+//!                │  history lines (hsize rows)
+//!          hsize ┴
+//!  y =  hsize    ─ top of visible screen
+//!                │
+//!                │  visible rows (sy rows)
+//!                │
+//!  y = hsize+sy-1 ─ bottom of visible screen
+//! ```
+//!
+//! - `sx` — width (columns).
+//! - `sy` — visible height.
+//! - `hsize` — number of scrollback lines currently stored.
+//! - `hlimit` — maximum scrollback retained before the oldest line is dropped.
+//!
+//! Two coordinate flavors are used throughout the code:
+//!
+//! - **Grid (absolute) coordinates** — `y` spans `0 .. hsize + sy`. This is
+//!   what the [`grid`] methods `get_cell`, `set_cell`, `get_line`, etc. take.
+//! - **View (screen-relative) coordinates** — `y` spans `0 .. sy`, with
+//!   `y = 0` being the top of the visible screen. The `view_*` family
+//!   (`view_get_cell`, `view_set_cell`, `view_clear`, …) translates by
+//!   adding `hsize` before delegating to the absolute variant.
+//!
+//! # Line and cell encoding
+//!
+//! A [`grid_line`] contains `cellused` (the number of columns actually
+//! written on this line) plus the raw per-cell entries. Each
+//! [`grid_cell_entry`] is a packed 8-byte record; cells whose state doesn't
+//! fit (RGB colors, hyperlinks, non-default style) spill into the line's
+//! `extddata` array, with an `EXTENDED` flag on the cell entry pointing at
+//! the side-table index. [`grid_cell`] is the unpacked view callers work
+//! with — conversion happens inside `get_cell` / `set_cell`.
+//!
+//! # Wrapped lines
+//!
+//! A line with [`grid_line_flag::WRAPPED`] means its content logically
+//! continues onto the next line. The [`wrap_position`](grid::wrap_position)
+//! / [`unwrap_position`](grid::unwrap_position) pair convert between
+//! "(column, row)" in grid coordinates and "(column, logical-line)" for
+//! reflow and search.
 use crate::*;
 
 /// Default grid cell data.
@@ -220,7 +273,11 @@ fn grid_check_y(gd: &grid, from: *const u8, py: c_uint) -> c_int {
     0
 }
 
-/// Check if two styles are (visibly) the same.
+/// Return 1 if two cells have the same *visible style* (foreground, background,
+/// attribute bitset, flags, and hyperlink id), 0 otherwise. The cell data
+/// (character and width) is **not** compared — use [`grid_cells_equal`] for
+/// that. Used by the renderer to detect when a terminal attribute change can
+/// be skipped between adjacent cells.
 pub unsafe fn grid_cells_look_equal(gc1: *const grid_cell, gc2: *const grid_cell) -> c_int {
     unsafe {
         if (*gc1).fg != (*gc2).fg || (*gc1).bg != (*gc2).bg {
@@ -236,7 +293,9 @@ pub unsafe fn grid_cells_look_equal(gc1: *const grid_cell, gc2: *const grid_cell
     }
 }
 
-/// Compare grid cells. Return 1 if equal, 0 if not.
+/// Full-equality comparison: same style as [`grid_cells_look_equal`], plus
+/// matching UTF-8 data (width, size, and byte contents). Returns `true` if
+/// the cells are structurally identical.
 pub unsafe fn grid_cells_equal(gc1: *const grid_cell, gc2: *const grid_cell) -> bool {
     unsafe {
         if grid_cells_look_equal(gc1, gc2) == 0 {
@@ -271,7 +330,11 @@ fn grid_free_lines(gd: &mut grid, py: c_uint, ny: c_uint) {
     }
 }
 
-/// Create a new grid.
+/// Allocate a new grid of `sx` columns by `sy` visible rows, with a scrollback
+/// history of up to `hlimit` lines. The history-retention flag
+/// [`GRID_HISTORY`] is set iff `hlimit > 0`; screens without history
+/// (alternate-screen buffers, popups, menus) pass `hlimit = 0`.
+/// Lines are created zero-length and expanded on first write.
 pub fn grid_create(sx: u32, sy: u32, hlimit: u32) -> Box<grid> {
     let mut linedata = Vec::with_capacity(sy as usize);
     linedata.resize_with(sy as usize, grid_line::new);
@@ -288,7 +351,11 @@ pub fn grid_create(sx: u32, sy: u32, hlimit: u32) -> Box<grid> {
 
 // grid_destroy removed — Grid is now Box<grid>, Drop handles cleanup.
 
-/// Compare grids.
+/// Compare two grids for full-content equality across the visible region
+/// (`sy` rows). Returns 0 if every corresponding cell is equal by
+/// [`grid_cells_equal`] (style + UTF-8 data) and lines are the same length,
+/// 1 otherwise. Used by the integration-test harness to diff server output
+/// against the C tmux baseline.
 pub unsafe fn grid_compare(ga: *mut grid, gb: *mut grid) -> c_int {
     unsafe {
         if (*ga).sx != (*gb).sx || (*ga).sy != (*gb).sy {
@@ -402,17 +469,24 @@ unsafe fn grid_get_cell1(gl: &grid_line, px: c_uint, gc: *mut grid_cell) {
 }
 
 impl grid {
-    /// Get line data (mutable reference).
+    /// Borrow the line at absolute row `line` for mutation. Panics if `line`
+    /// is out of bounds — callers must validate `line < hsize + sy`.
     pub fn get_line(&mut self, line: c_uint) -> &mut grid_line {
         &mut self.linedata[line as usize]
     }
 
-    /// Adjust number of lines.
+    /// Resize the line array to `lines` rows, creating empty lines at the
+    /// end if growing or dropping them if shrinking. Used during reflow and
+    /// window resize to reshape the grid without touching `sx`/`sy`.
     pub fn adjust_lines(&mut self, lines: c_uint) {
         self.linedata.resize_with(lines as usize, grid_line::new);
     }
 
-    /// Peek at grid line — returns null if py is out of range.
+    /// Non-panicking line accessor. Returns a raw pointer to the line at row
+    /// `py`, or a null pointer if `py` is out of range (logged at debug
+    /// level via `grid_peek_line`). Retained with a pointer return for
+    /// callers that prefer a nullable sentinel over a borrow; new code
+    /// should prefer [`get_line`](Self::get_line) plus a bounds check.
     pub fn peek_line(&mut self, py: c_uint) -> *mut grid_line {
         if grid_check_y(self, c!("grid_peek_line"), py) != 0 {
             return null_mut();
@@ -420,7 +494,10 @@ impl grid {
         &raw mut self.linedata[py as usize]
     }
 
-    /// Return the length of a line (position past last non-space cell).
+    /// Return the content length of line `py`: the column index one past
+    /// the last non-space, non-padding cell. Used by word-movement, copy
+    /// mode, and rendering to avoid walking trailing blank cells. Clamps to
+    /// `sx` even if the line was over-expanded.
     pub fn line_length(&mut self, py: u32) -> u32 {
         let mut px = self.get_line(py).celldata.len() as u32;
         if px > self.sx {
@@ -455,7 +532,11 @@ impl grid {
         }
     }
 
-    /// Set cell at position.
+    /// Write `gc` to position `(px, py)` in absolute grid coordinates.
+    /// Expands the target line if `px` exceeds its current width, bumps
+    /// `cellused` if needed, and promotes the cell to the line's extended
+    /// side-table if the style doesn't fit the packed representation. Silently
+    /// skips out-of-range `py` (logged at debug).
     pub fn set_cell(&mut self, px: c_uint, py: c_uint, gc: &grid_cell) {
         if grid_check_y(self, c!("grid_set_cell"), py) != 0 {
             return;
@@ -479,12 +560,18 @@ impl grid {
         }
     }
 
-    /// Set padding at position.
+    /// Mark the cell at `(px, py)` as padding — the continuation half of a
+    /// wide (double-width) character. Padding cells are skipped by cursor
+    /// movement, selection, and string extraction.
     pub fn set_padding(&mut self, px: c_uint, py: c_uint) {
         self.set_cell(px, py, &GRID_PADDING_CELL)
     }
 
-    /// Set cells at position.
+    /// Write a run of `slen` ASCII bytes starting at `(px, py)`, each with
+    /// style copied from `gc`. A fast path for string emission (used by
+    /// `screen_write` during input processing) that skips per-cell extended
+    /// style promotion. `s` must be valid for `slen` bytes; the call is
+    /// `unsafe` because `s` is a raw pointer.
     pub unsafe fn set_cells(
         &mut self,
         px: u32,
@@ -539,7 +626,10 @@ impl grid {
         }
     }
 
-    /// Remove lines from the bottom of the history.
+    /// Drop `ny` lines from the *bottom* of the history (the ones immediately
+    /// above the visible screen). Called when the visible screen grows
+    /// downward and needs to reclaim rows that were in scrollback. No-op if
+    /// `ny > hsize`.
     pub fn remove_history(&mut self, ny: c_uint) {
         if ny > self.hsize {
             return;
@@ -550,7 +640,10 @@ impl grid {
         self.hsize -= ny;
     }
 
-    /// Scroll the entire visible screen, moving one line into the history.
+    /// Scroll the visible screen up by one line. The top visible row is
+    /// promoted to history (compacted, timestamped with the current
+    /// event-loop tick), and a new blank row is appended at the bottom.
+    /// `bg` is the background color painted on the new row.
     pub fn scroll_history(&mut self, bg: c_uint) {
         let yy = self.hsize + self.sy;
         self.linedata.push(grid_line::new());
@@ -567,7 +660,8 @@ impl grid {
         self.hsize += 1;
     }
 
-    /// Clear the history.
+    /// Drop all scrollback lines and reset `hsize` / `hscrolled` to zero.
+    /// The visible screen is untouched. Used by the `clear-history` command.
     pub fn clear_history(&mut self) {
         grid_trim_history(self, self.hsize);
 
@@ -577,7 +671,12 @@ impl grid {
         self.linedata.resize_with(self.sy as usize, grid_line::new);
     }
 
-    /// Scroll a region up, moving the top line into the history.
+    /// Scroll the rows in `[upper, lower]` upward by one line, promoting the
+    /// top row into the history. Used when a DECSTBM scroll region is
+    /// anchored at the top of the screen so scroll-off content is still
+    /// captured in scrollback. `upper` and `lower` are in absolute grid
+    /// coordinates. `bg` is the background-color used to paint the new
+    /// bottom row.
     pub fn scroll_history_region(&mut self, upper: c_uint, lower: c_uint, bg: c_uint) {
         // Indices are relative to the visible screen; adjust for hsize.
         let hsize = self.hsize as usize;
@@ -604,7 +703,12 @@ impl grid {
         self.hsize += 1;
     }
 
-    /// Clear a rectangular area.
+    /// Reset the rectangular region `(px, py) .. (px+nx, py+ny)` to blank
+    /// cells, with `bg` as the background color (or `8` for "default"). If
+    /// the region covers whole lines (`px == 0 && nx == sx`), delegates to
+    /// the cheaper [`clear_lines`](Self::clear_lines). Defaults-background
+    /// cells past `cellused` are left untouched — only the filled portion
+    /// of each line is touched.
     pub fn clear(&mut self, px: c_uint, py: c_uint, nx: c_uint, ny: c_uint, bg: c_uint) {
         if nx == 0 || ny == 0 {
             return;
@@ -645,7 +749,10 @@ impl grid {
         }
     }
 
-    /// Clear a range of lines. Frees and truncates them.
+    /// Reset lines `py .. py + ny` to empty. The `celldata` and `extddata`
+    /// vectors are dropped; if `bg` is non-default the line is re-expanded
+    /// to `sx` with the background color so terminal redraws pick it up.
+    /// Faster than [`clear`](Self::clear) when clearing whole lines.
     pub fn clear_lines(&mut self, py: c_uint, ny: c_uint, bg: c_uint) {
         if ny == 0 {
             return;
@@ -667,7 +774,12 @@ impl grid {
         }
     }
 
-    /// Move a group of lines.
+    /// Move `ny` lines starting at row `py` to row `dy` (absolute grid
+    /// coordinates). Source and destination ranges may overlap (memmove
+    /// semantics). Replaced lines in the destination are freed first; the
+    /// source region is re-initialized with background `bg`. Marked
+    /// `unsafe` because the implementation uses `ptr::copy` on the line Vec
+    /// — `grid_line` is not `Copy` so a safe `copy_within` is not usable.
     pub unsafe fn move_lines(&mut self, dy: c_uint, py: c_uint, ny: c_uint, bg: c_uint) {
         unsafe {
             if ny == 0 || py == dy {
@@ -718,7 +830,11 @@ impl grid {
         }
     }
 
-    /// Move a group of cells within a line.
+    /// Move `nx` cells within line `py` from column `px` to column `dx`.
+    /// Overlap is handled by `Vec::copy_within`. The line is expanded to
+    /// cover both ranges first; source cells are not cleared afterwards
+    /// (the caller typically writes a background-colored overwrite there
+    /// via [`clear`](Self::clear)).
     pub fn move_cells(&mut self, dx: c_uint, px: c_uint, py: c_uint, nx: c_uint, bg: c_uint) {
         if nx == 0 || px == dx {
             return;
@@ -746,7 +862,10 @@ impl grid {
         }
     }
 
-    /// Empty a line and optionally fill with a background color.
+    /// Replace line `py` with a fresh empty line. If `bg` is non-default,
+    /// expands the new line to `sx` columns pre-filled with that background
+    /// color so the next redraw reflects the bg change. Caller must ensure
+    /// `py` is in range (bounds-checked via the `Vec` index panic).
     pub fn empty_line(&mut self, py: c_uint, bg: c_uint) {
         self.linedata[py as usize] = grid_line::new();
         if !COLOUR_DEFAULT(bg as i32) {
@@ -755,7 +874,20 @@ impl grid {
         }
     }
 
-    /// Convert cells into a string.
+    /// Render `nx` cells starting at `(px, py)` to a freshly-allocated
+    /// C-style (NUL-terminated, `xmalloc`'d) byte buffer. Caller owns the
+    /// returned pointer and must `free_()` it.
+    ///
+    /// Behavior is controlled by `flags` ([`grid_string_flags`]):
+    /// - `WITH_SEQUENCES` — emit SGR/CSI escape sequences for style changes.
+    /// - `ESCAPE_SEQUENCES` — backslash-escape control characters in output.
+    /// - `EMPTY_CELLS` — include trailing blank cells rather than stopping
+    ///   at `cellused`.
+    ///
+    /// `lastgc` is a caller-owned "previous style" slot used across calls
+    /// so sequential `string_cells` invocations emit minimal diffs. Pass a
+    /// pointer whose target is `null` on the first call; subsequent calls
+    /// re-use the updated style. `s` is needed for hyperlink resolution.
     pub unsafe fn string_cells(
         &mut self,
         px: c_uint,
@@ -893,7 +1025,12 @@ impl grid {
         }
     }
 
-    /// Reflow lines on grid to new width.
+    /// Reflow every line to a new width `sx`, joining runs of lines that
+    /// have [`grid_line_flag::WRAPPED`] and re-splitting them at the new
+    /// width. The grid's `sx` field is updated in place. Called when the
+    /// window or pane is resized horizontally so scrollback remains usable
+    /// after the resize. Marked `unsafe` for the internal `ptr::copy` line
+    /// shuffle in `reflow_join` / `reflow_split`.
     pub unsafe fn reflow(&mut self, sx: u32) {
         unsafe {
             let gd = self as *mut grid;
@@ -1098,7 +1235,9 @@ impl grid {
         self.hscrolled = 0;
     }
 
-    /// Clear a rectangular region in view coordinates.
+    /// View-coordinate wrapper around [`clear`](Self::clear): `py` is relative
+    /// to the top of the visible screen and is translated by adding `hsize`
+    /// before delegating.
     pub fn view_clear(&mut self, px: u32, py: u32, nx: u32, ny: u32, bg: u32) {
         self.clear(px, self.hsize + py, nx, ny, bg);
     }
@@ -1132,7 +1271,10 @@ impl grid {
         }
     }
 
-    /// Insert `ny` blank lines at view row `py`.
+    /// Insert `ny` blank lines at view row `py`, pushing the rows below
+    /// further down. Lines that fall off the bottom of the visible screen
+    /// are discarded (not moved into history). Implements the `IL` /
+    /// `CSI L` escape sequence outside a scroll region.
     pub unsafe fn view_insert_lines(&mut self, py: u32, ny: u32, bg: u32) {
         unsafe {
             let py_abs = self.hsize + py;
@@ -1154,7 +1296,10 @@ impl grid {
         }
     }
 
-    /// Delete `ny` lines at view row `py`.
+    /// Delete `ny` lines starting at view row `py`, pulling the rows below
+    /// up to fill the gap. The bottom `ny` rows of the screen are blanked
+    /// with background `bg`. Implements the `DL` / `CSI M` escape sequence
+    /// outside a scroll region.
     pub unsafe fn view_delete_lines(&mut self, py: u32, ny: u32, bg: u32) {
         unsafe {
             let py_abs = self.hsize + py;
@@ -1178,7 +1323,9 @@ impl grid {
         }
     }
 
-    /// Insert `nx` blank cells at view position (px, py).
+    /// Insert `nx` blank cells at view-coordinate `(px, py)`, shifting the
+    /// cells to the right and discarding any that fall off the end of the
+    /// line. Implements `ICH` / `CSI @`.
     pub fn view_insert_cells(&mut self, px: u32, py: u32, nx: u32, bg: u32) {
         let py_abs = self.hsize + py;
         let sx = self.sx;
@@ -1190,7 +1337,9 @@ impl grid {
         }
     }
 
-    /// Delete `nx` cells at view position (px, py).
+    /// Delete `nx` cells at view-coordinate `(px, py)`, shifting the cells
+    /// to the right leftward and clearing the now-vacated tail with
+    /// background `bg`. Implements `DCH` / `CSI P`.
     pub fn view_delete_cells(&mut self, px: u32, py: u32, nx: u32, bg: u32) {
         let py_abs = self.hsize + py;
         let sx = self.sx;
