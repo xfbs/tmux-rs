@@ -11,7 +11,7 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-//! Grid — the character-cell backing store behind every [`screen`](crate::screen).
+//! Grid — the character-cell backing store behind every screen.
 //!
 //! A [`Grid`] owns a `Vec<GridLine>`; each line owns a `Vec<GridCellEntry>`
 //! (packed per-column state) and a `Vec<GridExtdEntry>` side-table for
