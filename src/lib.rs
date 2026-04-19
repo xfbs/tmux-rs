@@ -705,76 +705,14 @@ fn COLOUR_DEFAULT(c: i32) -> bool {
     c == 8 || c == 9
 }
 
-// Grid attributes. Anything above 0xff is stored in an extended cell.
-bitflags::bitflags! {
-    /// Grid flags.
-    #[repr(transparent)]
-    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-    struct grid_attr : u16 {
-        const GRID_ATTR_BRIGHT = 0x1;
-        const GRID_ATTR_DIM = 0x2;
-        const GRID_ATTR_UNDERSCORE = 0x4;
-        const GRID_ATTR_BLINK = 0x8;
-        const GRID_ATTR_REVERSE = 0x10;
-        const GRID_ATTR_HIDDEN = 0x20;
-        const GRID_ATTR_ITALICS = 0x40;
-        const GRID_ATTR_CHARSET = 0x80; // alternative character set
-        const GRID_ATTR_STRIKETHROUGH = 0x100;
-        const GRID_ATTR_UNDERSCORE_2 = 0x200;
-        const GRID_ATTR_UNDERSCORE_3 = 0x400;
-        const GRID_ATTR_UNDERSCORE_4 = 0x800;
-        const GRID_ATTR_UNDERSCORE_5 = 0x1000;
-        const GRID_ATTR_OVERLINE = 0x2000;
-    }
-}
-
-/// All underscore attributes.
-const GRID_ATTR_ALL_UNDERSCORE: grid_attr = grid_attr::GRID_ATTR_UNDERSCORE
-    .union(grid_attr::GRID_ATTR_UNDERSCORE_2)
-    .union(grid_attr::GRID_ATTR_UNDERSCORE_3)
-    .union(grid_attr::GRID_ATTR_UNDERSCORE_4)
-    .union(grid_attr::GRID_ATTR_UNDERSCORE_5);
-
-bitflags::bitflags! {
-    /// Grid flags.
-    #[repr(transparent)]
-    #[derive(Copy, Clone, Eq, PartialEq)]
-    struct grid_flag : u8 {
-        const FG256 = 0x1;
-        const BG256 = 0x2;
-        const PADDING = 0x4;
-        const EXTENDED = 0x8;
-        const SELECTED = 0x10;
-        const NOPALETTE = 0x20;
-        const CLEARED = 0x40;
-    }
-}
-
-bitflags::bitflags! {
-    /// Grid line flags.
-    #[repr(transparent)]
-    #[derive(Copy, Clone, Eq, PartialEq)]
-    struct grid_line_flag: i32 {
-        const WRAPPED      = 1 << 0; // 0x1
-        const EXTENDED     = 1 << 1; // 0x2
-        const DEAD         = 1 << 2; // 0x4
-        const START_PROMPT = 1 << 3; // 0x8
-        const START_OUTPUT = 1 << 4; // 0x10
-    }
-}
-
-bitflags::bitflags! {
-    /// Grid string flags.
-    #[repr(transparent)]
-    #[derive(Copy, Clone, Eq, PartialEq)]
-    struct grid_string_flags: i32 {
-        const GRID_STRING_WITH_SEQUENCES = 0x1;
-        const GRID_STRING_ESCAPE_SEQUENCES = 0x2;
-        const GRID_STRING_TRIM_SPACES = 0x4;
-        const GRID_STRING_USED_ONLY = 0x8;
-        const GRID_STRING_EMPTY_CELLS = 0x10;
-    }
-}
+// Re-export grid bitflag families from `tmux-types`. These types were
+// previously defined here; the `pub use` keeps every call site in the
+// tmux-rs tree working unchanged (`use crate::{grid_attr, ...}`), while
+// future extracted crates (tmux-grid) can import them directly from
+// tmux-types without a tmux-rs dependency.
+pub use tmux_types::{
+    GRID_ATTR_ALL_UNDERSCORE, grid_attr, grid_flag, grid_line_flag, grid_string_flags,
+};
 
 /// Cell positions.
 #[repr(i32)]

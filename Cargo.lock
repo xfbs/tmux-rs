@@ -748,6 +748,14 @@ dependencies = [
  "paste",
  "tempfile",
  "terminfo-lean",
+ "tmux-types",
+]
+
+[[package]]
+name = "tmux-types"
+version = "0.0.1"
+dependencies = [
+ "bitflags",
 ]
 
 [[package]]

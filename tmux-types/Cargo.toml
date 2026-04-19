@@ -1,0 +1,9 @@
+[package]
+name         = "tmux-types"
+version      = "0.0.1"
+edition      = "2024"
+license      = "ISC"
+description  = "Shared data types for tmux-rs: grid cells, attributes, colours, utf-8 data."
+
+[dependencies]
+bitflags = { version = "2.9.1" }
