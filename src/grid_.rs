@@ -397,23 +397,6 @@ fn grid_expand_line(gd: &mut grid, py: c_uint, mut sx: c_uint, bg: c_uint) {
     }
 }
 
-/// Initialize a line slot without dropping (for after `ptr::copy` where
-/// the old data was bitwise-moved to another location).
-fn grid_init_line(gd: &mut grid, py: c_uint, bg: c_uint) {
-    // Write a fresh line. The old value was bitwise-moved away, so we must
-    // NOT drop it. Use ptr::write to avoid the implicit drop from assignment.
-    // SAFETY: the caller guarantees that the slot at `py` holds bitwise-moved
-    // data that must not be dropped.
-    unsafe {
-        let gl = gd.linedata.as_mut_ptr().add(py as usize);
-        std::ptr::write(gl, grid_line::new());
-    }
-    if !COLOUR_DEFAULT(bg as i32) {
-        let sx = gd.sx;
-        grid_expand_line(gd, py, sx, bg);
-    }
-}
-
 /// Get cell from line.
 unsafe fn grid_get_cell1(gl: &grid_line, px: c_uint, gc: *mut grid_cell) {
     unsafe {
@@ -765,56 +748,61 @@ impl grid {
     /// Move `ny` lines starting at row `py` to row `dy` (absolute grid
     /// coordinates). Source and destination ranges may overlap (memmove
     /// semantics). Replaced lines in the destination are freed first; the
-    /// source region is re-initialized with background `bg`. Marked
-    /// `unsafe` because the implementation uses `ptr::copy` on the line Vec
-    /// — `grid_line` is not `Copy` so a safe `copy_within` is not usable.
-    pub unsafe fn move_lines(&mut self, dy: c_uint, py: c_uint, ny: c_uint, bg: c_uint) {
-        unsafe {
-            if ny == 0 || py == dy {
-                return;
-            }
+    /// source region is re-initialized with background `bg`.
+    pub fn move_lines(&mut self, dy: c_uint, py: c_uint, ny: c_uint, bg: c_uint) {
+        if ny == 0 || py == dy {
+            return;
+        }
 
-            if grid_check_y(self, c!("grid_move_lines"), py) != 0 {
-                return;
-            }
-            if grid_check_y(self, c!("grid_move_lines"), py + ny - 1) != 0 {
-                return;
-            }
-            if grid_check_y(self, c!("grid_move_lines"), dy) != 0 {
-                return;
-            }
-            if grid_check_y(self, c!("grid_move_lines"), dy + ny - 1) != 0 {
-                return;
-            }
+        if grid_check_y(self, c!("grid_move_lines"), py) != 0 {
+            return;
+        }
+        if grid_check_y(self, c!("grid_move_lines"), py + ny - 1) != 0 {
+            return;
+        }
+        if grid_check_y(self, c!("grid_move_lines"), dy) != 0 {
+            return;
+        }
+        if grid_check_y(self, c!("grid_move_lines"), dy + ny - 1) != 0 {
+            return;
+        }
 
-            // Free any lines which are being replaced
-            for yy in dy..dy + ny {
-                if yy >= py && yy < py + ny {
-                    continue;
-                }
+        // Stash source lines and replace them with placeholders. After this
+        // block the src range holds default (empty) grid_lines, and `staged`
+        // owns the real data — which is why the overlap problem disappears.
+        let mut staged: Vec<grid_line> = (py..py + ny)
+            .map(|yy| std::mem::replace(&mut self.linedata[yy as usize], grid_line::new()))
+            .collect();
+
+        // Free any dst lines which will be overwritten and are NOT part of
+        // the src range (dst slots that overlap src now hold placeholders,
+        // which need no freeing).
+        for yy in dy..dy + ny {
+            if yy < py || yy >= py + ny {
                 grid_free_line(self, yy);
             }
-            if dy != 0 {
-                self.linedata[dy as usize - 1].flags &= !grid_line_flag::WRAPPED;
-            }
+        }
+        if dy != 0 {
+            self.linedata[dy as usize - 1].flags &= !grid_line_flag::WRAPPED;
+        }
 
-            // Move the lines (memmove semantics — handles overlap).
-            // Can't use copy_within because grid_line is not Copy (contains Vec).
-            let src = self.linedata.as_mut_ptr().add(py as usize);
-            let dst = self.linedata.as_mut_ptr().add(dy as usize);
-            std::ptr::copy(src, dst, ny as usize);
+        // Install staged lines at destination positions.
+        for (i, line) in staged.drain(..).enumerate() {
+            self.linedata[dy as usize + i] = line;
+        }
 
-            // Wipe source lines that are outside the destination range.
-            // These were bitwise-moved, so DON'T drop their Vec fields — the data
-            // is now owned by the destination. Use grid_init_line (no drop).
-            for yy in py..py + ny {
-                if yy < dy || yy >= dy + ny {
-                    grid_init_line(self, yy, bg);
+        // Init src lines that are outside the destination range (they are
+        // currently placeholders from the stash step above).
+        for yy in py..py + ny {
+            if yy < dy || yy >= dy + ny {
+                if !COLOUR_DEFAULT(bg as i32) {
+                    let sx = self.sx;
+                    grid_expand_line(self, yy, sx, bg);
                 }
             }
-            if py != 0 && (py < dy || py >= dy + ny) {
-                self.linedata[py as usize - 1].flags &= !grid_line_flag::WRAPPED;
-            }
+        }
+        if py != 0 && (py < dy || py >= dy + ny) {
+            self.linedata[py as usize - 1].flags &= !grid_line_flag::WRAPPED;
         }
     }
 
@@ -1224,84 +1212,72 @@ impl grid {
     }
 
     /// Scroll a region upward: contents of `[rupper, rlower]` move up by one line.
-    pub unsafe fn view_scroll_region_up(&mut self, rupper: u32, rlower: u32, bg: u32) {
-        unsafe {
-            if self.flags & GRID_HISTORY != 0 {
-                self.collect_history();
-                if rupper == 0 && rlower == self.sy - 1 {
-                    self.scroll_history(bg);
-                } else {
-                    let rupper_abs = self.hsize + rupper;
-                    let rlower_abs = self.hsize + rlower;
-                    self.scroll_history_region(rupper_abs, rlower_abs, bg);
-                }
+    pub fn view_scroll_region_up(&mut self, rupper: u32, rlower: u32, bg: u32) {
+        if self.flags & GRID_HISTORY != 0 {
+            self.collect_history();
+            if rupper == 0 && rlower == self.sy - 1 {
+                self.scroll_history(bg);
             } else {
                 let rupper_abs = self.hsize + rupper;
                 let rlower_abs = self.hsize + rlower;
-                self.move_lines(rupper_abs, rupper_abs + 1, rlower_abs - rupper_abs, bg);
+                self.scroll_history_region(rupper_abs, rlower_abs, bg);
             }
+        } else {
+            let rupper_abs = self.hsize + rupper;
+            let rlower_abs = self.hsize + rlower;
+            self.move_lines(rupper_abs, rupper_abs + 1, rlower_abs - rupper_abs, bg);
         }
     }
 
     /// Scroll a region downward: contents of `[rupper, rlower]` move down by one line.
-    pub unsafe fn view_scroll_region_down(&mut self, rupper: u32, rlower: u32, bg: u32) {
-        unsafe {
-            let rupper_abs = self.hsize + rupper;
-            let rlower_abs = self.hsize + rlower;
-            self.move_lines(rupper_abs + 1, rupper_abs, rlower_abs - rupper_abs, bg);
-        }
+    pub fn view_scroll_region_down(&mut self, rupper: u32, rlower: u32, bg: u32) {
+        let rupper_abs = self.hsize + rupper;
+        let rlower_abs = self.hsize + rlower;
+        self.move_lines(rupper_abs + 1, rupper_abs, rlower_abs - rupper_abs, bg);
     }
 
     /// Insert `ny` blank lines at view row `py`, pushing the rows below
     /// further down. Lines that fall off the bottom of the visible screen
     /// are discarded (not moved into history). Implements the `IL` /
     /// `CSI L` escape sequence outside a scroll region.
-    pub unsafe fn view_insert_lines(&mut self, py: u32, ny: u32, bg: u32) {
-        unsafe {
-            let py_abs = self.hsize + py;
-            let sy = self.hsize + self.sy;
-            self.move_lines(py_abs + ny, py_abs, sy - py_abs - ny, bg);
-        }
+    pub fn view_insert_lines(&mut self, py: u32, ny: u32, bg: u32) {
+        let py_abs = self.hsize + py;
+        let sy = self.hsize + self.sy;
+        self.move_lines(py_abs + ny, py_abs, sy - py_abs - ny, bg);
     }
 
     /// Insert `ny` blank lines at view row `py` inside scroll region bounded by `rlower`.
-    pub unsafe fn view_insert_lines_region(&mut self, rlower: u32, py: u32, ny: u32, bg: u32) {
-        unsafe {
-            let rlower_abs = self.hsize + rlower;
-            let py_abs = self.hsize + py;
+    pub fn view_insert_lines_region(&mut self, rlower: u32, py: u32, ny: u32, bg: u32) {
+        let rlower_abs = self.hsize + rlower;
+        let py_abs = self.hsize + py;
 
-            let ny2 = rlower_abs + 1 - py_abs - ny;
-            self.move_lines(rlower_abs + 1 - ny2, py_abs, ny2, bg);
-            // TODO does this bug exist upstream?
-            self.clear(0, py_abs + ny2, self.sx, ny.saturating_sub(ny2), bg);
-        }
+        let ny2 = rlower_abs + 1 - py_abs - ny;
+        self.move_lines(rlower_abs + 1 - ny2, py_abs, ny2, bg);
+        // TODO does this bug exist upstream?
+        self.clear(0, py_abs + ny2, self.sx, ny.saturating_sub(ny2), bg);
     }
 
     /// Delete `ny` lines starting at view row `py`, pulling the rows below
     /// up to fill the gap. The bottom `ny` rows of the screen are blanked
     /// with background `bg`. Implements the `DL` / `CSI M` escape sequence
     /// outside a scroll region.
-    pub unsafe fn view_delete_lines(&mut self, py: u32, ny: u32, bg: u32) {
-        unsafe {
-            let py_abs = self.hsize + py;
-            let sy = self.hsize + self.sy;
+    pub fn view_delete_lines(&mut self, py: u32, ny: u32, bg: u32) {
+        let py_abs = self.hsize + py;
+        let sy = self.hsize + self.sy;
 
-            self.move_lines(py_abs, py_abs + ny, sy - py_abs - ny, bg);
-            self.clear(0, sy.saturating_sub(ny), self.sx, ny, bg);
-        }
+        self.move_lines(py_abs, py_abs + ny, sy - py_abs - ny, bg);
+        self.clear(0, sy.saturating_sub(ny), self.sx, ny, bg);
     }
 
     /// Delete `ny` lines at view row `py` inside scroll region bounded by `rlower`.
-    pub unsafe fn view_delete_lines_region(&mut self, rlower: u32, py: u32, ny: u32, bg: u32) {
-        unsafe {
-            let rlower_abs = self.hsize + rlower;
-            let py_abs = self.hsize + py;
+    pub fn view_delete_lines_region(&mut self, rlower: u32, py: u32, ny: u32, bg: u32) {
+        let rlower_abs = self.hsize + rlower;
+        let py_abs = self.hsize + py;
 
-            let ny2 = rlower_abs + 1 - py_abs - ny;
-            self.move_lines(py_abs, py_abs + ny, ny2, bg);
-            // TODO does this bug exist in the tmux source code too
-            self.clear(0, py_abs + ny2, self.sx, ny.saturating_sub(ny2), bg);
-        }
+        let ny2 = rlower_abs + 1 - py_abs - ny;
+        self.move_lines(py_abs, py_abs + ny, ny2, bg);
+        // TODO does this bug exist in the tmux source code too
+        self.clear(0, py_abs + ny2, self.sx, ny.saturating_sub(ny2), bg);
     }
 
     /// Insert `nx` blank cells at view-coordinate `(px, py)`, shifting the
@@ -2220,24 +2196,19 @@ mod tests {
     #[test]
     fn grid_move_lines_basic() {
         let mut gd = grid_create(80, 10, 0);
-        unsafe {
-            let cell = make_cell(b'M', 8, 8);
-            gd.set_cell(0, 0, &cell);
+        let cell = make_cell(b'M', 8, 8);
+        gd.set_cell(0, 0, &cell);
 
-            // Move line 0 to line 5.
-            gd.move_lines(5, 0, 1, 8);
+        // Move line 0 to line 5.
+        gd.move_lines(5, 0, 1, 8);
 
-            // Line 0 should now be empty.
-            let mut gc: grid_cell;
-            gc = gd.get_cell(0, 0);
-            assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
+        // Line 0 should now be empty.
+        let gc = gd.get_cell(0, 0);
+        assert!(grid_cells_equal(&gc, &GRID_DEFAULT_CELL));
 
-            // Line 5 should have the cell.
-            gc = gd.get_cell(0, 5);
-            assert!(grid_cells_equal(&gc, &cell));
-
-            drop(gd);
-        }
+        // Line 5 should have the cell.
+        let gc = gd.get_cell(0, 5);
+        assert!(grid_cells_equal(&gc, &cell));
     }
 
     // ---------------------------------------------------------------
@@ -2365,19 +2336,14 @@ mod tests {
     #[test]
     fn grid_move_lines_noop_same_src_dst() {
         let mut gd = grid_create(80, 10, 0);
-        unsafe {
-            let cell = make_cell(b'N', 8, 8);
-            gd.set_cell(0, 2, &cell);
+        let cell = make_cell(b'N', 8, 8);
+        gd.set_cell(0, 2, &cell);
 
-            // Moving line 2 to line 2 should be a no-op.
-            gd.move_lines(2, 2, 1, 8);
+        // Moving line 2 to line 2 should be a no-op.
+        gd.move_lines(2, 2, 1, 8);
 
-            let gc: grid_cell;
-            gc = gd.get_cell(0, 2);
-            assert!(grid_cells_equal(&gc, &cell));
-
-            drop(gd);
-        }
+        let gc = gd.get_cell(0, 2);
+        assert!(grid_cells_equal(&gc, &cell));
     }
 
     #[test]
@@ -3156,23 +3122,19 @@ mod tests {
     fn grid_move_lines_overlapping_regions() {
         // Move overlapping regions: lines [0..3] → [2..5].
         let mut gd = grid_create(80, 10, 0);
-        unsafe {
-            for y in 0..3u32 {
-                let cell = make_cell(b'A' + y as u8, 8, 8);
-                gd.set_cell(0, y, &cell);
-            }
-
-            gd.move_lines(2, 0, 3, 8);
-
-            let mut gc: grid_cell;
-            gc = gd.get_cell(0, 2);
-            assert_eq!(gc.data.data[0], b'A');
-            gc = gd.get_cell(0, 3);
-            assert_eq!(gc.data.data[0], b'B');
-            gc = gd.get_cell(0, 4);
-            assert_eq!(gc.data.data[0], b'C');
-            drop(gd);
+        for y in 0..3u32 {
+            let cell = make_cell(b'A' + y as u8, 8, 8);
+            gd.set_cell(0, y, &cell);
         }
+
+        gd.move_lines(2, 0, 3, 8);
+
+        let gc = gd.get_cell(0, 2);
+        assert_eq!(gc.data.data[0], b'A');
+        let gc = gd.get_cell(0, 3);
+        assert_eq!(gc.data.data[0], b'B');
+        let gc = gd.get_cell(0, 4);
+        assert_eq!(gc.data.data[0], b'C');
     }
 
     // ---------------------------------------------------------------
