@@ -118,8 +118,8 @@ cfg_pub_mods! {
     mod xmalloc;
 }
 
-#[macro_use] // log_debug
-mod log;
+#[macro_use] // log_debug!, fatalx_!
+extern crate tmux_log;
 use std::{
     borrow::Cow,
     cell::RefCell,
@@ -138,7 +138,7 @@ use std::{
     },
 };
 
-use crate::log::*;
+use tmux_log::*;
 pub use crate::tmux::tmux_main;
 use crate::{
     alerts::*,

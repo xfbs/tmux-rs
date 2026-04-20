@@ -11,31 +11,55 @@
 // WHATSOEVER RESULTING FROM LOSS OF MIND, USE, DATA OR PROFITS, WHETHER
 // IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
 // OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-use std::io::BufWriter;
-use std::{
-    fs::File,
-    io::{LineWriter, Write},
-    sync::atomic::{AtomicI32, Ordering},
-};
+//! File-backed logging facade for tmux-rs.
+//!
+//! Writes timestamped, stravis-sanitized messages to `tmux-<name>-<pid>.log`.
+//! The log file is opened lazily by [`log_open`] once [`log_add_level`] has
+//! raised the global level above zero (one level per `-v` flag).
+//!
+//! Two entry points:
+//! * [`log_debug!`] — crate-local macro that preserves the call-site
+//!   `file:line`.
+//! * [`::log`] crate adapter installed by [`log_install_logger`], so
+//!   `::log::debug!` routes through the same sanitization and format.
+//!
+//! The facade is fork-safe: [`log_close`] intentionally avoids dropping
+//! the underlying `File` (which would `close(2)` a descriptor the
+//! parent may still own after fork) and instead flushes and forgets.
 
-use crate::compat::{stravis, vis_flags};
-use crate::event_::event_set_log_callback;
-use crate::*;
+use core::ffi::CStr;
+use std::ffi::CString;
+use std::fs::File;
+use std::io::{BufWriter, LineWriter, Write};
+use std::ptr::null_mut;
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicI32, Ordering};
 
+use tmux_compat::vis::{stravis, vis_flags};
+
+/// Log a debug message with the calling `file:line`. Formatted via
+/// `format_args!`, sanitized via `stravis(VIS_OCTAL|VIS_CSTYLE|VIS_TAB|VIS_NL)`.
+///
+/// Writes nothing if no log file is currently open.
+#[macro_export]
 macro_rules! log_debug {
-    ($($arg:tt)*) => {$crate::log::log_debug_rs(format_args!($($arg)*))};
+    ($($arg:tt)*) => {$crate::log_debug_rs(format_args!($($arg)*))};
 }
-pub(crate) use log_debug;
+
+/// Emit a fatal message (prefixed `fatal:`) and `exit(1)`. `fatalx_!` takes
+/// a format string; [`fatalx`] takes a `&str` with `Location::caller()`.
+#[macro_export]
+macro_rules! fatalx_ {
+   ($fmt:literal $(, $args:expr)* $(,)?) => {
+        $crate::fatalx_c(format_args!($fmt $(, $args)*))
+    };
+}
 
 // can't use File because it's open before fork which causes issues with how file works
 static LOG_FILE: Mutex<Option<LineWriter<File>>> = Mutex::new(None);
 static LOG_LEVEL: AtomicI32 = AtomicI32::new(0);
 
 const DEFAULT_ORDERING: Ordering = Ordering::SeqCst;
-
-unsafe extern "C-unwind" fn log_event_cb(_severity: c_int, msg: *const u8) {
-    unsafe { log_debug!("{}", _s(msg)) }
-}
 
 pub fn log_add_level() {
     LOG_LEVEL.fetch_add(1, DEFAULT_ORDERING);
@@ -62,7 +86,6 @@ pub fn log_open(name: &CStr) {
     };
 
     *LOG_FILE.lock().unwrap() = Some(LineWriter::new(file));
-    event_set_log_callback(Some(log_event_cb));
 }
 
 pub fn log_toggle(name: &CStr) {
@@ -101,8 +124,6 @@ pub fn log_close() {
                 }
             }
         }
-
-        event_set_log_callback(None);
     }
 }
 
@@ -152,7 +173,7 @@ fn log_write_at(args: std::fmt::Arguments, prefix: &str, file: &str, line: u32) 
             ));
         }
 
-        crate::free_(out);
+        libc::free(out.cast());
     }
 }
 
@@ -208,12 +229,6 @@ pub fn fatal(msg: &str) -> ! {
     std::process::exit(1)
 }
 
-macro_rules! fatalx_ {
-   ($fmt:literal $(, $args:expr)* $(,)?) => {
-        crate::log::fatalx_c(format_args!($fmt $(, $args)*))
-    };
-}
-pub(crate) use fatalx_;
 pub fn fatalx_c(args: std::fmt::Arguments) -> ! {
     log_vwrite_rs(args, "fatal: ");
     std::process::exit(1)
@@ -279,8 +294,8 @@ mod tests {
         let mut cap = LogCapture::new();
         log_debug!("hello {}", "world");
         let contents = cap.read_contents();
-        // Expect: "<secs>.<micros> src/log.rs:<line> hello world\n"
-        assert!(contents.contains("src/log.rs:"), "missing file:line: {contents:?}");
+        // Expect: "<secs>.<micros> <file>:<line> hello world\n"
+        assert!(contents.contains(".rs:"), "missing file:line: {contents:?}");
         assert!(contents.ends_with("hello world\n"), "wrong tail: {contents:?}");
         // Timestamp starts the line.
         let first = contents.split_whitespace().next().unwrap();
@@ -293,7 +308,7 @@ mod tests {
         let mut cap = LogCapture::new();
         ::log::debug!("adapter works {}", 42);
         let contents = cap.read_contents();
-        assert!(contents.contains("src/log.rs:"), "missing file:line: {contents:?}");
+        assert!(contents.contains(".rs:"), "missing file:line: {contents:?}");
         assert!(contents.ends_with("adapter works 42\n"), "wrong tail: {contents:?}");
     }
 

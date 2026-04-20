@@ -752,6 +752,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tmux-log"
+version = "0.0.3"
+dependencies = [
+ "libc",
+ "log",
+ "tempfile",
+ "tmux-compat",
+]
+
+[[package]]
 name = "tmux-protocol"
 version = "0.0.1"
 dependencies = [
@@ -783,6 +793,7 @@ dependencies = [
  "terminfo-lean",
  "tmux-compat",
  "tmux-grid",
+ "tmux-log",
  "tmux-protocol",
  "tmux-regsub",
  "tmux-types",

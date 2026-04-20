@@ -257,7 +257,7 @@ use super::super::{
     EV_READ, EV_SIGNAL, EV_TIMEOUT, EV_WRITE, EVLOOP_NONBLOCK,
     event_log_cb,
 };
-use crate::log::log_debug;
+use tmux_log::log_debug;
 
 /// A ready event notification — queued when a calloop source fires.
 struct ReadyEvent {

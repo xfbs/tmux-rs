@@ -367,7 +367,7 @@ pub unsafe fn tmux_main(mut argc: i32, mut argv: *mut *mut u8, _env: *mut *mut u
     // extracted crates like `tmux-grid` and `tmux-utf8`) can use
     // `log::debug!` / `log::info!` and have it flow through our existing
     // log pipeline.
-    crate::log::log_install_logger();
+    tmux_log::log_install_logger();
 
     unsafe {
         // setproctitle_init(argc, argv.cast(), env.cast());
