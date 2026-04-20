@@ -17,7 +17,7 @@ description  = "A Rust port of tmux"
 autotests = false
 
 [workspace]
-members = ["compat", "grid", "protocol", "types", "utf8"]
+members = ["compat", "grid", "protocol", "regsub", "types", "utf8"]
 
 # Note: most of these features are not supported yet
 # they just exist to make matching upstream's
@@ -49,6 +49,7 @@ log          = { version = "0.4" }
 tmux-compat   = { path = "compat" }
 tmux-grid     = { path = "grid" }
 tmux-protocol = { path = "protocol" }
+tmux-regsub   = { path = "regsub" }
 tmux-types    = { path = "types" }
 tmux-utf8     = { path = "utf8" }
 memchr       = { version = "2.7.6" }

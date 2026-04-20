@@ -19,5 +19,5 @@ fuzz_target!(|input: RegsubInput| {
         return;
     }
 
-    tmux_rs_new::regsub::fuzz_regsub(&input.pattern, &input.replacement, &input.text);
+    tmux_regsub::fuzz_regsub(&input.pattern, &input.replacement, &input.text);
 });

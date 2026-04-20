@@ -87,7 +87,6 @@ cfg_pub_mods! {
     mod paste;
     mod popup;
     mod proc;
-    mod regsub;
     mod resize;
     mod screen_;
     mod screen_redraw;
@@ -179,7 +178,6 @@ use crate::{
     paste::*,
     popup::*,
     proc::*,
-    regsub::regsub,
     resize::*,
     screen_::*,
     screen_redraw::*,

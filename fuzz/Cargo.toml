@@ -16,6 +16,7 @@ libfuzzer-sys = { version = "0.4.10" }
 tmux-rs-new = { path = "..", package = "tmux-rs" }
 tmux-rs-old = { git = "https://github.com/richardscollin/tmux-rs", package = "tmux-rs", branch = "main" }
 # tmux-rs-old = { path = "../../tmux-rs-old", package = "tmux-rs-old" }
+tmux-regsub = { path = "../regsub" }
 
 [[bin]]
 name = "colour_find_rgb"

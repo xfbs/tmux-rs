@@ -3919,11 +3919,15 @@ pub unsafe fn format_sub(
         if (*fm).argc >= 3 && !strchr(*(*fm).argv.add(2), b'i' as i32).is_null() {
             flags |= REG_ICASE;
         }
-        let value = regsub(pattern, with, text, flags);
-        if value.is_null() {
-            xstrdup(text).as_ptr()
-        } else {
-            value
+        let pat = CStr::from_ptr(pattern.cast());
+        let w = CStr::from_ptr(with.cast());
+        let t = CStr::from_ptr(text.cast());
+        match tmux_regsub::regsub(pat, w, t, flags) {
+            Some(v) => {
+                let c = CString::new(v).unwrap();
+                xmalloc::xstrdup_(&c).as_ptr()
+            }
+            None => xstrdup(text).as_ptr(),
         }
     }
 }
