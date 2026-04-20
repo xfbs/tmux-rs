@@ -32,13 +32,11 @@ pub(crate) use crate::libc::errno;
 pub(crate) use crate::libc::*;
 pub(crate) use crate::libc::{free_, memcpy_, memcpy__, streq_};
 
-// libevent2
-mod event_;
-// Phase 3.0: Pure-Rust evbuffer replacement
-pub mod evbuffer_;
+#[macro_use] // evbuffer_add_printf!
+extern crate tmux_event;
 use terminfo_lean::expand::ExpandContext;
 
-use crate::event_::*;
+use tmux_event::*;
 
 macro_rules! cfg_pub_mods {
     ($( mod $mod_name:ident; )*) => {
@@ -1128,9 +1126,9 @@ struct window_pane {
 
     fd: i32,
     /// Buffered data read from the PTY fd.
-    event_input: evbuffer_::Evbuffer,
+    event_input: tmux_event::Evbuffer,
     /// Buffered data to write to the PTY fd.
-    event_output: evbuffer_::Evbuffer,
+    event_output: tmux_event::Evbuffer,
     /// Calloop read registration for the PTY fd.
     event_read: Option<IoHandle>,
     /// Calloop write registration for the PTY fd.
@@ -1150,9 +1148,9 @@ struct window_pane {
 
     pipe_fd: i32,
     /// Buffered data to write to the pipe fd (pane output → pipe process).
-    pipe_output: evbuffer_::Evbuffer,
+    pipe_output: tmux_event::Evbuffer,
     /// Buffered data read from the pipe fd (pipe process → pane input).
-    pipe_input: evbuffer_::Evbuffer,
+    pipe_input: tmux_event::Evbuffer,
     /// Calloop read registration for the pipe fd.
     pipe_read: Option<IoHandle>,
     /// Calloop write registration for the pipe fd.
@@ -2268,7 +2266,7 @@ struct client_file {
     buffer: *mut evbuffer,
 
     /// I/O buffer for local file operations (output in write mode, input in read mode).
-    event_buf: evbuffer_::Evbuffer,
+    event_buf: tmux_event::Evbuffer,
     /// Calloop I/O registration for the local file fd.
     event_io: Option<IoHandle>,
 

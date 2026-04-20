@@ -741,6 +741,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tmux-event"
+version = "0.0.3"
+dependencies = [
+ "calloop",
+ "libc",
+ "memchr",
+ "tmux-log",
+]
+
+[[package]]
 name = "tmux-grid"
 version = "0.0.1"
 dependencies = [
@@ -792,6 +802,7 @@ dependencies = [
  "tempfile",
  "terminfo-lean",
  "tmux-compat",
+ "tmux-event",
  "tmux-grid",
  "tmux-log",
  "tmux-protocol",

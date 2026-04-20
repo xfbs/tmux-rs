@@ -49,9 +49,9 @@ pub struct job {
 
     pub fd: c_int,
     /// Buffered data read from the subprocess fd.
-    pub event_input: crate::evbuffer_::Evbuffer,
+    pub event_input: tmux_event::Evbuffer,
     /// Buffered data to write to the subprocess fd.
-    pub event_output: crate::evbuffer_::Evbuffer,
+    pub event_output: tmux_event::Evbuffer,
     /// Calloop read registration for the subprocess fd.
     pub event_read: Option<IoHandle>,
     /// Calloop write registration for the subprocess fd.
@@ -480,12 +480,12 @@ pub unsafe fn job_get_data(job: *mut job) -> *mut c_void {
 }
 
 /// Returns a pointer to the job's input buffer (data read from subprocess).
-pub unsafe fn job_get_input(job: *mut job) -> *mut crate::evbuffer_::Evbuffer {
+pub unsafe fn job_get_input(job: *mut job) -> *mut tmux_event::Evbuffer {
     unsafe { &raw mut (*job).event_input }
 }
 
 /// Returns a pointer to the job's output buffer (data to write to subprocess).
-pub unsafe fn job_get_output(job: *mut job) -> *mut crate::evbuffer_::Evbuffer {
+pub unsafe fn job_get_output(job: *mut job) -> *mut tmux_event::Evbuffer {
     unsafe { &raw mut (*job).event_output }
 }
 

@@ -74,11 +74,11 @@ pub struct control_state {
     pub all_blocks: Vec<*mut control_block>,
 
     /// Buffered data read from the control client fd.
-    pub read_input: crate::evbuffer_::Evbuffer,
+    pub read_input: tmux_event::Evbuffer,
     /// Calloop read registration for the control client fd.
     pub read_io: Option<IoHandle>,
     /// Buffered data to write to the control client (or `out_fd`).
-    pub write_output: crate::evbuffer_::Evbuffer,
+    pub write_output: tmux_event::Evbuffer,
     /// Calloop write registration for the control client (or `out_fd`).
     pub write_io: Option<IoHandle>,
 
@@ -802,9 +802,9 @@ pub unsafe fn control_start(c: *mut client) {
             pending_list: Vec::new(),
             pending_count: 0,
             all_blocks: Vec::new(),
-            read_input: crate::evbuffer_::Evbuffer::new(),
+            read_input: tmux_event::Evbuffer::new(),
             read_io: None,
-            write_output: crate::evbuffer_::Evbuffer::new(),
+            write_output: tmux_event::Evbuffer::new(),
             write_io: None,
             subs: BTreeMap::new(),
             subs_timer: None,

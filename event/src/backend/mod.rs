@@ -7,7 +7,7 @@ mod event_impl;
 
 use std::ffi::{c_int, c_void};
 
-use crate::evbuffer_::Evbuffer;
+use crate::{Evbuffer, evbuffer};
 
 /// Opaque `event_base` handle.
 #[derive(Debug, Copy, Clone)]
@@ -17,9 +17,6 @@ pub struct event_base {
 
 // Re-export all public API functions.
 pub use event_impl::*;
-
-// Re-export Evbuffer as evbuffer so existing code using `*mut evbuffer` works.
-pub use crate::evbuffer_::Evbuffer as evbuffer;
 
 // ---------------------------------------------------------------------------
 // Evbuffer shim functions — bridge the C-shaped API to Evbuffer methods.

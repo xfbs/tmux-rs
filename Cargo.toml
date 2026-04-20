@@ -17,7 +17,7 @@ description  = "A Rust port of tmux"
 autotests = false
 
 [workspace]
-members = ["compat", "grid", "log", "protocol", "regsub", "types", "utf8"]
+members = ["compat", "event", "grid", "log", "protocol", "regsub", "types", "utf8"]
 
 # Note: most of these features are not supported yet
 # they just exist to make matching upstream's
@@ -47,6 +47,7 @@ lalrpop-util = { version = "0.22.2", default-features = false, features = ["unic
 libc         = { version = "0.2.174" }
 log          = { version = "0.4" }
 tmux-compat   = { path = "compat" }
+tmux-event    = { path = "event" }
 tmux-grid     = { path = "grid" }
 tmux-log      = { path = "log" }
 tmux-protocol = { path = "protocol" }

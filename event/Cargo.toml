@@ -1,0 +1,13 @@
+[package]
+name        = "tmux-event"
+version     = "0.0.3"
+edition     = "2024"
+license     = "ISC"
+description = "Calloop-backed event loop and evbuffer for tmux-rs"
+publish     = false
+
+[dependencies]
+calloop  = { version = "0.14.4", features = ["signals"] }
+libc     = { version = "0.2" }
+memchr   = { version = "2.7" }
+tmux-log = { path = "../log" }
