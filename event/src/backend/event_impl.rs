@@ -174,6 +174,10 @@ pub fn defer(callback: Box<dyn FnOnce()>) {
 /// handler from the event loop automatically.
 pub struct SignalHandle {
     id: u64,
+    /// On non-Linux platforms, holds the signal-hook registration ID so we
+    /// can unregister the signal handler on drop.
+    #[cfg(not(target_os = "linux"))]
+    sig_id: signal_hook::SigId,
 }
 
 impl Drop for SignalHandle {
@@ -187,6 +191,8 @@ impl Drop for SignalHandle {
             base.handle.remove(reg.token);
         }
         base.timer_callbacks.remove(&self.id);
+        #[cfg(not(target_os = "linux"))]
+        signal_hook::low_level::unregister(self.sig_id);
         CANCELLED.with(|cell| { cell.borrow_mut().insert(self.id); });
     }
 }
@@ -194,6 +200,10 @@ impl Drop for SignalHandle {
 /// Register a signal handler that calls `callback` when `signum` is delivered.
 ///
 /// Returns `Some(SignalHandle)` on success.  Drop the handle to deregister.
+///
+/// On Linux this uses `signalfd(2)` via calloop's built-in `Signals` source.
+/// On other platforms (macOS, OpenBSD) it uses a self-pipe with `signal-hook`.
+#[cfg(target_os = "linux")]
 pub fn signal_register(signum: c_int, callback: Box<dyn Fn()>) -> Option<SignalHandle> {
     let base_ptr = unsafe { GLOBAL_BASE };
     if base_ptr.is_null() {
@@ -215,6 +225,46 @@ pub fn signal_register(signum: c_int, callback: Box<dyn Fn()>) -> Option<SignalH
     base.registrations.insert(id, Registration { token });
     base.timer_callbacks.insert(id, callback);
     Some(SignalHandle { id })
+}
+
+/// Self-pipe signal registration for non-Linux platforms.
+#[cfg(not(target_os = "linux"))]
+pub fn signal_register(signum: c_int, callback: Box<dyn Fn()>) -> Option<SignalHandle> {
+    let base_ptr = unsafe { GLOBAL_BASE };
+    if base_ptr.is_null() {
+        return None;
+    }
+    let base = unsafe { &mut *base_ptr };
+    let id = base.alloc_id();
+
+    // Create a non-blocking pipe.
+    let (read_fd, write_fd) = pipe_nonblock().ok()?;
+
+    // Register signal-hook to write a byte on signal delivery.
+    let sig_id = signal_hook::low_level::pipe::register(signum, write_fd).ok()?;
+
+    // Register the read end with calloop.
+    let generic = Generic::new(read_fd, Interest::READ, Mode::Level);
+    let token = base.handle.insert_source(generic, move |_, fd, data| {
+        // Drain the pipe so it doesn't keep firing.
+        let mut buf = [0u8; 64];
+        loop {
+            match rustix::io::read(&mut *fd, &mut buf) {
+                Ok(0) | Err(_) => break,
+                Ok(_) => {}
+            }
+        }
+        data.ready.push(ReadyEvent {
+            id,
+            fd: signum,
+            events: super::super::EV_SIGNAL,
+        });
+        Ok(PostAction::Continue)
+    }).ok()?;
+
+    base.registrations.insert(id, Registration { token });
+    base.timer_callbacks.insert(id, callback);
+    Some(SignalHandle { id, sig_id })
 }
 
 // ---------------------------------------------------------------------------
@@ -248,6 +298,7 @@ pub fn timer_add(duration: Duration, callback: Box<dyn Fn()>) -> Option<TimerHan
 }
 
 use calloop::generic::Generic;
+#[cfg(target_os = "linux")]
 use calloop::signals::{Signal, Signals};
 use calloop::timer::{TimeoutAction, Timer};
 use calloop::{EventLoop, Interest, LoopHandle, Mode, PostAction, RegistrationToken};
@@ -326,6 +377,7 @@ impl EventBase {
 /// Global event base pointer.
 static mut GLOBAL_BASE: *mut EventBase = std::ptr::null_mut();
 
+#[cfg(target_os = "linux")]
 fn signal_from_number(signum: c_int) -> Option<Signal> {
     match signum {
         libc::SIGCHLD => Some(Signal::SIGCHLD),
@@ -344,6 +396,22 @@ fn signal_from_number(signum: c_int) -> Option<Signal> {
             None
         }
     }
+}
+
+/// Create a non-blocking pipe, returning `(read, write)` as `OwnedFd`s.
+#[cfg(not(target_os = "linux"))]
+fn pipe_nonblock() -> io::Result<(OwnedFd, OwnedFd)> {
+    use std::os::fd::AsRawFd;
+    let (read_fd, write_fd) = rustix::pipe::pipe()
+        .map_err(|e| io::Error::from_raw_os_error(e.raw_os_error()))?;
+    // Set non-blocking and close-on-exec on both ends.
+    for fd in [read_fd.as_raw_fd(), write_fd.as_raw_fd()] {
+        unsafe {
+            libc::fcntl(fd, libc::F_SETFL, libc::O_NONBLOCK);
+            libc::fcntl(fd, libc::F_SETFD, libc::FD_CLOEXEC);
+        }
+    }
+    Ok((read_fd, write_fd))
 }
 
 // ---------------------------------------------------------------------------

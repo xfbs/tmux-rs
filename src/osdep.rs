@@ -116,6 +116,7 @@ pub unsafe fn osdep_get_name(fd: i32, _tty: *const u8) -> *mut u8 {
 
         const PROC_PIDT_SHORTBSDINFO: i32 = 13;
         // abi compatible version of struct defined in sys/proc_info.h
+        #[repr(C)]
         struct proc_bsdshortinfo {
             padding1: [u32; 4],
             pbsi_comm: [u8; 16],

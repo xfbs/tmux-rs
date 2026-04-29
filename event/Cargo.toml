@@ -7,7 +7,14 @@ description = "Calloop-backed event loop and evbuffer for tmux-rs"
 publish     = false
 
 [dependencies]
-calloop  = { version = "0.14.4", features = ["signals"] }
 libc     = { version = "0.2" }
 memchr   = { version = "2.7" }
 tmux-log = { path = "../log" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+calloop  = { version = "0.14.4", features = ["signals"] }
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+calloop      = { version = "0.14.4" }
+rustix       = { version = "1.1", features = ["pipe"] }
+signal-hook  = { version = "0.4.4", default-features = false }
