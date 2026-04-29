@@ -298,7 +298,7 @@ pub unsafe fn key_string_lookup_string(mut string: *const u8) -> key_code {
             if u < 32 {
                 return u as u64;
             }
-            let mlen = wctomb(m.as_mut_slice().as_mut_ptr().cast(), u as i32);
+            let mlen = wctomb(m.as_mut_slice().as_mut_ptr().cast(), u as wchar_t);
             if mlen <= 0 || mlen > MB_LEN_MAX as i32 {
                 return KEYC_UNKNOWN;
             }

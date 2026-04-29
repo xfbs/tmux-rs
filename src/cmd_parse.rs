@@ -1377,7 +1377,7 @@ unsafe fn yylex_token_escape(ps: &mut cmd_parse_state, buf: &mut Vec<u8>) -> boo
             yyerror!(ps, "invalid \\{} argument", type_ as u8 as char);
             return false;
         }
-        let mlen = wctomb((&raw mut m).cast(), tmp as i32);
+        let mlen = wctomb((&raw mut m).cast(), tmp as wchar_t);
         if mlen <= 0 || mlen > SIZEOF_M as i32 {
             yyerror!(ps, "invalid \\{} argument", type_ as u8 as char);
             return false;

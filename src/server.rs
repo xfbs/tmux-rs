@@ -300,7 +300,7 @@ pub unsafe fn server_start(
         if !cause.is_null() {
             if !c.is_null() {
                 (*c).exit_message = Some(
-                    std::ffi::CStr::from_ptr(cause as *const i8)
+                    std::ffi::CStr::from_ptr(cause.cast())
                         .to_string_lossy()
                         .into_owned(),
                 );

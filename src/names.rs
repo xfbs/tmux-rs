@@ -101,7 +101,7 @@ pub unsafe fn check_window_name(w: *mut window) {
         (*active).flags &= !window_pane_flags::PANE_CHANGED;
 
         let name = format_window_name(w);
-        let name_str = std::ffi::CStr::from_ptr(name as *const i8).to_string_lossy();
+        let name_str = std::ffi::CStr::from_ptr(name.cast()).to_string_lossy();
         let cur = (*w).name.as_deref().unwrap_or("");
         if name_str != cur {
             log_debug!("@{} name {} (was {})", (*w).id, name_str, cur);

@@ -3,8 +3,6 @@
 // reexport everything in libc from this module, then override things we want to change the interface for
 pub use ::libc::*;
 
-pub type wchar_t = core::ffi::c_int;
-
 unsafe extern "C" {
     pub static mut environ: *mut *mut u8;
     pub fn strsep(_: *mut *mut u8, _delim: *const u8) -> *mut u8;

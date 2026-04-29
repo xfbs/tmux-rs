@@ -116,7 +116,7 @@ impl session {
             std::ptr::write(
                 &raw mut s.cwd,
                 Some(PathBuf::from(
-                    std::ffi::CStr::from_ptr(cwd as *const i8)
+                    std::ffi::CStr::from_ptr(cwd.cast())
                         .to_string_lossy()
                         .into_owned(),
                 )),

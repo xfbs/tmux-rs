@@ -684,7 +684,7 @@ pub unsafe fn status_prompt_set<T>(
 
         let prompt_ptr = format_expand_time(ft, msg);
         (*c).prompt_string = Some(
-            std::ffi::CStr::from_ptr(prompt_ptr as *const i8)
+            std::ffi::CStr::from_ptr(prompt_ptr.cast())
                 .to_string_lossy()
                 .into_owned(),
         );
@@ -774,7 +774,7 @@ pub unsafe fn status_prompt_update(c: *mut client, msg: *const u8, input: *const
 
         let prompt_ptr = format_expand_time(ft, msg);
         (*c).prompt_string = Some(
-            std::ffi::CStr::from_ptr(prompt_ptr as *const i8)
+            std::ffi::CStr::from_ptr(prompt_ptr.cast())
                 .to_string_lossy()
                 .into_owned(),
         );

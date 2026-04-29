@@ -199,7 +199,7 @@ pub unsafe fn spawn_window(sc: *mut spawn_context) -> Result<NonNull<winlink>, S
             if !(*sc).name.is_null() {
                 let p = format_single(item, cstr_to_str((*sc).name), c, s, null_mut(), null_mut());
                 (*w).name = Some(
-                    std::ffi::CStr::from_ptr(p as *const i8)
+                    std::ffi::CStr::from_ptr(p.cast())
                         .to_string_lossy()
                         .into_owned(),
                 );
@@ -327,7 +327,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
             }
             if !cwd.is_null() {
                 (*new_wp).cwd = Some(PathBuf::from(
-                    std::ffi::CStr::from_ptr(cwd as *const i8)
+                    std::ffi::CStr::from_ptr(cwd.cast())
                         .to_string_lossy()
                         .into_owned(),
                 ));
@@ -382,7 +382,7 @@ pub unsafe fn spawn_pane(sc: *mut spawn_context) -> Result<NonNull<window_pane>,
                     tmp = _PATH_BSHELL;
                 }
                 (*new_wp).shell = Some(PathBuf::from(
-                    std::ffi::CStr::from_ptr(tmp as *const i8)
+                    std::ffi::CStr::from_ptr(tmp.cast())
                         .to_string_lossy()
                         .into_owned(),
                 ));

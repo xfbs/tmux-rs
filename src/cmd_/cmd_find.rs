@@ -54,7 +54,7 @@ pub unsafe fn cmd_find_inside_pane(c: *mut client) -> *mut window_pane {
             wp = wp_.as_ptr();
             if (*wp).fd != -1
                 && let Some(tn) = (*c).ttyname.as_deref()
-                && std::ffi::CStr::from_ptr((*wp).tty.as_ptr() as *const i8).to_bytes() == tn.as_bytes()
+                && std::ffi::CStr::from_ptr((*wp).tty.as_ptr().cast()).to_bytes() == tn.as_bytes()
             {
                 break;
             }

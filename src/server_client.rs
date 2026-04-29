@@ -182,7 +182,7 @@ pub unsafe fn server_client_check_nested(c: *mut client) -> bool {
 
         for wp in (*(&raw mut ALL_WINDOW_PANES)).values().map(|wp| NonNull::new(*wp).unwrap()) {
             if let Some(tn) = (*c).ttyname.as_deref()
-                && std::ffi::CStr::from_ptr((&raw const (*wp.as_ptr()).tty) as *const i8).to_bytes() == tn.as_bytes()
+                && std::ffi::CStr::from_ptr((&raw const (*wp.as_ptr()).tty).cast()).to_bytes() == tn.as_bytes()
             {
                 return true;
             }
@@ -328,9 +328,9 @@ pub unsafe fn server_client_open(c: *mut client) -> Result<(), String> {
             None => return Err("can't use ".to_string()),
         };
         let cstr_eq = |p: *mut u8| -> bool {
-            !p.is_null() && std::ffi::CStr::from_ptr(p as *const i8).to_bytes() == tn_bytes
+            !p.is_null() && std::ffi::CStr::from_ptr(p.cast()).to_bytes() == tn_bytes
         };
-        let path_tty_bytes = std::ffi::CStr::from_ptr(_PATH_TTY as *const i8).to_bytes();
+        let path_tty_bytes = std::ffi::CStr::from_ptr(_PATH_TTY.cast()).to_bytes();
         let conflict = tn_bytes == path_tty_bytes
             || (libc::isatty(libc::STDIN_FILENO) != 0
                 && cstr_eq(libc::ttyname(libc::STDIN_FILENO)))
@@ -2857,7 +2857,7 @@ pub unsafe fn server_client_set_title(c: *mut client) {
         format_defaults(ft, c, None, None, None);
 
         let title_ptr = format_expand_time(ft, template);
-        let new_title = std::ffi::CStr::from_ptr(title_ptr as *const i8)
+        let new_title = std::ffi::CStr::from_ptr(title_ptr.cast())
             .to_string_lossy()
             .into_owned();
         if (*c).title.as_deref() != Some(new_title.as_str()) {
@@ -2886,7 +2886,7 @@ pub unsafe fn server_client_set_path(c: *mut client) {
             Some(p) => p.as_ptr() as *const u8,
             None => c!(""),
         };
-        let new_path = std::ffi::CStr::from_ptr(path_ptr as *const i8)
+        let new_path = std::ffi::CStr::from_ptr(path_ptr.cast())
             .to_string_lossy()
             .into_owned();
         if (*c).path.as_deref() != Some(new_path.as_str()) {
@@ -3178,7 +3178,7 @@ pub unsafe fn server_client_dispatch_identify(c: *mut client, imsg: *mut imsg) {
                     // fatalx("bad MSG_IDENTIFY_CWD string");
                 }
                 if libc::access(data.cast(), libc::X_OK) == 0 {
-                    let bytes = std::ffi::CStr::from_ptr(data.cast::<i8>())
+                    let bytes = std::ffi::CStr::from_ptr(data.cast())
                         .to_string_lossy()
                         .into_owned();
                     (*c).cwd = Some(PathBuf::from(bytes));

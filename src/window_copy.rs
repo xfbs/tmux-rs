@@ -942,14 +942,14 @@ pub unsafe fn window_copy_expand_search_string(cs: *mut window_copy_cmd_state) -
                 return false;
             }
             (*data).searchstr = Some(
-                std::ffi::CStr::from_ptr(expanded as *const i8)
+                std::ffi::CStr::from_ptr(expanded.cast())
                     .to_string_lossy()
                     .into_owned(),
             );
             free_(expanded);
         } else {
             (*data).searchstr = Some(
-                std::ffi::CStr::from_ptr(ss as *const i8)
+                std::ffi::CStr::from_ptr(ss.cast())
                     .to_string_lossy()
                     .into_owned(),
             );
@@ -2682,7 +2682,7 @@ pub unsafe fn window_copy_cmd_search_backward_incremental(
 
         let prefix = *arg1;
         arg1 = arg1.add(1);
-        let arg1_str = std::ffi::CStr::from_ptr(arg1 as *const i8).to_string_lossy();
+        let arg1_str = std::ffi::CStr::from_ptr(arg1.cast()).to_string_lossy();
         if (*data).searchx == -1 || (*data).searchy == -1 {
             (*data).searchx = (*data).cx as i32;
             (*data).searchy = (*data).cy as i32;
@@ -2739,7 +2739,7 @@ pub unsafe fn window_copy_cmd_search_forward_incremental(
 
         let prefix = *arg1;
         arg1 = arg1.add(1);
-        let arg1_str = std::ffi::CStr::from_ptr(arg1 as *const i8).to_string_lossy();
+        let arg1_str = std::ffi::CStr::from_ptr(arg1.cast()).to_string_lossy();
         if (*data).searchx == -1 || (*data).searchy == -1 {
             (*data).searchx = (*data).cx as i32;
             (*data).searchy = (*data).cy as i32;
