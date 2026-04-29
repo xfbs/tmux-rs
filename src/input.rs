@@ -47,22 +47,22 @@ struct input_cell {
     g1set: i32, // 1 if ACS
 }
 
-#[repr(i32)]
-#[derive(Debug, Eq, PartialEq)]
-enum input_param_type {
-    INPUT_MISSING,
-    INPUT_NUMBER,
-    INPUT_STRING,
-}
-union input_param_union {
-    num: i32,
-    str: *mut u8,
-}
-
-/// Input parser argument.
-struct input_param {
-    type_: input_param_type,
-    union_: input_param_union,
+/// One CSI / DCS / OSC parameter parsed by [`input_split`].
+///
+/// The terminal protocols allow a parameter slot to be empty (between
+/// adjacent semicolons), a decimal number, or — for sub-parameter SGR
+/// sequences like `38;2;255;128;0` written with colons (`38:2:255:…`)
+/// — a colon-delimited substring that is parsed lazily by the
+/// downstream handler.
+#[derive(Debug)]
+enum InputParam {
+    /// An empty slot — terminal sent `;;` or a leading/trailing `;`.
+    Missing,
+    /// A decimal integer in `0..=i32::MAX`.
+    Number(i32),
+    /// A colon-delimited substring (no NUL terminator). Parsed by
+    /// `input_csi_dispatch_sgr_colon` for SGR sub-parameters.
+    String(Vec<u8>),
 }
 
 const INPUT_BUF_START: usize = 32;
@@ -111,8 +111,10 @@ pub struct input_ctx {
     input_len: usize,
     input_end: input_end_type,
 
-    param_list: [input_param; 24],
-    param_list_len: u32,
+    /// Parsed CSI/DCS/OSC parameters. Capped at 24 entries; further
+    /// parameters cause `input_split` to return -1 so the dispatch
+    /// handler will skip the malformed sequence.
+    param_list: Vec<InputParam>,
 
     utf8data: Utf8Data,
     utf8started: i32,
@@ -966,6 +968,7 @@ pub unsafe fn input_init(
         std::ptr::write(&raw mut (*p).since_ground, Evbuffer::new());
         std::ptr::write(&raw mut (*p).state, &INPUT_STATE_GROUND);
         std::ptr::write(&raw mut (*p).timer, None);
+        std::ptr::write(&raw mut (*p).param_list, Vec::new());
 
         let ictx = Box::into_raw(boxed.assume_init());
 
@@ -976,18 +979,10 @@ pub unsafe fn input_init(
 
 /// Destroy input parser.
 pub unsafe fn input_free(ictx: *mut input_ctx) {
-    unsafe {
-        // param_list strings are still C-allocated; release them before
-        // dropping the box so we don't leak.
-        for i in 0..(*ictx).param_list_len {
-            if (*ictx).param_list[i as usize].type_ == input_param_type::INPUT_STRING {
-                free_((*ictx).param_list[i as usize].union_.str);
-            }
-        }
-        // Reclaim the Box. Drops `input_buf` (Vec<u8>), `since_ground`
-        // (Evbuffer) and `timer` (Option<TimerHandle>) automatically.
-        drop(Box::from_raw(ictx));
-    }
+    // Reclaim the Box. Drops `input_buf` (Vec<u8>), `since_ground`
+    // (Evbuffer), `param_list` (Vec<InputParam>, including any owned
+    // String payloads) and `timer` (Option<TimerHandle>) automatically.
+    unsafe { drop(Box::from_raw(ictx)) }
 }
 
 // Reset input state and clear screen.
@@ -1171,65 +1166,60 @@ pub unsafe fn input_parse_screen(
     }
 }
 
-/// Split the parameter list (if any).
+/// Split [`input_ctx::param_buf`] into [`InputParam`] entries on `;`.
+///
+/// Each entry is one of:
+/// - empty (`;;` or leading/trailing `;`) → [`InputParam::Missing`]
+/// - contains a `:` (sub-parameter list) → [`InputParam::String`]
+/// - otherwise a decimal integer → [`InputParam::Number`]
+///
+/// Returns 0 on success, -1 on a number that doesn't parse or when more
+/// than 24 parameters are present.
+const PARAM_LIST_LIMIT: usize = 24;
+
 unsafe fn input_split(ictx: *mut input_ctx) -> i32 {
     unsafe {
-        // const char *errstr;
-        // char *ptr, *out;
-        // struct input_param *ip;
-        // u_int i;
-
-        for i in 0..(*ictx).param_list_len {
-            if (*ictx).param_list[i as usize].type_ == input_param_type::INPUT_STRING {
-                free_((*ictx).param_list[i as usize].union_.str);
-            }
-        }
-        (*ictx).param_list_len = 0;
+        let plist = &mut (*ictx).param_list;
+        plist.clear();
 
         if (*ictx).param_len == 0 {
             return 0;
         }
 
-        let mut ip = &raw mut (*ictx).param_list[0];
-
-        let mut out;
-
-        let mut ptr: *mut u8 = (&raw mut (*ictx).param_buf).cast();
-        while {
-            out = strsep(&raw mut ptr, c!(";"));
-            !out.is_null()
-        } {
-            if *out == b'\0' {
-                (*ip).type_ = input_param_type::INPUT_MISSING;
-            } else if !libc::strchr(out, b':' as i32).is_null() {
-                (*ip).type_ = input_param_type::INPUT_STRING;
-                (*ip).union_.str = xstrdup(out).as_ptr();
-            } else {
-                (*ip).type_ = input_param_type::INPUT_NUMBER;
-                (*ip).union_.num = match strtonum(out, 0, i32::MAX) {
-                    Ok(n) => n,
-                    Err(_errstr) => return -1,
-                };
-            }
-            (*ictx).param_list_len += 1;
-            ip = &raw mut (*ictx).param_list[(*ictx).param_list_len as usize];
-            if (*ictx).param_list_len == (*ictx).param_list.len() as u32 {
+        // `param_buf` is a fixed [u8; 64] populated by `input_parameter`,
+        // NUL-terminated at index `param_len`. Operate on the bytes directly.
+        let pbuf = &(*ictx).param_buf;
+        let buf = &pbuf[..(*ictx).param_len];
+        for part in buf.split(|&b| b == b';') {
+            if plist.len() >= PARAM_LIST_LIMIT {
                 return -1;
             }
+            let param = if part.is_empty() {
+                InputParam::Missing
+            } else if part.contains(&b':') {
+                InputParam::String(part.to_vec())
+            } else {
+                let s = match std::str::from_utf8(part) {
+                    Ok(s) => s,
+                    Err(_) => return -1,
+                };
+                match s.parse::<i32>() {
+                    Ok(n) if n >= 0 => InputParam::Number(n),
+                    _ => return -1,
+                }
+            };
+            plist.push(param);
         }
 
-        for i in 0..(*ictx).param_list_len {
-            ip = &raw mut (*ictx).param_list[i as usize];
-            match (*ip).type_ {
-                input_param_type::INPUT_MISSING => {
-                    log_debug!("parameter {}: missing", i);
-                }
-                input_param_type::INPUT_STRING => {
-                    log_debug!("parameter {}: string {}", i, _s((*ip).union_.str));
-                }
-                input_param_type::INPUT_NUMBER => {
-                    log_debug!("parameter {}: number {}", i, (*ip).union_.num);
-                }
+        for (i, ip) in plist.iter().enumerate() {
+            match ip {
+                InputParam::Missing => log_debug!("parameter {}: missing", i),
+                InputParam::String(s) => log_debug!(
+                    "parameter {}: string {}",
+                    i,
+                    String::from_utf8_lossy(s)
+                ),
+                InputParam::Number(n) => log_debug!("parameter {}: number {}", i, n),
             }
         }
 
@@ -1237,20 +1227,18 @@ unsafe fn input_split(ictx: *mut input_ctx) -> i32 {
     }
 }
 
-/// Get an argument or return default value.
+/// Get a numeric argument at index `validx`. Returns:
+/// - `defval` if the slot is out-of-range or [`InputParam::Missing`]
+/// - `-1` if the slot is a colon sub-parameter [`InputParam::String`]
+/// - the slot's number, clamped to `>= minval`, otherwise.
 pub unsafe fn input_get(ictx: *mut input_ctx, validx: u32, minval: i32, defval: i32) -> i32 {
     unsafe {
-        if validx >= (*ictx).param_list_len {
-            return defval;
+        let plist = &(*ictx).param_list;
+        match plist.get(validx as usize) {
+            None | Some(InputParam::Missing) => defval,
+            Some(InputParam::String(_)) => -1,
+            Some(InputParam::Number(n)) => (*n).max(minval),
         }
-        let ip = &raw mut (*ictx).param_list[validx as usize];
-        if (*ip).type_ == input_param_type::INPUT_MISSING {
-            return defval;
-        }
-        if (*ip).type_ == input_param_type::INPUT_STRING {
-            return -1;
-        }
-        (*ip).union_.num.max(minval)
     }
 }
 
@@ -1821,7 +1809,7 @@ unsafe fn input_csi_dispatch_rm(ictx: *mut input_ctx) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
 
-        for i in 0..(*ictx).param_list_len {
+        for i in 0..(*ictx).param_list.len() as u32 {
             match input_get(ictx, i, 0, -1) {
                 -1 => (),
                 4 => screen_write_mode_clear(sctx, mode_flag::MODE_INSERT), // IRM
@@ -1841,7 +1829,7 @@ unsafe fn input_csi_dispatch_rm_private(ictx: *mut input_ctx) {
         let sctx = &raw mut (*ictx).ctx;
         let gc = &raw mut (*ictx).cell.cell;
 
-        for i in 0..(*ictx).param_list_len {
+        for i in 0..(*ictx).param_list.len() as u32 {
             match input_get(ictx, i, 0, -1) {
                 -1 => (),
 
@@ -1884,7 +1872,7 @@ unsafe fn input_csi_dispatch_sm(ictx: *mut input_ctx) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
 
-        for i in 0..(*ictx).param_list_len {
+        for i in 0..(*ictx).param_list.len() as u32 {
             match input_get(ictx, i, 0, -1) {
                 -1 => (),
                 4 => screen_write_mode_set(sctx, mode_flag::MODE_INSERT), // IRM
@@ -1905,7 +1893,7 @@ unsafe fn input_csi_dispatch_sm_private(ictx: *mut input_ctx) {
         let sctx = &raw mut (*ictx).ctx;
         let gc = &raw mut (*ictx).cell.cell;
 
-        for i in 0..(*ictx).param_list_len {
+        for i in 0..(*ictx).param_list.len() as u32 {
             match input_get(ictx, i, 0, -1) {
                 -1 => (),
                 1 => screen_write_mode_set(sctx, mode_flag::MODE_KCURSOR), // DECCKM
@@ -1959,7 +1947,7 @@ unsafe fn input_csi_dispatch_sm_graphics(ictx: *mut input_ctx) {
     unsafe {
         use crate::image_sixel::SIXEL_COLOUR_REGISTERS;
 
-        if (*ictx).param_list_len > 3 {
+        if (*ictx).param_list.len() > 3 {
             return;
         }
         let n = input_get(ictx, 0, 0, 0);
@@ -2137,48 +2125,38 @@ unsafe fn input_csi_dispatch_sgr_rgb(ictx: *mut input_ctx, fgbg: i32, i: *mut u3
 }
 
 /// Handle CSI SGR with a ISO parameter.
-unsafe fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u32) {
+unsafe fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, idx: u32) {
     let __func__ = "input_csi_dispatch_sgr_colon";
     unsafe {
         let gc = &raw mut (*ictx).cell.cell;
-        let s = (*ictx).param_list[i as usize].union_.str;
+        let plist = &(*ictx).param_list;
+        let s = match &plist[idx as usize] {
+            InputParam::String(s) => s,
+            _ => return, // Only string params are dispatched here.
+        };
 
-        let mut n = 0;
+        // Parse `:`-delimited sub-parameters into a fixed-size buffer.
+        // Empty slots stay at -1; non-empty slots must parse as a
+        // non-negative i32 or we abort the whole sequence.
         let mut p: [i32; 8] = [-1; 8];
-
-        let mut ptr = xstrdup(s).as_ptr();
-        let copy = ptr;
-        let mut out: *mut u8;
-        while {
-            out = strsep(&raw mut ptr, c!(":"));
-            !out.is_null()
-        } {
-            if *out != b'\0' {
-                match strtonum(out, 0, i32::MAX) {
-                    Ok(x) => {
-                        p[n] = x;
-                        n += 1;
-                    }
-                    Err(_) => {
-                        free_(copy);
-                        return;
-                    }
-                }
-
-                if n == p.len() {
-                    free_(copy);
-                    return;
-                }
-            } else {
-                n += 1;
-                if n == p.len() {
-                    free_(copy);
-                    return;
+        let mut n: usize = 0;
+        for part in s.split(|&b| b == b':') {
+            if !part.is_empty() {
+                let part_str = match std::str::from_utf8(part) {
+                    Ok(s) => s,
+                    Err(_) => return,
+                };
+                match part_str.parse::<i32>() {
+                    Ok(x) if x >= 0 => p[n] = x,
+                    _ => return,
                 }
             }
+            n += 1;
             log_debug!("{}: {} = {}", __func__, n - 1, p[n - 1]);
+            if n == p.len() {
+                return;
+            }
         }
-        free_(copy);
 
         if n == 0 {
             return;
@@ -2219,18 +2197,14 @@ unsafe fn input_csi_dispatch_sgr_colon(ictx: *mut input_ctx, mut i: u32) {
         match p[1] {
             2 => {
                 if n >= 3 {
-                    if n == 5 {
-                        i = 2;
-                    } else {
-                        i = 3;
-                    }
-                    if n >= i as usize + 3 {
+                    let off: usize = if n == 5 { 2 } else { 3 };
+                    if n >= off + 3 {
                         input_csi_dispatch_sgr_rgb_do(
                             ictx,
                             p[0],
-                            p[i as usize],
-                            p[i as usize + 1],
-                            p[i as usize + 2],
+                            p[off],
+                            p[off + 1],
+                            p[off + 2],
                         );
                     }
                 }
@@ -2250,14 +2224,16 @@ unsafe fn input_csi_dispatch_sgr(ictx: *mut input_ctx) {
     unsafe {
         let gc = &raw mut (*ictx).cell.cell;
 
-        if (*ictx).param_list_len == 0 {
+        if (*ictx).param_list.is_empty() {
             memcpy__(gc, &raw const GRID_DEFAULT_CELL);
             return;
         }
 
         let mut i: u32 = 0;
-        while i < (*ictx).param_list_len {
-            if (*ictx).param_list[i as usize].type_ == input_param_type::INPUT_STRING {
+        let plist_len = (*ictx).param_list.len();
+        while (i as usize) < plist_len {
+            let plist = &(*ictx).param_list;
+            if matches!(&plist[i as usize], InputParam::String(_)) {
                 input_csi_dispatch_sgr_colon(ictx, i);
                 i += 1;
                 continue;
@@ -3245,8 +3221,8 @@ mod tests {
             // Flags should be empty after init.
             assert!((*ictx).flags.is_empty());
 
-            // param_list_len should be 0.
-            assert_eq!((*ictx).param_list_len, 0);
+            // param_list starts empty.
+            assert!((*ictx).param_list.is_empty());
 
             // input_buf is pre-seeded with a single NUL terminator and
             // capacity at INPUT_BUF_START.
@@ -3275,7 +3251,7 @@ mod tests {
             (*ictx).param_len = 0;
             let ret = input_split(ictx);
             assert_eq!(ret, 0);
-            assert_eq!((*ictx).param_list_len, 0);
+            assert!((*ictx).param_list.is_empty());
 
             input_free(ictx);
         }
@@ -3298,9 +3274,7 @@ mod tests {
 
             let ret = input_split(ictx);
             assert_eq!(ret, 0);
-            assert_eq!((*ictx).param_list_len, 1);
-            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_NUMBER);
-            assert_eq!((*ictx).param_list[0].union_.num, 42);
+            assert!(matches!(&(*ictx).param_list[..], [InputParam::Number(42)]));
 
             input_free(ictx);
         }
@@ -3322,13 +3296,10 @@ mod tests {
 
             let ret = input_split(ictx);
             assert_eq!(ret, 0);
-            assert_eq!((*ictx).param_list_len, 2);
-
-            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_NUMBER);
-            assert_eq!((*ictx).param_list[0].union_.num, 1);
-
-            assert!((*ictx).param_list[1].type_ == input_param_type::INPUT_NUMBER);
-            assert_eq!((*ictx).param_list[1].union_.num, 2);
+            assert!(matches!(
+                &(*ictx).param_list[..],
+                [InputParam::Number(1), InputParam::Number(2)]
+            ));
 
             input_free(ictx);
         }
@@ -3350,12 +3321,10 @@ mod tests {
 
             let ret = input_split(ictx);
             assert_eq!(ret, 0);
-            assert_eq!((*ictx).param_list_len, 2);
-
-            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_MISSING);
-
-            assert!((*ictx).param_list[1].type_ == input_param_type::INPUT_NUMBER);
-            assert_eq!((*ictx).param_list[1].union_.num, 5);
+            assert!(matches!(
+                &(*ictx).param_list[..],
+                [InputParam::Missing, InputParam::Number(5)]
+            ));
 
             input_free(ictx);
         }
@@ -3377,12 +3346,10 @@ mod tests {
 
             let ret = input_split(ictx);
             assert_eq!(ret, 0);
-            assert_eq!((*ictx).param_list_len, 1);
-
-            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_STRING);
-            // The string was xstrdup'd, so it should match "2:5".
-            let s = CStr::from_ptr((*ictx).param_list[0].union_.str.cast());
-            assert_eq!(s.to_bytes(), b"2:5");
+            match &(*ictx).param_list[..] {
+                [InputParam::String(s)] => assert_eq!(s, b"2:5"),
+                other => panic!("expected single String param, got {:?}", other),
+            }
 
             input_free(ictx);
         }
@@ -3404,12 +3371,10 @@ mod tests {
 
             let ret = input_split(ictx);
             assert_eq!(ret, 0);
-            assert_eq!((*ictx).param_list_len, 2);
-
-            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_NUMBER);
-            assert_eq!((*ictx).param_list[0].union_.num, 7);
-
-            assert!((*ictx).param_list[1].type_ == input_param_type::INPUT_MISSING);
+            assert!(matches!(
+                &(*ictx).param_list[..],
+                [InputParam::Number(7), InputParam::Missing]
+            ));
 
             input_free(ictx);
         }
@@ -3424,8 +3389,8 @@ mod tests {
         unsafe {
             let ictx = make_test_ctx();
 
-            // No parameters parsed yet.
-            (*ictx).param_list_len = 0;
+            // No parameters parsed yet — Vec starts empty.
+            assert!((*ictx).param_list.is_empty());
 
             // Asking for index 0 with no params should return the default.
             let val = input_get(ictx, 0, 0, 99);
@@ -3440,10 +3405,7 @@ mod tests {
         unsafe {
             let ictx = make_test_ctx();
 
-            // Set up one numeric parameter with value 42.
-            (*ictx).param_list_len = 1;
-            (*ictx).param_list[0].type_ = input_param_type::INPUT_NUMBER;
-            (*ictx).param_list[0].union_.num = 42;
+            (*ictx).param_list.push(InputParam::Number(42));
 
             let val = input_get(ictx, 0, 0, 0);
             assert_eq!(val, 42);
@@ -3458,9 +3420,7 @@ mod tests {
             let ictx = make_test_ctx();
 
             // Value 3, but minimum is 10.
-            (*ictx).param_list_len = 1;
-            (*ictx).param_list[0].type_ = input_param_type::INPUT_NUMBER;
-            (*ictx).param_list[0].union_.num = 3;
+            (*ictx).param_list.push(InputParam::Number(3));
 
             let val = input_get(ictx, 0, 10, 0);
             assert_eq!(val, 10);
@@ -3474,8 +3434,7 @@ mod tests {
         unsafe {
             let ictx = make_test_ctx();
 
-            (*ictx).param_list_len = 1;
-            (*ictx).param_list[0].type_ = input_param_type::INPUT_MISSING;
+            (*ictx).param_list.push(InputParam::Missing);
 
             let val = input_get(ictx, 0, 0, 55);
             assert_eq!(val, 55);
@@ -3489,17 +3448,10 @@ mod tests {
         unsafe {
             let ictx = make_test_ctx();
 
-            (*ictx).param_list_len = 1;
-            (*ictx).param_list[0].type_ = input_param_type::INPUT_STRING;
-            (*ictx).param_list[0].union_.str = xstrdup_(c"hello").as_ptr();
+            (*ictx).param_list.push(InputParam::String(b"hello".to_vec()));
 
             let val = input_get(ictx, 0, 0, 0);
             assert_eq!(val, -1);
-
-            // Clean up the string before freeing context.
-            free_((*ictx).param_list[0].union_.str);
-            (*ictx).param_list[0].type_ = input_param_type::INPUT_MISSING;
-            (*ictx).param_list_len = 0;
 
             input_free(ictx);
         }
@@ -3637,13 +3589,16 @@ mod tests {
 
             let ret = input_split(ictx);
             assert_eq!(ret, 0);
-            assert_eq!((*ictx).param_list_len, 5);
-
-            assert_eq!((*ictx).param_list[0].union_.num, 38);
-            assert_eq!((*ictx).param_list[1].union_.num, 2);
-            assert_eq!((*ictx).param_list[2].union_.num, 255);
-            assert_eq!((*ictx).param_list[3].union_.num, 128);
-            assert_eq!((*ictx).param_list[4].union_.num, 0);
+            assert!(matches!(
+                &(*ictx).param_list[..],
+                [
+                    InputParam::Number(38),
+                    InputParam::Number(2),
+                    InputParam::Number(255),
+                    InputParam::Number(128),
+                    InputParam::Number(0),
+                ]
+            ));
 
             input_free(ictx);
         }
@@ -3664,18 +3619,15 @@ mod tests {
             (*ictx).param_len = params1.len() - 1;
             let ret = input_split(ictx);
             assert_eq!(ret, 0);
-            assert_eq!((*ictx).param_list_len, 1);
-            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_STRING);
+            assert!(matches!(&(*ictx).param_list[..], [InputParam::String(_)]));
 
-            // Second split should free the old string and parse new data.
+            // Second split must drop the old string and parse new data.
             let params2 = b"99\0";
             (*ictx).param_buf[..params2.len()].copy_from_slice(params2);
             (*ictx).param_len = params2.len() - 1;
             let ret = input_split(ictx);
             assert_eq!(ret, 0);
-            assert_eq!((*ictx).param_list_len, 1);
-            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_NUMBER);
-            assert_eq!((*ictx).param_list[0].union_.num, 99);
+            assert!(matches!(&(*ictx).param_list[..], [InputParam::Number(99)]));
 
             input_free(ictx);
         }
@@ -3901,9 +3853,7 @@ mod tests {
 
             let ret = input_split(ictx);
             assert_eq!(ret, 0);
-            assert_eq!((*ictx).param_list_len, 1);
-            assert!((*ictx).param_list[0].type_ == input_param_type::INPUT_NUMBER);
-            assert_eq!((*ictx).param_list[0].union_.num, 0);
+            assert!(matches!(&(*ictx).param_list[..], [InputParam::Number(0)]));
 
             input_free(ictx);
         }
@@ -3918,13 +3868,9 @@ mod tests {
         unsafe {
             let ictx = make_test_ctx();
 
-            (*ictx).param_list_len = 3;
-            (*ictx).param_list[0].type_ = input_param_type::INPUT_NUMBER;
-            (*ictx).param_list[0].union_.num = 10;
-            (*ictx).param_list[1].type_ = input_param_type::INPUT_NUMBER;
-            (*ictx).param_list[1].union_.num = 20;
-            (*ictx).param_list[2].type_ = input_param_type::INPUT_NUMBER;
-            (*ictx).param_list[2].union_.num = 30;
+            (*ictx).param_list.push(InputParam::Number(10));
+            (*ictx).param_list.push(InputParam::Number(20));
+            (*ictx).param_list.push(InputParam::Number(30));
 
             assert_eq!(input_get(ictx, 0, 0, 0), 10);
             assert_eq!(input_get(ictx, 1, 0, 0), 20);
