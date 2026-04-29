@@ -104,9 +104,11 @@ pub struct input_ctx {
     param_buf: [u8; 64],
     param_len: usize,
 
-    input_buf: *mut u8,
+    /// Variable-length input buffer for OSC / DCS / APC / rename payloads.
+    /// Invariant: always non-empty, with a trailing `0` byte at index
+    /// `input_len`, so `as_ptr()` is a valid NUL-terminated C string.
+    input_buf: Vec<u8>,
     input_len: usize,
-    input_space: usize,
     input_end: input_end_type,
 
     param_list: [input_param; 24],
@@ -953,8 +955,11 @@ pub unsafe fn input_init(
         std::ptr::write(&raw mut (*p).wp, pane_id_from_ptr(wp));
         std::ptr::write(&raw mut (*p).event, evb);
         std::ptr::write(&raw mut (*p).palette, palette);
-        std::ptr::write(&raw mut (*p).input_space, INPUT_BUF_START);
-        std::ptr::write(&raw mut (*p).input_buf, xmalloc(INPUT_BUF_START).as_ptr().cast());
+        // Pre-allocate at INPUT_BUF_START and seed the trailing NUL so
+        // `input_buf.as_ptr()` is immediately a valid empty C string.
+        let mut buf = Vec::<u8>::with_capacity(INPUT_BUF_START);
+        buf.push(0);
+        std::ptr::write(&raw mut (*p).input_buf, buf);
         std::ptr::write(&raw mut (*p).since_ground, evbuffer_new());
         std::ptr::write(&raw mut (*p).state, &INPUT_STATE_GROUND);
         std::ptr::write(&raw mut (*p).timer, None);
@@ -973,18 +978,20 @@ pub unsafe fn input_init(
 /// Destroy input parser.
 pub unsafe fn input_free(ictx: *mut input_ctx) {
     unsafe {
+        // param_list strings are still C-allocated; release them before
+        // dropping the box so we don't leak.
         for i in 0..(*ictx).param_list_len {
             if (*ictx).param_list[i as usize].type_ == input_param_type::INPUT_STRING {
                 free_((*ictx).param_list[i as usize].union_.str);
             }
         }
-
-        std::ptr::drop_in_place(&raw mut (*ictx).timer);
-
-        free_((*ictx).input_buf);
+        // since_ground is a libevent-style allocation; not yet owned by
+        // the struct, so free explicitly.
         evbuffer_free((*ictx).since_ground);
 
-        free_(ictx);
+        // Reclaim the Box. Drops `input_buf` (Vec<u8>) and `timer`
+        // (Option<TimerHandle>) automatically.
+        drop(Box::from_raw(ictx));
     }
 }
 
@@ -1279,7 +1286,10 @@ unsafe fn input_clear(ictx: *mut input_ctx) {
         (*ictx).param_buf[0] = b'\0';
         (*ictx).param_len = 0;
 
-        *(*ictx).input_buf = b'\0';
+        // Reset content but keep the trailing NUL so the C-string view
+        // (`input_buf.as_ptr()`) remains valid.
+        (*ictx).input_buf.clear();
+        (*ictx).input_buf.push(0);
         (*ictx).input_len = 0;
 
         (*ictx).input_end = input_end_type::INPUT_END_ST;
@@ -1294,9 +1304,8 @@ unsafe fn input_ground(ictx: *mut input_ctx) {
         (*ictx).timer = None;
         evbuffer_drain((*ictx).since_ground, EVBUFFER_LENGTH((*ictx).since_ground));
 
-        if (*ictx).input_space > INPUT_BUF_START {
-            (*ictx).input_space = INPUT_BUF_START;
-            (*ictx).input_buf = xrealloc_((*ictx).input_buf, INPUT_BUF_START).as_ptr();
+        if (*ictx).input_buf.capacity() > INPUT_BUF_START {
+            (*ictx).input_buf.shrink_to(INPUT_BUF_START);
         }
     }
 }
@@ -1365,19 +1374,20 @@ unsafe fn input_parameter(ictx: *mut input_ctx) -> i32 {
 /// Collect input string.
 unsafe fn input_input(ictx: *mut input_ctx) -> i32 {
     unsafe {
-        let mut available: usize = (*ictx).input_space;
-        while (*ictx).input_len + 1 >= available {
-            available *= 2;
-            if available > INPUT_BUF_LIMIT {
-                (*ictx).flags |= input_flags::INPUT_DISCARD;
-                return 0;
-            }
-            (*ictx).input_buf = xrealloc_((*ictx).input_buf, available).as_ptr();
-            (*ictx).input_space = available;
+        // Cap content length at INPUT_BUF_LIMIT-1 so the buffer (content + NUL)
+        // stays within the limit. C tmux doubles `input_space`; Vec grows on
+        // its own, so we just check the limit and let `Vec::push` handle
+        // capacity.
+        if (*ictx).input_len + 2 > INPUT_BUF_LIMIT {
+            (*ictx).flags |= input_flags::INPUT_DISCARD;
+            return 0;
         }
-        *(*ictx).input_buf.add((*ictx).input_len) = (*ictx).ch as u8;
+        // Overwrite the trailing NUL with the new byte, append a fresh NUL.
+        let buf = &mut (*ictx).input_buf;
+        let idx = (*ictx).input_len;
+        buf[idx] = (*ictx).ch as u8;
         (*ictx).input_len += 1;
-        *(*ictx).input_buf.add((*ictx).input_len) = b'\0';
+        buf.push(0);
 
         0
     }
@@ -2342,7 +2352,7 @@ unsafe fn input_dcs_dispatch(ictx: *mut input_ctx) -> i32 {
 
         let wp = pane_ptr_from_id((*ictx).wp);
         let sctx = &raw mut (*ictx).ctx;
-        let buf = (*ictx).input_buf;
+        let buf: *mut u8 = (*ictx).input_buf.as_mut_ptr();
         let len = (*ictx).input_len;
 
         let prefix = c"tmux;";
@@ -2407,7 +2417,7 @@ unsafe fn input_exit_osc(ictx: *mut input_ctx) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
         let wp = pane_ptr_from_id((*ictx).wp);
-        let mut p = (*ictx).input_buf;
+        let mut p: *mut u8 = (*ictx).input_buf.as_mut_ptr();
 
         if (*ictx).flags.intersects(input_flags::INPUT_DISCARD) {
             return;
@@ -2495,9 +2505,9 @@ unsafe fn input_exit_apc(ictx: *mut input_ctx) {
         if (*ictx).flags.intersects(input_flags::INPUT_DISCARD) {
             return;
         }
-        log_debug!("input_exit_apc: \"{}\"", _s((*ictx).input_buf.cast::<u8>()));
+        log_debug!("input_exit_apc: \"{}\"", _s((*ictx).input_buf.as_ptr()));
 
-        if screen_set_title((*sctx).s, (*ictx).input_buf.cast()) != 0 && !wp.is_null() {
+        if screen_set_title((*sctx).s, (*ictx).input_buf.as_ptr().cast()) != 0 && !wp.is_null() {
             notify_pane(c"pane-title-changed", wp);
             server_redraw_window_borders(window_pane_window(wp));
             server_status_window(window_pane_window(wp));
@@ -2533,10 +2543,10 @@ unsafe fn input_exit_rename(ictx: *mut input_ctx) {
         log_debug!(
             "{}: \"{}\"",
             "input_exit_rename",
-            _s((*ictx).input_buf.cast::<u8>())
+            _s((*ictx).input_buf.as_ptr())
         );
 
-        if !utf8_isvalid((*ictx).input_buf.cast()) {
+        if !utf8_isvalid((*ictx).input_buf.as_ptr().cast()) {
             return;
         }
         let w = window_pane_window(wp);
@@ -2550,7 +2560,7 @@ unsafe fn input_exit_rename(ictx: *mut input_ctx) {
             }
         } else {
             options_set_number((*w).options, "automatic-rename", 0);
-            window_set_name(w, (*ictx).input_buf.cast());
+            window_set_name(w, (*ictx).input_buf.as_ptr().cast());
         }
         server_redraw_window_borders(w);
         server_status_window(w);
@@ -3238,9 +3248,11 @@ mod tests {
             // param_list_len should be 0.
             assert_eq!((*ictx).param_list_len, 0);
 
-            // input_buf should have been allocated.
-            assert!(!(*ictx).input_buf.is_null());
-            assert_eq!((*ictx).input_space, INPUT_BUF_START);
+            // input_buf is pre-seeded with a single NUL terminator and
+            // capacity at INPUT_BUF_START.
+            assert_eq!((*ictx).input_buf.len(), 1);
+            assert_eq!((*ictx).input_buf[0], 0);
+            assert_eq!((*ictx).input_buf.capacity(), INPUT_BUF_START);
 
             // since_ground evbuffer should be allocated.
             assert!(!(*ictx).since_ground.is_null());
