@@ -619,6 +619,7 @@ mod tests {
     #[test]
     fn parse_fg_color() {
         unsafe {
+            let _lock = STYLE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
             let sy = parse("fg=red").unwrap();
             assert_eq!(sy.gc.fg, 1); // red = colour index 1
             assert_eq!(tostring(&sy), "fg=red");
@@ -628,6 +629,7 @@ mod tests {
     #[test]
     fn parse_bg_color() {
         unsafe {
+            let _lock = STYLE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
             let sy = parse("bg=blue").unwrap();
             assert_eq!(sy.gc.bg, 4); // blue = colour index 4
             assert!(tostring(&sy).contains("bg=blue"));
@@ -646,6 +648,7 @@ mod tests {
     #[test]
     fn parse_us_color() {
         unsafe {
+            let _lock = STYLE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
             let sy = parse("us=green").unwrap();
             assert_eq!(sy.gc.us, 2); // green = 2
             assert!(tostring(&sy).contains("us=green"));
@@ -655,6 +658,7 @@ mod tests {
     #[test]
     fn parse_fill_color() {
         unsafe {
+            let _lock = STYLE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
             let sy = parse("fill=yellow").unwrap();
             assert_eq!(sy.fill, 3); // yellow = 3
             assert!(tostring(&sy).contains("fill=yellow"));

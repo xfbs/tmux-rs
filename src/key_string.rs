@@ -568,6 +568,16 @@ pub unsafe fn key_string_lookup_key(mut key: key_code, with_flags: i32) -> *cons
 mod tests {
     use super::*;
 
+    /// `key_string_lookup_key` writes into a process-global `static mut OUT`
+    /// and returns a pointer into it. Production tmux is single-threaded so
+    /// the race is invisible; under `cargo test` parallel runs the tests
+    /// stomp on each other's results. Serialize tests that read from `OUT`.
+    static LOOKUP_KEY_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn lookup_lock() -> std::sync::MutexGuard<'static, ()> {
+        LOOKUP_KEY_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
     /// Helper to convert a `*const u8` C string to a Rust `&str`.
     unsafe fn cptr_to_str<'a>(p: *const u8) -> &'a str {
         unsafe { core::ffi::CStr::from_ptr(p.cast()).to_str().unwrap() }
@@ -695,6 +705,7 @@ mod tests {
 
     #[test]
     fn lookup_key_single_char() {
+        let _g = lookup_lock();
         unsafe {
             let s = cptr_to_str(key_string_lookup_key(b'a' as key_code, 0));
             assert_eq!(s, "a");
@@ -703,6 +714,7 @@ mod tests {
 
     #[test]
     fn lookup_key_special() {
+        let _g = lookup_lock();
         unsafe {
             let s = cptr_to_str(key_string_lookup_key(c0::C0_CR as key_code, 0));
             assert_eq!(s, "Enter");
@@ -717,6 +729,7 @@ mod tests {
 
     #[test]
     fn lookup_key_with_modifiers() {
+        let _g = lookup_lock();
         unsafe {
             let s = cptr_to_str(key_string_lookup_key(b'a' as key_code | KEYC_CTRL, 0));
             assert_eq!(s, "C-a");
@@ -731,6 +744,7 @@ mod tests {
 
     #[test]
     fn lookup_key_none() {
+        let _g = lookup_lock();
         unsafe {
             let s = cptr_to_str(key_string_lookup_key(KEYC_NONE, 0));
             assert_eq!(s, "None");
@@ -743,6 +757,7 @@ mod tests {
 
     #[test]
     fn round_trip_simple_keys() {
+        let _g = lookup_lock();
         unsafe {
             for name in &[c"a", c"z", c"Enter", c"Tab", c"Escape", c"Space", c"BSpace"] {
                 let key = key_string_lookup_string(name.as_ptr().cast());
@@ -755,6 +770,7 @@ mod tests {
 
     #[test]
     fn round_trip_with_modifiers() {
+        let _g = lookup_lock();
         unsafe {
             for name in &[c"C-a", c"M-a", c"M-C-a"] {
                 let key = key_string_lookup_string(name.as_ptr().cast());
