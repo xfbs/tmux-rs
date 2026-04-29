@@ -127,8 +127,11 @@ pub struct input_ctx {
 
     timer: Option<TimerHandle>,
 
-    /// All input received since we were last in the ground state. Sent to control clients on connection.
-    since_ground: *mut evbuffer,
+    /// All input received since we were last in the ground state. Sent
+    /// to control clients on connection. Owned by the parser; exposed
+    /// through `input_pending` as a `*mut evbuffer` for the (single)
+    /// external consumer.
+    since_ground: Evbuffer,
 }
 
 // Command table entry.
@@ -960,15 +963,11 @@ pub unsafe fn input_init(
         let mut buf = Vec::<u8>::with_capacity(INPUT_BUF_START);
         buf.push(0);
         std::ptr::write(&raw mut (*p).input_buf, buf);
-        std::ptr::write(&raw mut (*p).since_ground, evbuffer_new());
+        std::ptr::write(&raw mut (*p).since_ground, Evbuffer::new());
         std::ptr::write(&raw mut (*p).state, &INPUT_STATE_GROUND);
         std::ptr::write(&raw mut (*p).timer, None);
 
         let ictx = Box::into_raw(boxed.assume_init());
-
-        if (*ictx).since_ground.is_null() {
-            fatalx("out of memory");
-        }
 
         input_reset(ictx, 0);
         ictx
@@ -985,12 +984,8 @@ pub unsafe fn input_free(ictx: *mut input_ctx) {
                 free_((*ictx).param_list[i as usize].union_.str);
             }
         }
-        // since_ground is a libevent-style allocation; not yet owned by
-        // the struct, so free explicitly.
-        evbuffer_free((*ictx).since_ground);
-
-        // Reclaim the Box. Drops `input_buf` (Vec<u8>) and `timer`
-        // (Option<TimerHandle>) automatically.
+        // Reclaim the Box. Drops `input_buf` (Vec<u8>), `since_ground`
+        // (Evbuffer) and `timer` (Option<TimerHandle>) automatically.
         drop(Box::from_raw(ictx));
     }
 }
@@ -1021,9 +1016,12 @@ pub unsafe fn input_reset(ictx: *mut input_ctx, clear: i32) {
     }
 }
 
-/// Return pending data.
+/// Return pending data — bytes received since the parser was last in the
+/// ground state. Exposed as `*mut evbuffer` for `cmd_capture_pane`'s
+/// `EVBUFFER_*` shim use; the buffer is owned by the parser, so the
+/// caller must not free it.
 pub unsafe fn input_pending(ictx: *mut input_ctx) -> *mut evbuffer {
-    unsafe { (*ictx).since_ground }
+    unsafe { &raw mut (*ictx).since_ground }
 }
 
 /// Transition the parser to `next`, running the current state's exit hook
@@ -1103,7 +1101,8 @@ fn input_parse(ictx: *mut input_ctx, buf: *mut u8, len: usize) {
 
             // If not in ground state, save input.
             if !std::ptr::eq((*ictx).state, &INPUT_STATE_GROUND) {
-                evbuffer_add((*ictx).since_ground, (&raw const (*ictx).ch).cast(), 1);
+                let byte = (*ictx).ch as u8;
+                (*ictx).since_ground.add(std::slice::from_ref(&byte));
             }
         }
     }
@@ -1302,7 +1301,8 @@ unsafe fn input_clear(ictx: *mut input_ctx) {
 unsafe fn input_ground(ictx: *mut input_ctx) {
     unsafe {
         (*ictx).timer = None;
-        evbuffer_drain((*ictx).since_ground, EVBUFFER_LENGTH((*ictx).since_ground));
+        let len = (*ictx).since_ground.len();
+        (*ictx).since_ground.drain(len);
 
         if (*ictx).input_buf.capacity() > INPUT_BUF_START {
             (*ictx).input_buf.shrink_to(INPUT_BUF_START);
@@ -3254,8 +3254,8 @@ mod tests {
             assert_eq!((*ictx).input_buf[0], 0);
             assert_eq!((*ictx).input_buf.capacity(), INPUT_BUF_START);
 
-            // since_ground evbuffer should be allocated.
-            assert!(!(*ictx).since_ground.is_null());
+            // since_ground evbuffer starts empty.
+            assert!((*ictx).since_ground.is_empty());
 
             input_free(ictx);
             drop(palette);
