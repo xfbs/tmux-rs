@@ -120,7 +120,8 @@ pub struct input_ctx {
 
     flags: input_flags,
 
-    state: *const input_state,
+    /// Current parser state. Points at one of the `INPUT_STATE_*` statics.
+    state: &'static input_state,
 
     timer: Option<TimerHandle>,
 
@@ -873,7 +874,7 @@ unsafe fn input_timer_fire(pane_id: PaneId) {
         log_debug!(
             "{}: {} expired",
             "input_timer_callback",
-            _s((*(*ictx).state).name.as_ptr())
+            _s((*ictx).state.name.as_ptr())
         );
         input_reset(ictx, 0);
     }
@@ -941,23 +942,28 @@ pub unsafe fn input_init(
     palette: *mut colour_palette,
 ) -> *mut input_ctx {
     unsafe {
-        let ictx = Box::into_raw(Box::new(input_ctx {
-            wp: pane_id_from_ptr(wp),
-            event: evb,
-            palette,
-            input_space: INPUT_BUF_START,
-            input_buf: xmalloc(INPUT_BUF_START).as_ptr().cast(),
-            since_ground: evbuffer_new(),
-            ..zeroed()
-        }));
+        // `input_ctx` contains a `&'static input_state` and an `Option<TimerHandle>`,
+        // neither of which is zero-initialisable safely. Allocate uninitialised,
+        // zero the memory, then write the non-trivial fields explicitly before
+        // assuming initialisation.
+        let mut boxed = Box::<input_ctx>::new_uninit();
+        let p: *mut input_ctx = boxed.as_mut_ptr();
+        std::ptr::write_bytes(p, 0, 1);
+
+        std::ptr::write(&raw mut (*p).wp, pane_id_from_ptr(wp));
+        std::ptr::write(&raw mut (*p).event, evb);
+        std::ptr::write(&raw mut (*p).palette, palette);
+        std::ptr::write(&raw mut (*p).input_space, INPUT_BUF_START);
+        std::ptr::write(&raw mut (*p).input_buf, xmalloc(INPUT_BUF_START).as_ptr().cast());
+        std::ptr::write(&raw mut (*p).since_ground, evbuffer_new());
+        std::ptr::write(&raw mut (*p).state, &INPUT_STATE_GROUND);
+        std::ptr::write(&raw mut (*p).timer, None);
+
+        let ictx = Box::into_raw(boxed.assume_init());
 
         if (*ictx).since_ground.is_null() {
             fatalx("out of memory");
         }
-
-        // timer field is already None from ..zeroed() — but write explicitly
-        // since zeroed Option<TimerHandle> is not guaranteed safe.
-        std::ptr::write(&raw mut (*ictx).timer, None);
 
         input_reset(ictx, 0);
         ictx
@@ -1003,7 +1009,7 @@ pub unsafe fn input_reset(ictx: *mut input_ctx, clear: i32) {
 
         input_clear(ictx);
 
-        (*ictx).state = &raw const INPUT_STATE_GROUND;
+        (*ictx).state = &INPUT_STATE_GROUND;
         (*ictx).flags = input_flags::empty();
     }
 }
@@ -1013,15 +1019,18 @@ pub unsafe fn input_pending(ictx: *mut input_ctx) -> *mut evbuffer {
     unsafe { (*ictx).since_ground }
 }
 
-pub unsafe fn input_set_state(ictx: *mut input_ctx, itr: *const input_transition) {
+/// Transition the parser to `next`, running the current state's exit hook
+/// and the new state's enter hook. The states themselves are `'static`,
+/// so the reference is always valid for the lifetime of the parser.
+pub unsafe fn input_set_state(ictx: *mut input_ctx, next: &'static input_state) {
     unsafe {
-        if let Some(exit) = (*(*ictx).state).exit {
+        if let Some(exit) = (*ictx).state.exit {
             exit(ictx);
         }
 
-        (*ictx).state = (*itr).state.map(|e| &raw const *e).unwrap_or_default();
+        (*ictx).state = next;
 
-        if let Some(enter) = (*(*ictx).state).enter {
+        if let Some(enter) = (*ictx).state.enter {
             enter(ictx);
         }
     }
@@ -1031,7 +1040,10 @@ pub unsafe fn input_set_state(ictx: *mut input_ctx, itr: *const input_transition
 fn input_parse(ictx: *mut input_ctx, buf: *mut u8, len: usize) {
     unsafe {
         let sctx = &raw mut (*ictx).ctx;
-        let mut state: *const input_state = null();
+        // Cache the most recently observed parser state as a raw pointer so
+        // we can detect state changes via cheap pointer-equality without
+        // refetching the transition table on every byte.
+        let mut state: *const input_state = std::ptr::null();
         let mut itr: Option<&input_transition> = None;
         let mut off = 0usize;
 
@@ -1041,12 +1053,13 @@ fn input_parse(ictx: *mut input_ctx, buf: *mut u8, len: usize) {
             off += 1;
 
             // Find the transition.
-            if (*ictx).state != state
+            if !std::ptr::eq((*ictx).state as *const _, state)
                 || itr.is_none()
                 || (*ictx).ch < itr.as_ref().unwrap().first
                 || (*ictx).ch > itr.as_ref().unwrap().last
             {
-                itr = (*(*ictx).state)
+                itr = (*ictx)
+                    .state
                     .transitions
                     .as_ref()
                     .unwrap()
@@ -1057,7 +1070,7 @@ fn input_parse(ictx: *mut input_ctx, buf: *mut u8, len: usize) {
                     fatalx("no transition from state");
                 } /* No transition? Eh? */
             }
-            state = (*ictx).state;
+            state = (*ictx).state as *const _;
 
             // Any state except print stops the current collection. This is
             // an optimization to avoid checking if the attributes have
@@ -1077,12 +1090,12 @@ fn input_parse(ictx: *mut input_ctx, buf: *mut u8, len: usize) {
             }
 
             // And switch state, if necessary.
-            if itr.as_ref().unwrap().state.is_some() {
-                input_set_state(ictx, itr.map(|e| &raw const *e).unwrap_or_default());
+            if let Some(next) = itr.as_ref().unwrap().state {
+                input_set_state(ictx, next);
             }
 
             // If not in ground state, save input.
-            if (*ictx).state != &raw const INPUT_STATE_GROUND {
+            if !std::ptr::eq((*ictx).state, &INPUT_STATE_GROUND) {
                 evbuffer_add((*ictx).since_ground, (&raw const (*ictx).ch).cast(), 1);
             }
         }
@@ -3217,7 +3230,7 @@ mod tests {
             assert!(!ictx.is_null());
 
             // The context should start in the ground state.
-            assert_eq!((*ictx).state, &raw const INPUT_STATE_GROUND);
+            assert!(std::ptr::eq((*ictx).state, &INPUT_STATE_GROUND));
 
             // Flags should be empty after init.
             assert!((*ictx).flags.is_empty());
