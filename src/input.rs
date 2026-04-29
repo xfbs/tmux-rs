@@ -3910,4 +3910,457 @@ mod tests {
             input_free(ictx);
         }
     }
+
+    // -----------------------------------------------------------------
+    // Byte-in / screen-state-out parser tests.
+    //
+    // These tests drive bytes through `input_parse_screen` against an
+    // isolated screen buffer (no PTY, no server, no window_pane). The
+    // goal is a regression net for the upcoming idiomatic-Rust rewrite:
+    // current behavior captured as assertions before structural change.
+    // -----------------------------------------------------------------
+    mod parse {
+        use super::*;
+        use crate::screen_::{screen_free, screen_init, screen_placeholder};
+
+        /// Serializes parser tests. `screen_write` uses a process-global
+        /// `SCREEN_WRITE_CITEM_FREELIST` (`src/screen_write.rs`) that isn't
+        /// thread-safe; without this lock parallel tests race on it and
+        /// corrupt the heap. Production tmux is single-threaded.
+        static PARSE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+        fn lock() -> std::sync::MutexGuard<'static, ()> {
+            // Ignore poisoning — a panicked test left no global state behind.
+            PARSE_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+        }
+
+        unsafe fn init_globals() {
+            use std::sync::Once;
+            static INIT: Once = Once::new();
+            INIT.call_once(|| unsafe {
+                use crate::options_::*;
+                use crate::tmux::{GLOBAL_OPTIONS, GLOBAL_S_OPTIONS, GLOBAL_W_OPTIONS};
+
+                // wcwidth(3) needs a UTF-8 locale to size non-ASCII codepoints.
+                // tmux normally does this in tmux_main; tests must do it too.
+                use crate::libc::{LC_CTYPE, setlocale};
+                if setlocale(LC_CTYPE, c!("C.UTF-8")).is_null() {
+                    setlocale(LC_CTYPE, c!("en_US.UTF-8"));
+                }
+
+                GLOBAL_OPTIONS = options_create(null_mut());
+                GLOBAL_S_OPTIONS = options_create(null_mut());
+                GLOBAL_W_OPTIONS = options_create(null_mut());
+                for oe in &OPTIONS_TABLE {
+                    if oe.scope & OPTIONS_TABLE_SERVER != 0 {
+                        options_default(GLOBAL_OPTIONS, oe);
+                    }
+                    if oe.scope & OPTIONS_TABLE_SESSION != 0 {
+                        options_default(GLOBAL_S_OPTIONS, oe);
+                    }
+                    if oe.scope & OPTIONS_TABLE_WINDOW != 0 {
+                        options_default(GLOBAL_W_OPTIONS, oe);
+                    }
+                }
+            });
+        }
+
+        /// Owns an isolated `input_ctx` + `screen` + `colour_palette`. Drives
+        /// bytes through `input_parse_screen` and exposes lightweight read
+        /// accessors for assertions. Drop releases all resources.
+        ///
+        /// Holds `PARSE_LOCK` for its whole lifetime: declared last so it is
+        /// dropped last, keeping the lock held through the resource teardown
+        /// in `Drop::drop`.
+        struct Parser {
+            ictx: *mut input_ctx,
+            screen: *mut screen,
+            palette: *mut colour_palette,
+            _guard: std::sync::MutexGuard<'static, ()>,
+        }
+
+        impl Parser {
+            fn new(cols: u32, rows: u32) -> Self {
+                let _guard = lock();
+                unsafe {
+                    init_globals();
+                    let palette = Box::into_raw(Box::new(colour_palette_init()));
+                    let ictx = input_init(null_mut(), null_mut(), palette);
+                    let screen = Box::into_raw(Box::new(screen_placeholder()));
+                    screen_init(screen, cols, rows, 0);
+                    Parser { ictx, screen, palette, _guard }
+                }
+            }
+
+            fn feed(&mut self, bytes: &[u8]) {
+                unsafe {
+                    input_parse_screen(
+                        self.ictx,
+                        self.screen,
+                        None,
+                        null_mut(),
+                        bytes.as_ptr() as *mut u8,
+                        bytes.len(),
+                    );
+                }
+            }
+
+            fn cursor(&self) -> (u32, u32) {
+                unsafe { ((*self.screen).cx, (*self.screen).cy) }
+            }
+
+            fn cell(&self, x: u32, y: u32) -> GridCell {
+                unsafe { (*self.screen).grid.get_cell(x, y) }
+            }
+
+            /// Decode a row's written content into a String by concatenating
+            /// each cell's UTF-8 bytes up to `line_length`. Padding cells
+            /// (zero-size data) are rendered as a single space.
+            fn line(&self, y: u32) -> String {
+                unsafe {
+                    let g = &(*self.screen).grid;
+                    let len = g.line_length(y);
+                    let mut out: Vec<u8> = Vec::new();
+                    for x in 0..len {
+                        let c = g.get_cell(x, y);
+                        let n = c.data.size as usize;
+                        if n == 0 {
+                            out.push(b' ');
+                        } else {
+                            out.extend_from_slice(&c.data.data[..n]);
+                        }
+                    }
+                    String::from_utf8_lossy(&out).into_owned()
+                }
+            }
+
+            fn mode(&self) -> mode_flag {
+                unsafe { (*self.screen).mode }
+            }
+        }
+
+        impl Drop for Parser {
+            fn drop(&mut self) {
+                unsafe {
+                    input_free(self.ictx);
+                    screen_free(self.screen);
+                    drop(Box::from_raw(self.screen));
+                    drop(Box::from_raw(self.palette));
+                }
+            }
+        }
+
+        // ---- Plain text & C0 controls ----
+
+        #[test]
+        fn plain_ascii_advances_cursor() {
+            let mut p = Parser::new(80, 24);
+            p.feed(b"hello");
+            assert_eq!(p.cursor(), (5, 0));
+            assert_eq!(&p.line(0)[..5], "hello");
+        }
+
+        #[test]
+        fn cr_returns_to_column_zero() {
+            let mut p = Parser::new(80, 24);
+            p.feed(b"abc\rX");
+            assert_eq!(p.cursor(), (1, 0));
+            // CR moves cursor to col 0; 'X' overwrites 'a'.
+            assert_eq!(&p.line(0)[..3], "Xbc");
+        }
+
+        #[test]
+        fn lf_moves_to_next_row() {
+            let mut p = Parser::new(80, 24);
+            p.feed(b"a\nb");
+            // LF advances row but does not reset column (no CR).
+            assert_eq!(p.cursor(), (2, 1));
+            assert_eq!(&p.line(0)[..1], "a");
+            assert_eq!(p.line(1).chars().nth(1), Some('b'));
+        }
+
+        #[test]
+        fn crlf_starts_new_line_at_col_zero() {
+            let mut p = Parser::new(80, 24);
+            p.feed(b"a\r\nb");
+            assert_eq!(p.cursor(), (1, 1));
+            assert_eq!(&p.line(0)[..1], "a");
+            assert_eq!(&p.line(1)[..1], "b");
+        }
+
+        #[test]
+        fn backspace_moves_left() {
+            let mut p = Parser::new(80, 24);
+            p.feed(b"abc\x08X");
+            assert_eq!(p.cursor(), (3, 0));
+            // BS leaves the existing 'c' visible until overwritten by 'X'.
+            assert_eq!(&p.line(0)[..3], "abX");
+        }
+
+        #[test]
+        fn tab_moves_to_next_stop() {
+            let mut p = Parser::new(80, 24);
+            p.feed(b"a\tb");
+            // Default tab stops are every 8 columns.
+            assert_eq!(p.cursor(), (9, 0));
+        }
+
+        // ---- CSI cursor movement ----
+
+        #[test]
+        fn cup_sets_absolute_position() {
+            let mut p = Parser::new(80, 24);
+            // CSI 3;5 H -> 1-based row 3, col 5 -> 0-based (4, 2).
+            p.feed(b"\x1b[3;5H");
+            assert_eq!(p.cursor(), (4, 2));
+        }
+
+        #[test]
+        fn cup_no_args_homes_cursor() {
+            let mut p = Parser::new(80, 24);
+            p.feed(b"abc\x1b[H");
+            assert_eq!(p.cursor(), (0, 0));
+        }
+
+        #[test]
+        fn cuf_moves_right() {
+            let mut p = Parser::new(80, 24);
+            p.feed(b"\x1b[10C");
+            assert_eq!(p.cursor(), (10, 0));
+        }
+
+        #[test]
+        fn cub_moves_left() {
+            let mut p = Parser::new(80, 24);
+            p.feed(b"\x1b[20C\x1b[5D");
+            assert_eq!(p.cursor(), (15, 0));
+        }
+
+        #[test]
+        fn cuu_cud_move_vertically() {
+            let mut p = Parser::new(80, 24);
+            p.feed(b"\x1b[10;1H\x1b[3A");
+            assert_eq!(p.cursor(), (0, 6));
+            p.feed(b"\x1b[5B");
+            assert_eq!(p.cursor(), (0, 11));
+        }
+
+        #[test]
+        fn hpa_sets_column() {
+            let mut p = Parser::new(80, 24);
+            p.feed(b"\x1b[5;5H\x1b[20G");
+            assert_eq!(p.cursor(), (19, 4));
+        }
+
+        #[test]
+        fn vpa_sets_row() {
+            let mut p = Parser::new(80, 24);
+            p.feed(b"\x1b[5;5H\x1b[10d");
+            assert_eq!(p.cursor(), (4, 9));
+        }
+
+        // ---- CSI erase ----
+
+        #[test]
+        fn ed_2_clears_screen() {
+            let mut p = Parser::new(20, 5);
+            p.feed(b"hello\nworld");
+            p.feed(b"\x1b[2J");
+            assert_eq!(p.line(0).trim_end(), "");
+            assert_eq!(p.line(1).trim_end(), "");
+        }
+
+        #[test]
+        fn el_0_clears_to_eol() {
+            let mut p = Parser::new(20, 5);
+            p.feed(b"hello world");
+            p.feed(b"\x1b[6G\x1b[K");
+            assert_eq!(p.line(0).trim_end(), "hello");
+        }
+
+        // ---- CSI insert / delete ----
+
+        #[test]
+        fn ich_inserts_blanks() {
+            let mut p = Parser::new(20, 5);
+            p.feed(b"abc\x1b[1G\x1b[2@");
+            // Two blanks inserted before "abc".
+            assert_eq!(&p.line(0)[..5], "  abc");
+        }
+
+        #[test]
+        fn dch_deletes_chars() {
+            let mut p = Parser::new(20, 5);
+            p.feed(b"abcdef\x1b[1G\x1b[2P");
+            // Delete first two chars; "cdef" shifts left.
+            assert_eq!(&p.line(0)[..4], "cdef");
+        }
+
+        // ---- SGR ----
+
+        #[test]
+        fn sgr_bold_sets_attribute() {
+            let mut p = Parser::new(20, 5);
+            p.feed(b"\x1b[1mA");
+            let c = p.cell(0, 0);
+            assert!(c.attr.contains(GridAttr::GRID_ATTR_BRIGHT));
+        }
+
+        #[test]
+        fn sgr_basic_color_sets_fg() {
+            let mut p = Parser::new(20, 5);
+            p.feed(b"\x1b[31mR");
+            let c = p.cell(0, 0);
+            // Basic 8 colors land as 0..=7 (with the BASIC flag bit when stored).
+            assert_eq!(c.fg & 0xff, 1, "expected red index 1, got fg=0x{:x}", c.fg);
+        }
+
+        #[test]
+        fn sgr_reset_clears_attributes() {
+            let mut p = Parser::new(20, 5);
+            p.feed(b"\x1b[1;31mA\x1b[0mB");
+            let a = p.cell(0, 0);
+            let b = p.cell(1, 0);
+            assert!(a.attr.contains(GridAttr::GRID_ATTR_BRIGHT));
+            assert!(!b.attr.contains(GridAttr::GRID_ATTR_BRIGHT));
+        }
+
+        #[test]
+        fn sgr_256_color() {
+            let mut p = Parser::new(20, 5);
+            p.feed(b"\x1b[38;5;208mX");
+            let c = p.cell(0, 0);
+            // 256-color uses the 0x100000000 flag.
+            assert!(c.fg & COLOUR_FLAG_256 as i32 != 0);
+            assert_eq!(c.fg & 0xff, 208);
+        }
+
+        #[test]
+        fn sgr_rgb_color() {
+            let mut p = Parser::new(20, 5);
+            p.feed(b"\x1b[38;2;100;150;200mX");
+            let c = p.cell(0, 0);
+            assert!(c.fg & COLOUR_FLAG_RGB as i32 != 0);
+        }
+
+        // ---- OSC ----
+        //
+        // Note: OSC 2 (set title) requires a window_pane with the
+        // `allow-set-title` option enabled — the parser is wp-gated for
+        // those paths, so they aren't testable through this harness.
+        // OSC sequences that don't need wp can still be exercised, mainly
+        // to confirm the parser stays in ground state after the dispatch
+        // and doesn't corrupt subsequent input.
+
+        #[test]
+        fn osc_st_returns_to_ground() {
+            let mut p = Parser::new(20, 5);
+            // OSC 0 (set title) — no-op without wp, but the parser must
+            // still consume the entire sequence and accept text after.
+            p.feed(b"\x1b]0;ignored\x1b\\");
+            p.feed(b"hi");
+            assert_eq!(p.cursor(), (2, 0));
+            assert_eq!(&p.line(0)[..2], "hi");
+        }
+
+        #[test]
+        fn osc_bel_returns_to_ground() {
+            let mut p = Parser::new(20, 5);
+            p.feed(b"\x1b]0;ignored\x07");
+            p.feed(b"hi");
+            assert_eq!(p.cursor(), (2, 0));
+            assert_eq!(&p.line(0)[..2], "hi");
+        }
+
+        // ---- Save / restore cursor ----
+
+        #[test]
+        fn decsc_decrc_round_trip() {
+            let mut p = Parser::new(80, 24);
+            p.feed(b"\x1b[5;7H\x1b7"); // move + DECSC
+            p.feed(b"\x1b[1;1H"); // move away
+            assert_eq!(p.cursor(), (0, 0));
+            p.feed(b"\x1b8"); // DECRC
+            assert_eq!(p.cursor(), (6, 4));
+        }
+
+        // ---- DECSET / DECRST modes ----
+
+        #[test]
+        fn decset_25_toggles_cursor_visibility() {
+            let mut p = Parser::new(20, 5);
+            // Cursor mode starts on by default.
+            assert!(p.mode().contains(mode_flag::MODE_CURSOR));
+            p.feed(b"\x1b[?25l");
+            assert!(!p.mode().contains(mode_flag::MODE_CURSOR));
+            p.feed(b"\x1b[?25h");
+            assert!(p.mode().contains(mode_flag::MODE_CURSOR));
+        }
+
+        // ---- UTF-8 ----
+
+        #[test]
+        fn utf8_two_byte_char() {
+            let mut p = Parser::new(20, 5);
+            p.feed("é".as_bytes());
+            assert_eq!(p.cursor(), (1, 0));
+            let c = p.cell(0, 0);
+            assert_eq!(&c.data.data[..c.data.size as usize], "é".as_bytes());
+        }
+
+        #[test]
+        fn utf8_three_byte_char() {
+            let mut p = Parser::new(20, 5);
+            p.feed("€".as_bytes());
+            assert_eq!(p.cursor(), (1, 0));
+            let c = p.cell(0, 0);
+            assert_eq!(&c.data.data[..c.data.size as usize], "€".as_bytes());
+        }
+
+        #[test]
+        fn utf8_wide_char_advances_two_columns() {
+            let mut p = Parser::new(20, 5);
+            // "中" is East Asian Wide.
+            p.feed("中".as_bytes());
+            assert_eq!(p.cursor(), (2, 0));
+            let c = p.cell(0, 0);
+            assert_eq!(c.data.width, 2);
+        }
+
+        #[test]
+        fn utf8_split_across_feeds() {
+            // A multibyte char delivered in two feed() calls (simulating a
+            // PTY byte split). The parser must accumulate bytes and emit one
+            // cell once the codepoint is complete.
+            let mut p = Parser::new(20, 5);
+            let bytes = "é".as_bytes(); // 0xC3 0xA9
+            p.feed(&bytes[..1]);
+            assert_eq!(p.cursor(), (0, 0)); // not yet emitted
+            p.feed(&bytes[1..]);
+            assert_eq!(p.cursor(), (1, 0));
+            let c = p.cell(0, 0);
+            assert_eq!(&c.data.data[..c.data.size as usize], "é".as_bytes());
+        }
+
+        // ---- Edge cases ----
+
+        #[test]
+        fn unknown_csi_intermediate_is_ignored() {
+            let mut p = Parser::new(20, 5);
+            // Garbage CSI with private intermediates that don't dispatch.
+            // Should leave the parser in ground state, cursor unchanged.
+            p.feed(b"\x1b[?99;99x");
+            p.feed(b"hello");
+            assert_eq!(p.cursor(), (5, 0));
+            assert_eq!(&p.line(0)[..5], "hello");
+        }
+
+        #[test]
+        fn partial_csi_then_complete() {
+            let mut p = Parser::new(20, 5);
+            p.feed(b"\x1b[3");
+            p.feed(b";5H");
+            assert_eq!(p.cursor(), (4, 2));
+        }
+    }
 }
